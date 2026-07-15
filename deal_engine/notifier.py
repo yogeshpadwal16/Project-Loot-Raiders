@@ -53,31 +53,44 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     is_amazon = "amazon" in platform.lower()
     is_glitch = discount >= 75.0
     
-    # 1. Siren Alert mode formatting for Glitches vs Regular drops
+    # 1. Premium Headers
     if is_glitch:
-        platform_header = "🚨🚨 *[ DANGER: LOOT GLITCH ALERT ]* 🚨🚨\n🔥 *PRICE ERROR DETECTED* 🔥"
-        validation_badge = "⚠️ *HURRY! Price will rise or sell out in seconds!*\n⚠️ *Forward to friends immediately!*\n"
+        header = (
+            "🚨🚨 <b>[ LOOT GLITCH ALERT ]</b> 🚨🚨\n"
+            "🔥 <b>PRICE ERROR DETECTED</b> 🔥\n"
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        badge = "⚠️ <b>HURRY! Prices will rise or sell out in seconds!</b>\n⚠️ <i>Forward to friends immediately!</i>\n"
     else:
-        platform_header = "🍊 *[ AMAZON INDIA ]*" if is_amazon else "💣 *[ FLIPKART ]*"
-        validation_badge = "🔥 *[ VERIFIED ALL-TIME LOW PRICE ]*\n" if is_verified_low else ""
+        badge_title = "AMAZON LOOT" if is_amazon else "FLIPKART LOOT"
+        icon = "🍊" if is_amazon else "💣"
+        header = (
+            f"<b>{icon} [ {badge_title} DEAL ] {icon}</b>\n"
+            "━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        badge = "🔥 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>\n" if is_verified_low else ""
         
     clean_title = title.split('\n')[0].strip()
     truncated_title = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
     
+    savings = mrp - price
+    rating_score = deal_score / 10.0
+    stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
+    
     caption = (
-        f"{platform_header}\n"
-        f"{validation_badge}\n"
-        f"📌 *{truncated_title}*\n\n"
-        f"```\n"
-        f"💰 Deal Price: ₹{price:,}\n"
-        f"❌ True MRP:   ₹{mrp:,}\n"
-        f"📉 Discount:   {discount:.1f}% OFF\n"
-        f"🔥 Deal Score: {deal_score:.1f}/100\n"
-        f"```\n"
-        f"⚡ *HURRY, PRICE DROP SEEN!*\n"
-        f"👉 [GRAB THIS LAUNCH DEAL NOW]({final_url})\n\n"
-        f"--- \n"
-        f"🛒 Curated by: *Yogesh Padwal*"
+        f"{header}\n"
+        f"📌 <b>{truncated_title}</b>\n\n"
+        f"{badge}\n"
+        f"💰 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
+        f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
+        f"💸 <b>Direct Savings:</b> <code>₹{savings:,}</code> (<b>{discount:.0f}% OFF</b>)\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⭐ <b>Deal Rating:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
+        f"🛡️ <b>Status:</b> <code>📉 Verified 90-Day Low</code>\n\n"
+        f"⚡ <i>Hurry, price drop seen! Grab it before stock ends!</i>\n"
+        f"👉 <b><a href='{final_url}'>CLICK HERE TO BUY NOW</a></b>\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📢 <b>Join @LootRaidersDeals for more loot deals!</b>"
     )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
@@ -103,7 +116,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
-                payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+                payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
                 res = requests.post(endpoint, data=payload, files=files, timeout=25)
                 
                 # Cleanup local scratch file
@@ -121,7 +134,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # Fallback to Text Alert if photo card failed
     try:
         text_endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload_fallback = {"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"}
+        payload_fallback = {"chat_id": chat_id, "text": caption, "parse_mode": "HTML"}
         res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
         if res_fb.status_code == 200:
             logging.info(f"Telegram Fallback Text Broadcast Success -> {truncated_title[:20]}...")
@@ -175,8 +188,8 @@ def send_daily_digest_if_time():
         top_5 = deals_list[:5]
         
         digest_copy = (
-            "🍊💣 *LOOT RAIDERS DAILY DIGEST* 💣🍊\n"
-            f"📅 *Date:* {today_str}\n"
+            "🍊💣 <b>LOOT RAIDERS DAILY DIGEST</b> 💣🍊\n"
+            f"📅 <b>Date:</b> {today_str}\n"
             "━━━━━━━━━━━━━━━━━━━━━━\n"
             "Here are the top 5 highest-rated loot deals of the day:\n\n"
         )
@@ -188,20 +201,20 @@ def send_daily_digest_if_time():
             truncated_title = clean_title[:45] + "..." if len(clean_title) > 48 else clean_title
             
             digest_copy += (
-                f"*{idx}️⃣ {badge} {truncated_title}*\n"
-                f"💰 *Deal Price:* ₹{lp.price:,} (MRP: ₹{lp.mrp:,})\n"
-                f"📉 *Discount:* {lp.discount:.0f}% OFF  🔥 *Score:* {lp.deal_score:.0f}/100\n"
-                f"👉 [GRAB THIS LOOT DEAL]({p.url})\n\n"
+                f"<b>{idx}️⃣ {badge} {truncated_title}</b>\n"
+                f"💰 <b>Deal Price:</b> <code>₹{lp.price:,}</code> (<s>₹{lp.mrp:,}</s>)\n"
+                f"📉 <b>Discount:</b> {lp.discount:.0f}% OFF  🔥 <b>Score:</b> <code>{lp.deal_score:.0f}/100</code>\n"
+                f"👉 <b><a href='{p.url}'>GRAB THIS LOOT DEAL</a></b>\n\n"
             )
             
         digest_copy += (
             "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "⚡ *Don't miss a single price drop! Join @LootRaidersDeals!*"
+            "⚡ <b>Don't miss a single price drop! Join @LootRaidersDeals!</b>"
         )
         
         # Send digest
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": digest_copy, "parse_mode": "Markdown"}
+        payload = {"chat_id": chat_id, "text": digest_copy, "parse_mode": "HTML"}
         res = requests.post(url, json=payload, timeout=15)
         if res.status_code == 200:
             logging.info("Daily Loot Digest broadcast sent successfully!")
