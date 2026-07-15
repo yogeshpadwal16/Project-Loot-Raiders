@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="file-protocol-warning" class="protocol-warning-banner" style="display: none;">
@@ -23,7 +24,26 @@
         <!-- HEADER -->
         <header class="main-header">
             <div class="logo-area">
-                <i class="fa-solid fa-circle-nodes pulse-icon"></i>
+                <svg class="logo-vector" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Outer Hexagon -->
+                    <polygon points="50,8 86,29 86,71 50,92 14,71 14,29" stroke="url(#logo-grad-primary)" stroke-width="3.5" fill="none" stroke-linejoin="round" />
+                    <!-- Nested Inner Ring -->
+                    <circle cx="50" cy="50" r="24" stroke="url(#logo-grad-secondary)" stroke-width="2" fill="none" opacity="0.6" stroke-dasharray="6 3"/>
+                    <!-- Styled Crown/Loot Icon -->
+                    <path d="M 32,62 L 32,38 L 44,50 L 50,34 L 56,50 L 68,38 L 68,62 Z" fill="url(#logo-grad-primary)" stroke="url(#logo-grad-primary)" stroke-width="1.5" stroke-linejoin="round" />
+                    <!-- Dot indicators -->
+                    <circle cx="50" cy="62" r="3.5" fill="#ffffff" />
+                    <defs>
+                        <linearGradient id="logo-grad-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="var(--md-sys-color-primary)"/>
+                            <stop offset="100%" stop-color="var(--md-sys-color-tertiary)"/>
+                        </linearGradient>
+                        <linearGradient id="logo-grad-secondary" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="var(--md-sys-color-secondary)"/>
+                            <stop offset="100%" stop-color="var(--md-sys-color-primary)"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
                 <div class="title-meta">
                     <h1>Loot Raiders</h1>
                     <span class="sub-title">Automated Deal Matrix Engine</span>
@@ -36,9 +56,9 @@
                     <span class="status-text">INITIALIZING</span>
                 </div>
                 <div class="header-actions">
-                    <div class="user-identity-box">
-                        <i class="fa-solid fa-user"></i>
-                        <input type="text" id="user-identity-input" placeholder="Enter Operator Name/ID" title="Your Operator Identity Name">
+                    <div class="user-identity-box" id="user-identity-box" title="Authenticated Operator">
+                        <i class="fa-solid fa-user-shield"></i>
+                        <span id="user-display-name">Operator: Anonymous</span>
                     </div>
                     <button class="btn-logout" id="logout-btn" title="Sign Out Administrator">
                         <i class="fa-solid fa-right-from-bracket"></i>
@@ -159,6 +179,9 @@
                             <span class="summary-val" id="top-clicked-deal" title="None">None</span>
                         </div>
                     </div>
+                    <div class="analytics-chart-container" style="padding: 10px 15px; height: 160px; position: relative; margin-bottom: 10px;">
+                        <canvas id="clicks-chart"></canvas>
+                    </div>
                     <div class="clicks-log" id="clicks-log-container">
                         <div class="log-line system-line">Waiting for link click activity...</div>
                     </div>
@@ -200,6 +223,59 @@
                             <div class="input-group">
                                 <label for="image-sel">Image Element CSS Selector</label>
                                 <input type="text" id="image-sel" required placeholder="img">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- GLOBAL SETTINGS MANAGER -->
+                <div class="selector-card settings-card" style="margin-top: 20px;">
+                    <div class="selector-header">
+                        <h3><i class="fa-solid fa-bell text-yellow"></i> Scraper & Alert Settings</h3>
+                        <button class="btn btn-sm btn-success" id="save-settings-btn">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Settings
+                        </button>
+                    </div>
+                    <div class="selector-body">
+                        <form id="settings-form" class="selector-form">
+                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="set-amazon-tag">Amazon Tag</label>
+                                    <input type="text" id="set-amazon-tag" required placeholder="lootraiders-21">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="set-flipkart-affid">Flipkart AffID</label>
+                                    <input type="text" id="set-flipkart-affid" required placeholder="flipkart-affid">
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label for="set-telegram-token">Telegram Bot Token</label>
+                                <input type="text" id="set-telegram-token" placeholder="bot_token">
+                            </div>
+                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="set-telegram-chat">Telegram Chat ID</label>
+                                    <input type="text" id="set-telegram-chat" placeholder="@channel">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="set-min-discount">Min Discount %</label>
+                                    <input type="number" id="set-min-discount" min="30" max="98" step="1" required>
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label for="set-discord-webhook">Discord Webhook URL</label>
+                                <input type="url" id="set-discord-webhook" placeholder="https://discord.com/api/webhooks/...">
+                            </div>
+                            
+                            <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
+                            
+                            <div class="input-group-checkbox" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; margin-top: 10px;">
+                                <input type="checkbox" id="set-proxies-enabled" style="width: auto; cursor: pointer; height: auto;">
+                                <label for="set-proxies-enabled" style="cursor: pointer; font-weight: 600; margin: 0; font-size: 0.85rem;">Enable Scraper Proxies</label>
+                            </div>
+                            <div class="input-group" style="margin-bottom: 0;">
+                                <label for="set-proxy-list">Proxy Server List (One per line: <code>ip:port</code>)</label>
+                                <textarea id="set-proxy-list" rows="3" placeholder="185.22.11.4:8080&#10;192.168.1.100:3128" style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-background); font-family: 'Fira Code', monospace; font-size: 0.8rem; padding: 8px; resize: vertical; box-sizing: border-box;"></textarea>
                             </div>
                         </form>
                     </div>

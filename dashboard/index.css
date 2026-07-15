@@ -161,15 +161,14 @@ body::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 30%, rgba(0, 0, 0, 0.2) 100%) !important;
-    backdrop-filter: blur(32px) saturate(210%);
-    -webkit-backdrop-filter: blur(32px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(0, 0, 0, 0.15) 100%) !important;
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
     border-radius: 28px;
     padding: 24px 32px;
     box-shadow: 
-        inset 0 1px 2px 0 rgba(255, 255, 255, 0.25),
-        inset 0 -1px 2px 0 rgba(0, 0, 0, 0.4),
+        inset 0 1px 0px 0 rgba(255, 255, 255, 0.15),
         0 16px 36px 0 rgba(0, 0, 0, 0.3);
 }
 
@@ -177,6 +176,19 @@ body::after {
     display: flex;
     align-items: center;
     gap: 18px;
+}
+
+.logo-vector {
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(0 0 8px rgba(255, 153, 0, 0.45)) drop-shadow(0 0 3px rgba(255, 153, 0, 0.3));
+    transition: all 0.5s cubic-bezier(0.2, 0, 0, 1);
+    transform-origin: center;
+}
+
+.logo-area:hover .logo-vector {
+    transform: scale(1.12) rotate(45deg);
+    filter: drop-shadow(0 0 15px rgba(255, 153, 0, 0.7)) drop-shadow(0 0 5px rgba(255, 153, 0, 0.4));
 }
 
 .pulse-icon {
@@ -452,15 +464,15 @@ body::after {
    LEFT COLUMN: DEALS CONTAINER
    ========================================== */
 .deals-section {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.3) 100%) !important;
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.15) 100%) !important;
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
     border-radius: 24px;
     padding: 24px;
     box-shadow: 
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-        0 24px 60px 0 rgba(0, 0, 0, 0.45) !important;
+        inset 0 1px 0px 0 rgba(255, 255, 255, 0.15),
+        0 24px 60px 0 rgba(0, 0, 0, 0.35) !important;
 }
 
 .deals-container {
@@ -742,15 +754,15 @@ body::after {
 
 /* Console Logs Terminal */
 .console-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.3) 100%) !important;
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.15) 100%) !important;
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
     border-radius: 24px;
     padding: 20px;
     box-shadow: 
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-        0 24px 60px 0 rgba(0, 0, 0, 0.45) !important;
+        inset 0 1px 0px 0 rgba(255, 255, 255, 0.15),
+        0 24px 60px 0 rgba(0, 0, 0, 0.35) !important;
 }
 
 .console-header {
@@ -800,15 +812,15 @@ body::after {
 
 /* Selector Configuration Panel */
 .selector-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.3) 100%) !important;
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.15) 100%) !important;
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
     border-radius: 24px;
     padding: 20px;
     box-shadow: 
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-        0 24px 60px 0 rgba(0, 0, 0, 0.45) !important;
+        inset 0 1px 0px 0 rgba(255, 255, 255, 0.15),
+        0 24px 60px 0 rgba(0, 0, 0, 0.35) !important;
 }
 
 .platform-tabs {
@@ -986,7 +998,7 @@ body::after {
     --md-sys-color-error-container: #ffdad6;
     --md-sys-color-on-error-container: #410002;
     
-    --md-sys-color-outline: #94a3b8;
+    --md-sys-color-outline: #5c6f84;
     --md-sys-color-outline-variant: #e2e8f0;
     
     --md-sys-color-success-container: #c6ffd9;
@@ -996,6 +1008,14 @@ body::after {
 }
 
 /* Light mode specifics overrides */
+.light-mode .logo-vector {
+    filter: drop-shadow(0 0 8px rgba(230, 126, 0, 0.35));
+}
+
+.light-mode .logo-area:hover .logo-vector {
+    filter: drop-shadow(0 0 15px rgba(230, 126, 0, 0.55));
+}
+
 .light-mode::before, .light-mode::after {
     opacity: 0.06;
 }
@@ -1011,6 +1031,42 @@ body::after {
         inset 0 1px 2px 0 rgba(255, 255, 255, 0.8),
         inset 0 -1px 2px 0 rgba(121, 66, 165, 0.05),
         0 16px 36px 0 rgba(121, 66, 165, 0.08) !important;
+}
+
+.light-mode .title-meta h1 {
+    background: linear-gradient(135deg, #b35900 0%, #1b64da 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+.light-mode .toast {
+    background: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+    color: #1f2937 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+}
+.light-mode .toast.success {
+    color: #1b5e20 !important;
+    border-color: rgba(27, 94, 32, 0.2) !important;
+}
+.light-mode .toast.error {
+    color: #ba1a1a !important;
+    border-color: rgba(186, 26, 26, 0.2) !important;
+}
+
+.light-mode .status-badge.running {
+    color: #0f5132 !important;
+    border-color: rgba(25, 135, 84, 0.25) !important;
+    background-color: rgba(25, 135, 84, 0.08) !important;
+}
+.light-mode .status-badge.running .status-dot {
+    background-color: #198754 !important;
+    box-shadow: 0 0 6px rgba(25, 135, 84, 0.4) !important;
+}
+
+.light-mode .tab-btn.active {
+    background-color: var(--md-sys-color-primary-container) !important;
+    color: #4a2700 !important;
 }
 
 .light-mode .stat-card:hover {
@@ -1172,44 +1228,27 @@ body::after {
     color: #ff3366 !important;
 }
 
-/* User Identity Input styling */
+/* User Identity styling */
 .user-identity-box {
-    position: relative;
     display: flex;
     align-items: center;
+    gap: 8px;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-background);
 }
 .user-identity-box i {
-    position: absolute;
-    left: 12px;
-    color: var(--md-sys-color-outline);
-    font-size: 0.8rem;
-    pointer-events: none;
+    color: var(--md-sys-color-primary);
+    filter: drop-shadow(0 0 5px rgba(255, 153, 0, 0.5));
 }
-.user-identity-box input {
-    padding: 8px 12px 8px 30px;
-    border-radius: 100px;
-    border: 1px solid var(--md-sys-color-outline-variant);
-    background: var(--md-sys-color-surface-container-low);
-    color: var(--md-sys-color-on-background);
-    font-family: inherit;
-    font-size: 0.8rem;
-    font-weight: 500;
-    width: 140px;
-    transition: all var(--transition-duration) var(--transition-timing);
-}
-.user-identity-box input:focus {
-    outline: none;
-    border-color: var(--md-sys-color-primary);
-    width: 180px;
-    background: var(--md-sys-color-surface-container-high);
-}
-.light-mode .user-identity-box input {
+.light-mode .user-identity-box {
     background: rgba(255, 255, 255, 0.7);
     border-color: rgba(0, 0, 0, 0.12);
-}
-.light-mode .user-identity-box input:focus {
-    background: #ffffff;
-    border-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-background);
 }
 
 /* Login Overlay Styling */
@@ -1229,15 +1268,15 @@ body::after {
 }
 
 .login-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.02) 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.15) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
     border-radius: 28px;
     padding: 40px;
     width: 100%;
     max-width: 420px;
     box-shadow: 
-        inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
-        0 30px 70px rgba(0, 0, 0, 0.55);
+        inset 0 1px 0px 0 rgba(255, 255, 255, 0.15),
+        0 30px 70px rgba(0, 0, 0, 0.45);
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -1422,5 +1461,40 @@ body::after {
     background: #dc3545;
     color: #ffffff;
     border-color: #dc3545;
+}
+
+/* Premium Settings form styles */
+.selector-form textarea {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-background);
+    border-radius: 12px;
+    padding: 10px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    transition: border-color var(--transition-duration) var(--transition-timing);
+}
+.selector-form textarea:focus {
+    outline: none;
+    border-color: var(--md-sys-color-primary);
+}
+.input-group-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--md-sys-color-primary);
+    cursor: pointer;
+}
+
+/* Light mode overrides for form inputs */
+.light-mode .selector-form input,
+.light-mode .selector-form textarea {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    color: #1f2937 !important;
+}
+.light-mode .selector-form input:focus,
+.light-mode .selector-form textarea:focus {
+    border-color: var(--md-sys-color-primary) !important;
+    background: #ffffff !important;
 }
 

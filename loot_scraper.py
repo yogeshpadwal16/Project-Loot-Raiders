@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -94,25 +95,97 @@ def initialize_selectors_json():
     with open(SELECTOR_FILE, 'w', encoding='utf-8') as f:
         json.dump(default_matrix, f, indent=4)
 
-def load_history() -> dict:
-    if os.path.exists(HISTORY_FILE):
+# Thread synchronization locks
+history_lock = threading.Lock()
+deals_history_lock = threading.Lock()
+
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
+
+def load_settings() -> dict:
+    default_settings = {
+        "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+        "telegram_chat_id": "@LootRaidersDeals",
+        "amazon_tag": "lootraiders-21",
+        "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
+        "discord_webhook_url": "",
+        "min_discount": 30.0,
+        "proxy_list": [],
+        "proxies_enabled": False
+    }
+    if os.path.exists(SETTINGS_FILE):
         try:
-            with open(HISTORY_FILE, "r", encoding='utf-8') as f:
-                return json.load(f)
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                saved = json.load(f)
+                for k, v in default_settings.items():
+                    if k not in saved:
+                        saved[k] = v
+                return saved
         except:
             pass
-    return {}
+    return default_settings
+
+def save_settings(settings: dict):
+    try:
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=2)
+    except Exception as e:
+        logging.error(f"Failed to save settings.json: {e}")
+
+def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool) -> bool:
+    try:
+        is_amazon = "amazon" in final_url.lower()
+        embed = {
+            "title": title[:250],
+            "url": final_url,
+            "color": 16750848 if is_amazon else 114686,
+            "fields": [
+                {"name": "Price", "value": f"₹{price:,}", "inline": True},
+                {"name": "MRP", "value": f"₹{mrp:,}", "inline": True},
+                {"name": "Discount", "value": f"{discount:.1f}% OFF", "inline": True}
+            ],
+            "footer": {
+                "text": "Loot Raiders Deal Alert • Curated by Yogesh Padwal"
+            }
+        }
+        if is_verified_low:
+            embed["description"] = "🔥 **VERIFIED ALL-TIME LOW PRICE!**"
+        if img_url and "base64" not in img_url:
+            embed["image"] = {"url": img_url}
+            
+        payload = {
+            "embeds": [embed]
+        }
+        r = requests.post(webhook_url, json=payload, timeout=10)
+        if r.status_code in [200, 204]:
+            logging.info("Discord Webhook broadcast success.")
+            return True
+        else:
+            logging.warning(f"Discord Webhook returned status {r.status_code}: {r.text}")
+    except Exception as e:
+        logging.error(f"Discord Webhook broadcast failure: {e}")
+    return False
+
+def load_history() -> dict:
+    with history_lock:
+        if os.path.exists(HISTORY_FILE):
+            try:
+                with open(HISTORY_FILE, "r", encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return {}
 
 def save_and_flush_history(history: dict, unique_id: str):
-    history[unique_id] = time.time()
-    try:
-        fd = os.open(HISTORY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-        with os.fdopen(fd, 'w', encoding='utf-8') as f:
-            json.dump(history, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-    except Exception as e:
-        logging.error(f"State Flash Failure: {e}")
+    with history_lock:
+        history[unique_id] = time.time()
+        try:
+            fd = os.open(HISTORY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                json.dump(history, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception as e:
+            logging.error(f"State Flash Failure: {e}")
 
 def increment_click_count(deal_id: str):
     stats = {}
@@ -157,39 +230,40 @@ def log_click_activity(deal_id: str, title: str, ip: str, user: str, user_agent:
         logging.error(f"Failed to save click activity: {e}")
 
 def save_deal_to_rich_history(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str):
-    deals = []
-    if os.path.exists(DEALS_HISTORY_FILE):
+    with deals_history_lock:
+        deals = []
+        if os.path.exists(DEALS_HISTORY_FILE):
+            try:
+                with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                    deals = json.load(f)
+            except:
+                pass
+                
+        # Remove any existing deal with the same ID to prevent duplicates
+        deals = [d for d in deals if d.get("id") != unique_id]
+                
+        new_deal = {
+            "id": unique_id,
+            "platform": platform,
+            "title": title,
+            "price": price,
+            "mrp": mrp,
+            "discount": discount,
+            "image_url": img_url,
+            "url": final_url,
+            "is_verified_low": is_verified_low,
+            "timestamp": time.time()
+        }
+        
+        # Prepend new deals, limit to last 100 entries
+        deals.insert(0, new_deal)
+        deals = deals[:100]
+        
         try:
-            with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                deals = json.load(f)
-        except:
-            pass
-            
-    # Remove any existing deal with the same ID to prevent duplicates
-    deals = [d for d in deals if d.get("id") != unique_id]
-            
-    new_deal = {
-        "id": unique_id,
-        "platform": platform,
-        "title": title,
-        "price": price,
-        "mrp": mrp,
-        "discount": discount,
-        "image_url": img_url,
-        "url": final_url,
-        "is_verified_low": is_verified_low,
-        "timestamp": time.time()
-    }
-    
-    # Prepend new deals, limit to last 100 entries
-    deals.insert(0, new_deal)
-    deals = deals[:100]
-    
-    try:
-        with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(deals, f, indent=2)
-    except Exception as e:
-        logging.error(f"Rich History Flash Failure: {e}")
+            with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(deals, f, indent=2)
+        except Exception as e:
+            logging.error(f"Rich History Flash Failure: {e}")
 
 def extract_amazon_asin(url: str) -> str:
     match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
@@ -230,7 +304,8 @@ def calculate_true_discount(text_content: str):
     true_discount = ((mrp - selling_price) / mrp) * 100
     return selling_price, mrp, true_discount
 
-def verify_historical_low(driver, product_url: str, current_price: int) -> bool:
+def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
+    historical_prices = []
     try:
         encoded_url = urllib.parse.quote_plus(product_url)
         tracker_query_url = f"https://price.buyhatke.com/products.php?url={encoded_url}"
@@ -248,12 +323,6 @@ def verify_historical_low(driver, product_url: str, current_price: int) -> bool:
             
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
-        
-        if historical_prices:
-            lowest_ever = min(historical_prices)
-            if current_price <= (lowest_ever * 1.05):
-                return True
-        return False
     except:
         try:
             if len(driver.window_handles) > 1:
@@ -261,14 +330,49 @@ def verify_historical_low(driver, product_url: str, current_price: int) -> bool:
                 driver.switch_to.window(driver.window_handles[0])
         except:
             pass
+
+    # If external tracker succeeded, use its data
+    if historical_prices:
+        lowest_ever = min(historical_prices)
+        if current_price <= (lowest_ever * 1.05):
+            return True
         return False
+        
+    # Fallback 1: Compare against our local historical deals database
+    if unique_id and os.path.exists(DEALS_HISTORY_FILE):
+        try:
+            with deals_history_lock:
+                with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
+                    deals = json.load(f)
+            matching_deals = [d for d in deals if d.get("id") == unique_id]
+            if matching_deals:
+                min_price = min(int(d.get("price", 999999)) for d in matching_deals)
+                if current_price <= min_price:
+                    return True
+                return False
+        except Exception as e:
+            logging.error(f"Local price check failed: {e}")
+            
+    # Fallback 2: If it's a new item, mark as verified low if discount is substantial (>= 60%)
+    if discount >= 60.0:
+        return True
+        
+    return False
 
 # ==========================================
 # INTELLIGENT DISPATCH HUB
 # ==========================================
 def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool):
-    if "YOUR_TELEGRAM" in TELEGRAM_BOT_TOKEN:
-        logging.warning("Skipping Broadcast: Secret Token parameters remain default.")
+    settings = load_settings()
+    telegram_success = False
+    discord_success = False
+    
+    bot_token = settings.get("telegram_bot_token")
+    chat_id = settings.get("telegram_chat_id")
+    min_disc = settings.get("min_discount", 30.0)
+    
+    if discount < min_disc:
+        logging.info(f"Skipping broadcast: discount ({discount:.1f}%) is below minimum threshold ({min_disc}%)")
         return False
 
     is_amazon = "amazon" in platform.lower()
@@ -294,33 +398,42 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
         f"🛒 Curated by: *Yogesh Padwal*"
     )
     
-    # Check if image is valid, if not use fallback textual alert immediately
-    if not img_url or "base64" in img_url:
-         try:
-            text_endpoint = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            payload_fallback = {"chat_id": TELEGRAM_CHAT_ID, "text": caption, "parse_mode": "Markdown"}
-            res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
-            return res_fb.status_code == 200
-         except:
-            return False
+    # 1. Telegram Alert dispatch
+    if bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "":
+        if img_url and "base64" not in img_url:
+            try:
+                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+                payload = {"chat_id": chat_id, "photo": img_url, "caption": caption, "parse_mode": "Markdown"}
+                res = requests.post(endpoint, json=payload, timeout=15)
+                if res.status_code == 200:
+                    logging.info(f"Telegram Broadcast Success -> {truncated_title[:20]}...")
+                    telegram_success = True
+            except Exception as e:
+                logging.error(f"Telegram Photo Method Failed: {e}")
+                
+        if not telegram_success:
+            try:
+                text_endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload_fallback = {"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"}
+                res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
+                if res_fb.status_code == 200:
+                    logging.info(f"Telegram Text Broadcast Success -> {truncated_title[:20]}...")
+                    telegram_success = True
+            except Exception as e:
+                logging.error(f"Telegram Text Method Failed: {e}")
 
-    try:
-        endpoint = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "photo": img_url, "caption": caption, "parse_mode": "Markdown"}
-        res = requests.post(endpoint, json=payload, timeout=15)
-        if res.status_code == 200:
-            logging.info(f"Telegram Broadcast Success -> {truncated_title[:20]}...")
-            return True
-    except:
-        pass
-
-    try:
-        text_endpoint = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload_fallback = {"chat_id": TELEGRAM_CHAT_ID, "text": caption, "parse_mode": "Markdown"}
-        res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
-        return res_fb.status_code == 200
-    except:
-        return False
+    # 2. Discord Alert dispatch
+    discord_webhook = settings.get("discord_webhook_url")
+    if discord_webhook and discord_webhook.strip() != "":
+        discord_success = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low)
+        
+    has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
+    has_discord = (discord_webhook and discord_webhook.strip() != "")
+    
+    if not has_telegram and not has_discord:
+        return True # Save local history anyway
+        
+    return telegram_success or discord_success
 
 def init_driver() -> webdriver.Chrome:
     options = Options()
@@ -332,6 +445,16 @@ def init_driver() -> webdriver.Chrome:
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
     
+    settings = load_settings()
+    if settings.get("proxies_enabled") and settings.get("proxy_list"):
+        import random
+        # Clean and pick a random proxy
+        valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
+        if valid_proxies:
+            proxy = random.choice(valid_proxies)
+            options.add_argument(f"--proxy-server={proxy}")
+            logging.info(f"WebDriver initialized using proxy: {proxy}")
+            
     driver = webdriver.Chrome(options=options)
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
@@ -357,22 +480,39 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        # Serve static dashboard files
-        if self.path == '/' or self.path == '/index.html':
-            filepath = os.path.join(DASHBOARD_DIR, 'index.html')
-            mime = 'text/html'
+        # Serve static dashboard files dynamically
+        clean_path = self.path.split('?')[0]
+        if clean_path == '/':
+            clean_path = '/index.html'
+            
+        path_mappings = {
+            '/main.js': '/index.js',
+            '/style.css': '/index.css'
+        }
+        mapped_path = path_mappings.get(clean_path, clean_path)
+        local_filename = mapped_path.lstrip('/')
+        filepath = os.path.join(DASHBOARD_DIR, local_filename)
+        
+        if os.path.exists(filepath) and os.path.isfile(filepath):
+            ext = os.path.splitext(filepath)[1].lower()
+            mime_types = {
+                '.html': 'text/html',
+                '.css': 'text/css',
+                '.js': 'application/javascript',
+                '.jpg': 'image/jpeg',
+                '.jpeg': 'image/jpeg',
+                '.png': 'image/png',
+                '.gif': 'image/gif',
+                '.json': 'application/json',
+                '.svg': 'image/svg+xml',
+                '.ico': 'image/x-icon'
+            }
+            mime = mime_types.get(ext, 'application/octet-stream')
             self._serve_static(filepath, mime)
-        elif self.path == '/index.js' or self.path == '/main.js':
-            filepath = os.path.join(DASHBOARD_DIR, 'index.js')
-            mime = 'application/javascript'
-            self._serve_static(filepath, mime)
-        elif self.path == '/index.css' or self.path == '/style.css':
-            filepath = os.path.join(DASHBOARD_DIR, 'index.css')
-            mime = 'text/css'
-            self._serve_static(filepath, mime)
+            return
         
         # API Endpoints
-        elif self.path == '/api/status':
+        if self.path == '/api/status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -473,6 +613,13 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     pass
             self.wfile.write(json.dumps(activity).encode('utf-8'))
                 
+        elif self.path == '/api/settings':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            settings = load_settings()
+            self.wfile.write(json.dumps(settings).encode('utf-8'))
+            
         elif self.path == '/api/logs':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -524,6 +671,19 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"status": "success", "is_running": scraper_state["is_running"]}).encode('utf-8'))
             
+        elif parsed_path == '/api/settings':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                save_settings(data)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                
         elif parsed_path == '/api/login':
             try:
                 data = json.loads(post_data.decode('utf-8'))
@@ -619,10 +779,159 @@ def start_api_server(port=5555):
 # ==========================================
 # CORE SCANNERS MAIN LOOP
 # ==========================================
+def scrape_platform(platform: str, config: dict, history: dict):
+    if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
+        return
+        
+    logging.info(f"Scanning target feed stream: {platform.upper()} (Multi-threaded)")
+    driver = None
+    try:
+        driver = init_driver()
+        driver.set_page_load_timeout(30)
+        driver.get(config['url'])
+        time.sleep(4)
+        
+        # 1. Human-Simulated Scroll Matrix to load images completely
+        for scroll in range(1, 6):
+            driver.execute_script(f"window.scrollTo(0, {scroll * 500});")
+            time.sleep(1.5) 
+        
+        cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
+        logging.info(f"Targeting matrix: Found {len(cards)} node objects inside {platform}")
+        
+        for card in cards:
+            if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
+                logging.info(f"Scraper execution halted by user request on stream {platform}.")
+                break
+                
+            try:
+                links = card.find_elements(By.TAG_NAME, "a")
+                raw_url = None
+                
+                for l in links:
+                    href = l.get_attribute("href")
+                    if href and ("javascript" not in href) and ("/p/" in href or "pid=" in href or "/dp/" in href):
+                        raw_url = href
+                        break
+                        
+                if not raw_url and links:
+                    for l in links:
+                        href = l.get_attribute("href")
+                        if href and ("javascript" not in href):
+                            raw_url = href
+                            break
+                            
+                if not raw_url: continue
+                
+                unique_id = None
+                clean_base_url = ""
+                norm_plat = platform.lower()
+                
+                if "amazon" in norm_plat:
+                    unique_id = extract_amazon_asin(raw_url)
+                    if unique_id:
+                        clean_base_url = f"https://www.amazon.in/dp/{unique_id}"
+                        final_url = f"{clean_base_url}?tag={AMAZON_TAG}"
+                elif "flipkart" in norm_plat:
+                    unique_id = extract_flipkart_pid(raw_url)
+                    if not unique_id:
+                        unique_id = str(hash(card.text[:40]))
+                    clean_base_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}"
+                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={FLIPKART_AFFID}"
+                
+                if not unique_id:
+                    continue
+                    
+                with history_lock:
+                    in_history = unique_id in history
+                if in_history:
+                    continue
+                
+                title = ""
+                try:
+                    title_el = card.find_element(By.CSS_SELECTOR, config['title_selector'])
+                    raw_title = title_el.get_attribute("title")
+                    if not raw_title:
+                        raw_title = title_el.get_attribute("textContent").strip()
+                    if raw_title:
+                        title = re.sub(r'\s+', ' ', raw_title)
+                except:
+                    pass
+                    
+                if not title or title.endswith("...") or title.endswith(""):
+                    try:
+                        for a_el in card.find_elements(By.TAG_NAME, "a"):
+                            t_attr = a_el.get_attribute("title")
+                            if t_attr and len(t_attr) > len(title) and not (t_attr.endswith("...") or t_attr.endswith("")):
+                                title = re.sub(r'\s+', ' ', t_attr).strip()
+                                break
+                    except:
+                        pass
+                    
+                if not title:
+                    try:
+                        blacklist = ["limited time deal", "deal of the day", "lowest price", "super deals", "bank offer", "only few left", "mobiles & accessories", "showing 1 -", "other colors/patterns", "colors/patterns", "other colors"]
+                        for text_segment in card.text.split("\n"):
+                            seg = text_segment.strip()
+                            if (len(seg) > 15 
+                                and not seg.startswith("₹") 
+                                and "OFF" not in seg 
+                                and "%" not in seg
+                                and not any(b in seg.lower() for b in blacklist)):
+                                title = seg
+                                break
+                    except:
+                        pass
+                    
+                if not title or len(title) < 5: continue
+                
+                if any(h in title.lower() for h in ["showing 1 -", "results for", "showing 1–", "showing 1-"]):
+                    continue
+                
+                img_url = None
+                try:
+                    img_element = card.find_element(By.CSS_SELECTOR, config['image_selector'])
+                    for attr in ["src", "data-src", "srcset", "original"]:
+                        val = img_element.get_attribute(attr)
+                        if val and "http" in val and "base64" not in val:
+                            img_url = val
+                            break
+                except:
+                    pass
+                
+                if not img_url:
+                    try:
+                        img_element = card.find_element(By.TAG_NAME, "img")
+                        for attr in ["src", "data-src", "srcset", "original"]:
+                            val = img_element.get_attribute(attr)
+                            if val and "http" in val and "base64" not in val:
+                                img_url = val
+                                break
+                    except:
+                        pass
+                
+                price, mrp, true_discount = calculate_true_discount(card.text)
+                
+                if price and mrp and (30.0 <= true_discount <= 98.0):
+                    is_verified_low = verify_historical_low(driver, clean_base_url, price, unique_id, true_discount)
+                    
+                    if dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low):
+                        save_and_flush_history(history, unique_id)
+                        save_deal_to_rich_history(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
+                        time.sleep(1)
+                        
+            except Exception as inner_err:
+                continue
+    except Exception as out_err:
+        logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
+    finally:
+        if driver:
+            try: driver.quit()
+            except: pass
+
 def main():
     initialize_selectors_json()
     
-    # Check for single-run mode (command-line arg or GITHUB_ACTIONS env var)
     single_run = "--single-run" in sys.argv or os.environ.get('GITHUB_ACTIONS') == 'true'
     
     if not single_run:
@@ -631,32 +940,17 @@ def main():
     else:
         logging.info("Single-run execution mode activated (Cloud/CI environment).")
     
-    driver = None
-    
     try:
         while True:
             if not single_run:
-                # Check state flags: Sleep if not running and no manual scan triggered
                 if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
                     time.sleep(1)
                     continue
                     
-                # Handle manual scan trigger
                 if scraper_state["scan_trigger"]:
                     logging.info("Manual scan triggered via REST API. Starting execute sequence.")
                     scraper_state["scan_trigger"] = False
                 
-            # Initialize or recover chrome driver session
-            if driver is None:
-                try:
-                    driver = init_driver()
-                    driver.set_page_load_timeout(30)
-                except Exception as de:
-                    logging.error(f"Failed to initialize Chrome Driver: {de}. Retrying in 10s...")
-                    time.sleep(10)
-                    continue
-
-            # Core scanning logic wrapped inside try block for selenium crash recovery
             try:
                 with open(SELECTOR_FILE, 'r', encoding='utf-8') as f:
                     matrix = json.load(f)
@@ -665,175 +959,35 @@ def main():
                 current_time = time.time()
                 history = {k: v for k, v in history.items() if current_time - v < 86400}
                 
-                for platform, config in matrix.items():
-                    # Check loop flags mid-stream to toggle instantly
-                    if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
-                        logging.info("Scraper execution halted by user request.")
-                        break
-                        
-                    logging.info(f"Scanning target feed stream: {platform.upper()}")
-                    try:
-                        driver.set_page_load_timeout(30)
-                        driver.get(config['url'])
-                        time.sleep(4)
-                        
-                        # 1. Human-Simulated Scroll Matrix to load images completely
-                        for scroll in range(1, 6):
-                            driver.execute_script(f"window.scrollTo(0, {scroll * 500});")
-                            time.sleep(1.5) 
-                        
-                        cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
-                        logging.info(f"Targeting matrix: Found {len(cards)} node objects inside {platform}")
-                        
-                        for card in cards:
-                            try:
-                                links = card.find_elements(By.TAG_NAME, "a")
-                                raw_url = None
-                                
-                                for l in links:
-                                    href = l.get_attribute("href")
-                                    if href and ("javascript" not in href) and ("/p/" in href or "pid=" in href or "/dp/" in href):
-                                        raw_url = href
-                                        break
-                                        
-                                if not raw_url and links:
-                                    for l in links:
-                                        href = l.get_attribute("href")
-                                        if href and ("javascript" not in href):
-                                            raw_url = href
-                                            break
-                                            
-                                if not raw_url: continue
-                                
-                                unique_id = None
-                                clean_base_url = ""
-                                norm_plat = platform.lower()
-                                
-                                if "amazon" in norm_plat:
-                                    unique_id = extract_amazon_asin(raw_url)
-                                    if unique_id:
-                                        clean_base_url = f"https://www.amazon.in/dp/{unique_id}"
-                                        final_url = f"{clean_base_url}?tag={AMAZON_TAG}"
-                                elif "flipkart" in norm_plat:
-                                    unique_id = extract_flipkart_pid(raw_url)
-                                    if not unique_id:
-                                        unique_id = str(hash(card.text[:40]))
-                                    clean_base_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}"
-                                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={FLIPKART_AFFID}"
-                                
-                                if not unique_id or unique_id in history:
-                                    continue
-                                
-                                title = ""
-                                try:
-                                    # First check if the custom title selector extracts anything
-                                    title_el = card.find_element(By.CSS_SELECTOR, config['title_selector'])
-                                    # Try to fetch full title from the title attribute first (avoids site truncation)
-                                    raw_title = title_el.get_attribute("title")
-                                    if not raw_title:
-                                        raw_title = title_el.get_attribute("textContent").strip()
-                                    if raw_title:
-                                        title = re.sub(r'\s+', ' ', raw_title)
-                                except:
-                                    pass
-                                    
-                                # If title is still empty, or if it is truncated (ends with ellipsis), check other links inside the card
-                                if not title or title.endswith("...") or title.endswith(""):
-                                    try:
-                                        for a_el in card.find_elements(By.TAG_NAME, "a"):
-                                            t_attr = a_el.get_attribute("title")
-                                            if t_attr and len(t_attr) > len(title) and not (t_attr.endswith("...") or t_attr.endswith("")):
-                                                title = re.sub(r'\s+', ' ', t_attr).strip()
-                                                break
-                                    except:
-                                        pass
-                                    
-                                if not title:
-                                    try:
-                                        blacklist = ["limited time deal", "deal of the day", "lowest price", "super deals", "bank offer", "only few left", "mobiles & accessories", "showing 1 -", "other colors/patterns", "colors/patterns", "other colors"]
-                                        for text_segment in card.text.split("\n"):
-                                            seg = text_segment.strip()
-                                            if (len(seg) > 15 
-                                                and not seg.startswith("₹") 
-                                                and "OFF" not in seg 
-                                                and "%" not in seg
-                                                and not any(b in seg.lower() for b in blacklist)):
-                                                title = seg
-                                                break
-                                    except:
-                                        pass
-                                    
-                                if not title or len(title) < 5: continue
-                                
-                                # Skip page-layout search headers
-                                if any(h in title.lower() for h in ["showing 1 -", "results for", "showing 1–", "showing 1-"]):
-                                    continue
-                                
-                                # 2. Resilient Adaptive Image Extraction Layer
-                                img_url = None
-                                try:
-                                    img_element = card.find_element(By.CSS_SELECTOR, config['image_selector'])
-                                    for attr in ["src", "data-src", "srcset", "original"]:
-                                        val = img_element.get_attribute(attr)
-                                        if val and "http" in val and "base64" not in val:
-                                            img_url = val
-                                            break
-                                except:
-                                    pass
-                                
-                                if not img_url:
-                                    try:
-                                        img_element = card.find_element(By.TAG_NAME, "img")
-                                        for attr in ["src", "data-src", "srcset", "original"]:
-                                            val = img_element.get_attribute(attr)
-                                            if val and "http" in val and "base64" not in val:
-                                                img_url = val
-                                                break
-                                    except:
-                                        pass
-                                
-                                price, mrp, true_discount = calculate_true_discount(card.text)
-                                
-                                if price and mrp and (30.0 <= true_discount <= 98.0):
-                                    is_verified_low = verify_historical_low(driver, clean_base_url, price)
-                                    
-                                    # 3. Safe Dispatch (Will switch to text mode if image fails)
-                                    if dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low):
-                                        save_and_flush_history(history, unique_id)
-                                        save_deal_to_rich_history(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
-                                        time.sleep(1)
-                                        
-                            except Exception as inner_err:
-                                continue
-                    except Exception as out_err:
-                        logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = []
+                    for platform, config in matrix.items():
+                        futures.append(executor.submit(scrape_platform, platform, config, history))
+                    
+                    for fut in futures:
+                        try:
+                            fut.result()
+                        except Exception as thread_err:
+                            logging.error(f"Thread execution error: {thread_err}")
                 
-                # Update loop stats
                 scraper_state["scans_completed"] += 1
                 scraper_state["last_scan_time"] = time.time()
                 logging.info("Inter-stream sequence frame complete. Pausing current execution cycle.")
                 
-            except webdriver.exceptions.WebDriverException as wde:
-                logging.error(f"WebDriver crash recognized: {wde}. Terminating session for auto-recreation.")
-                try: driver.quit()
-                except: pass
-                driver = None
+            except Exception as loop_err:
+                logging.error(f"Error in main scanner loop: {loop_err}")
                 
             if single_run:
                 logging.info("Single-run execution complete. Exiting scraper loop.")
                 break
                 
-            # Responsive sleep cycle check
-            for _ in range(60): # 60 seconds sleep, checked every 1 second
+            for _ in range(60):
                 if not scraper_state["is_running"] or scraper_state["scan_trigger"]:
                     break
                 time.sleep(1)
                 
     except KeyboardInterrupt:
         logging.warning("SIGINT operational interrupt recognized. Turning pipeline off safely.")
-    finally:
-        if driver is not None:
-            driver.quit()
 
 if __name__ == "__main__":
     main()

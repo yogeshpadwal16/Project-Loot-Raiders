@@ -1,0 +1,10 @@
+{
+  "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+  "telegram_chat_id": "@LootRaidersDeals",
+  "amazon_tag": "lootraiders-21",
+  "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
+  "discord_webhook_url": "",
+  "min_discount": 30.0,
+  "proxy_list": [],
+  "proxies_enabled": false
+}

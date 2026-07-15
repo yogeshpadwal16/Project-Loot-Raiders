@@ -16,6 +16,8 @@ function isAuthorized() {
 let currentSelectors = {};
 let selectedPlatformKey = 'amazon_master_lightning_deals'; // default tab
 let currentDeals = [];
+let clicksChartInstance = null;
+let lastClicksData = [];
 
 // DOM elements
 const statusBadge = document.getElementById('status-badge');
@@ -252,7 +254,7 @@ function updateDealsUI(deals) {
         const mrpVal = deal.mrp ? parseInt(deal.mrp).toLocaleString() : '0';
         const discountVal = deal.discount ? parseFloat(deal.discount).toFixed(0) : '0';
         const dealUrl = deal.url || '#';
-        const operatorName = encodeURIComponent(document.getElementById('user-identity-input') ? document.getElementById('user-identity-input').value.trim() : 'Anonymous');
+        const operatorName = encodeURIComponent(localStorage.getItem('operator_identity') || 'Anonymous');
         const redirectUrl = IS_STATIC_MODE 
             ? dealUrl
             : `${API_BASE}/api/redirect?id=${deal.id}&user=${operatorName}&url=${encodeURIComponent(dealUrl)}`;
@@ -463,6 +465,12 @@ function updateClicksUI(clicks) {
     
     totalBadge.textContent = `${clicks.length} Clicks`;
     
+    // Save to global cache
+    lastClicksData = clicks;
+    
+    // Render visual Chart.js chart
+    renderClicksChart(clicks);
+    
     if (clicks.length === 0) {
         topDealEl.textContent = 'None';
         topDealEl.title = 'None';
@@ -491,9 +499,7 @@ function updateClicksUI(clicks) {
     let html = '';
     clicks.forEach(c => {
         const timeStr = new Date(c.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        // Clean title
         const displayTitle = c.title.length > 30 ? c.title.substring(0, 27) + '...' : c.title;
-        
         const userDisplay = c.user && c.user !== 'Anonymous' ? `${c.user} (${c.ip})` : c.ip;
         html += `
             <div class="click-line">
@@ -505,6 +511,149 @@ function updateClicksUI(clicks) {
     });
     
     logContainer.innerHTML = html;
+}
+
+function renderClicksChart(clicks) {
+    const canvas = document.getElementById('clicks-chart');
+    if (!canvas) return;
+    
+    const counts = {};
+    clicks.forEach(c => {
+        const shortTitle = c.title.length > 25 ? c.title.substring(0, 22) + '...' : c.title;
+        counts[shortTitle] = (counts[shortTitle] || 0) + 1;
+    });
+    
+    const sorted = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+        
+    const labels = sorted.map(item => item[0]);
+    const dataValues = sorted.map(item => item[1]);
+    
+    if (sorted.length === 0) {
+        labels.push('No clicks yet');
+        dataValues.push(0);
+    }
+    
+    const isDarkMode = !document.body.classList.contains('light-mode');
+    const textColor = isDarkMode ? '#94a3b8' : '#475569';
+    const gridColor = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const barColor = isDarkMode ? 'rgba(255, 153, 0, 0.75)' : 'rgba(27, 100, 218, 0.75)';
+    const barBorderColor = isDarkMode ? '#ff9900' : '#1b64da';
+    
+    if (clicksChartInstance) {
+        clicksChartInstance.data.labels = labels;
+        clicksChartInstance.data.datasets[0].data = dataValues;
+        clicksChartInstance.data.datasets[0].backgroundColor = barColor;
+        clicksChartInstance.data.datasets[0].borderColor = barBorderColor;
+        clicksChartInstance.options.scales.x.ticks.color = textColor;
+        clicksChartInstance.options.scales.y.ticks.color = textColor;
+        clicksChartInstance.options.scales.x.grid.color = gridColor;
+        clicksChartInstance.options.scales.y.grid.color = gridColor;
+        clicksChartInstance.update();
+    } else {
+        const ctx = canvas.getContext('2d');
+        clicksChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Clicks',
+                    data: dataValues,
+                    backgroundColor: barColor,
+                    borderColor: barBorderColor,
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: textColor, stepSize: 1, precision: 0 },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        ticks: { color: textColor },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+}
+
+async function fetchSettings() {
+    if (IS_STATIC_MODE) return;
+    try {
+        const response = await fetch(`${API_BASE}/api/settings`);
+        const settings = await response.json();
+        
+        document.getElementById('set-amazon-tag').value = settings.amazon_tag || '';
+        document.getElementById('set-flipkart-affid').value = settings.flipkart_affid || '';
+        document.getElementById('set-telegram-token').value = settings.telegram_bot_token || '';
+        document.getElementById('set-telegram-chat').value = settings.telegram_chat_id || '';
+        document.getElementById('set-min-discount').value = settings.min_discount || 30;
+        document.getElementById('set-discord-webhook').value = settings.discord_webhook_url || '';
+        document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
+        
+        const proxyList = settings.proxy_list || [];
+        document.getElementById('set-proxy-list').value = proxyList.join('\n');
+    } catch (err) {
+        console.error('API Error (Settings):', err);
+    }
+}
+
+async function saveSettings(e) {
+    if (e) e.preventDefault();
+    
+    const amazon_tag = document.getElementById('set-amazon-tag').value.trim();
+    const flipkart_affid = document.getElementById('set-flipkart-affid').value.trim();
+    const telegram_bot_token = document.getElementById('set-telegram-token').value.trim();
+    const telegram_chat_id = document.getElementById('set-telegram-chat').value.trim();
+    const min_discount = parseFloat(document.getElementById('set-min-discount').value) || 30;
+    const discord_webhook_url = document.getElementById('set-discord-webhook').value.trim();
+    const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
+    
+    const proxyText = document.getElementById('set-proxy-list').value;
+    const proxy_list = proxyText.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+        
+    const settings = {
+        amazon_tag,
+        flipkart_affid,
+        telegram_bot_token,
+        telegram_chat_id,
+        min_discount,
+        discord_webhook_url,
+        proxies_enabled,
+        proxy_list
+    };
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        if (response.ok) {
+            showToast('Settings saved successfully!');
+            fetchSettings();
+        } else {
+            showToast('Failed to save settings.', 'error');
+        }
+    } catch (err) {
+        console.error('Save Settings Error:', err);
+        showToast('Connection error. Could not save settings.', 'error');
+    }
 }
 
 function init() {
@@ -555,6 +704,13 @@ function init() {
             }
         });
     }
+    
+    // Fetch and bind settings
+    fetchSettings();
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', saveSettings);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -584,14 +740,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Operator Identity Caching
-    const userIdInput = document.getElementById('user-identity-input');
-    if (userIdInput) {
-        userIdInput.value = localStorage.getItem('operator_identity') || '';
-        userIdInput.addEventListener('input', function() {
-            localStorage.setItem('operator_identity', this.value.trim());
-        });
+    // Operator Identity Caching & Display
+    function updateOperatorDisplay() {
+        const userDisplayName = document.getElementById('user-display-name');
+        if (userDisplayName) {
+            if (isAuthorized()) {
+                userDisplayName.textContent = localStorage.getItem('operator_identity') || 'Yogesh Padwal';
+            } else {
+                userDisplayName.textContent = 'Anonymous';
+            }
+        }
     }
+    updateOperatorDisplay();
 
     // Check authentication
     if (!checkAuthentication()) {
@@ -615,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('admin_token', data.token);
                     localStorage.setItem('operator_identity', data.name);
                     
-                    if (userIdInput) userIdInput.value = data.name;
+                    updateOperatorDisplay();
                     
                     document.getElementById('login-overlay').style.display = 'none';
                     init();
@@ -663,6 +823,9 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
         themeIcon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
         showToast(`${isLight ? 'Light' : 'Dark'} mode activated.`);
+        if (lastClicksData && lastClicksData.length > 0) {
+            renderClicksChart(lastClicksData);
+        }
     });
 
     // Feed controls live listeners
