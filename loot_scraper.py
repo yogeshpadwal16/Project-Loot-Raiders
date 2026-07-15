@@ -9,7 +9,7 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -24,10 +24,16 @@ from deal_engine.bot_listener import start_telegram_bot_listener
 # Retailer Scraper Plugins
 from plugins.amazon import AmazonRetailerPlugin
 from plugins.flipkart import FlipkartRetailerPlugin
+from plugins.generic import GenericRetailerPlugin
 
 RETAILER_PLUGINS = {
     "amazon": AmazonRetailerPlugin(),
-    "flipkart": FlipkartRetailerPlugin()
+    "flipkart": FlipkartRetailerPlugin(),
+    "myntra": GenericRetailerPlugin("myntra"),
+    "ajio": GenericRetailerPlugin("ajio"),
+    "meesho": GenericRetailerPlugin("meesho"),
+    "tatacliq": GenericRetailerPlugin("tatacliq"),
+    "jiomart": GenericRetailerPlugin("jiomart")
 }
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -67,39 +73,74 @@ scraper_state = {
 def initialize_database_selectors():
     db = SessionLocal()
     try:
-        matrices = db.query(SelectorMatrix).all()
-        if not matrices:
-            default_matrix = {
-                "amazon_master_lightning_deals": {
-                    "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
-                    "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
-                    "title_selector": "span.a-truncate-full, .a-truncate-full",
-                    "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
-                    "image_selector": "img[class*='ProductCardImage-module__image'], img"
-                },
-                "amazon_sitewide_search_deals": {
-                    "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
-                    "card_selector": "div[data-component-type='s-search-result']",
-                    "title_selector": "h2 a span",
-                    "link_selector": "a.a-link-normal",
-                    "image_selector": "img.s-image"
-                },
-                "flipkart_sitewide_offers": {
-                    "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
-                    "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-                    "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-                    "link_selector": "a",
-                    "image_selector": "img"
-                },
-                "flipkart_clearance_master_feed": {
-                    "url": "https://www.flipkart.com/search?q=clearance sale",
-                    "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-                    "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-                    "link_selector": "a",
-                    "image_selector": "img"
-                }
+        default_matrix = {
+            "amazon_master_lightning_deals": {
+                "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
+                "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
+                "title_selector": "span.a-truncate-full, .a-truncate-full",
+                "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
+                "image_selector": "img[class*='ProductCardImage-module__image'], img"
+            },
+            "amazon_sitewide_search_deals": {
+                "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
+                "card_selector": "div[data-component-type='s-search-result']",
+                "title_selector": "h2 a span",
+                "link_selector": "a.a-link-normal",
+                "image_selector": "img.s-image"
+            },
+            "flipkart_sitewide_offers": {
+                "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
+                "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+                "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+                "link_selector": "a",
+                "image_selector": "img"
+            },
+            "flipkart_clearance_master_feed": {
+                "url": "https://www.flipkart.com/search?q=clearance sale",
+                "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+                "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+                "link_selector": "a",
+                "image_selector": "img"
+            },
+            "myntra_deals": {
+                "url": "https://www.myntra.com/deals?f=discount%3A50.0",
+                "card_selector": "li.product-base",
+                "title_selector": "h4.product-product, h3.product-brand",
+                "link_selector": "a",
+                "image_selector": "img.product-thumb"
+            },
+            "ajio_deals": {
+                "url": "https://www.ajio.com/s/discount-50-percent-and-above",
+                "card_selector": "div.item",
+                "title_selector": "div.name",
+                "link_selector": "a",
+                "image_selector": "img.rilrtl-lazy-img"
+            },
+            "meesho_deals": {
+                "url": "https://www.meesho.com/search?q=offers",
+                "card_selector": "div[class*='ProductCard']",
+                "title_selector": "p[class*='ProductTitle']",
+                "link_selector": "a",
+                "image_selector": "img"
+            },
+            "tatacliq_deals": {
+                "url": "https://www.tatacliq.com/deals",
+                "card_selector": "div[class*='ProductCard']",
+                "title_selector": "h3[class*='ProductCard']",
+                "link_selector": "a",
+                "image_selector": "img"
+            },
+            "jiomart_deals": {
+                "url": "https://www.jiomart.com/c/deals",
+                "card_selector": "div.plp-card-container",
+                "title_selector": "div.plp-card-name",
+                "link_selector": "a",
+                "image_selector": "img"
             }
-            for plat_key, config in default_matrix.items():
+        }
+        for plat_key, config in default_matrix.items():
+            existing = db.query(SelectorMatrix).filter_by(platform=plat_key).first()
+            if not existing:
                 matrix = SelectorMatrix(
                     platform=plat_key,
                     url=config.get("url", ""),
@@ -109,8 +150,8 @@ def initialize_database_selectors():
                     image_selector=config.get("image_selector", "")
                 )
                 db.add(matrix)
-            db.commit()
-            logging.info("Default scrapers selector matrix bootstrapped in database.")
+        db.commit()
+        logging.info("Default scrapers selector matrix bootstrapped/updated in database.")
     except Exception as e:
         db.rollback()
         logging.error(f"Failed to bootstrap selector matrix in DB: {e}")
@@ -688,7 +729,7 @@ def start_api_server(port=5555):
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
     
-    server = HTTPServer(('127.0.0.1', port), ScraperAPIHandler)
+    server = ThreadingHTTPServer(('127.0.0.1', port), ScraperAPIHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     logging.info(f"Dashboard REST API engine running at http://127.0.0.1:{port}/")
