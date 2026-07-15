@@ -1,0 +1,52 @@
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# Environment Variables
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Python cache
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# ==========================================
+# Project Loot Raiders
+# ==========================================
+
+# Runtime generated files
+execution.log
+
+# Uncomment these if they are automatically generated
+# deals_history.json
+# omega_history.json
+# clicks_activity.json
+# clicks_tracker.json
