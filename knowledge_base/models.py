@@ -51,3 +51,13 @@ class SelectorMatrix(Base):
     title_selector = Column(String)
     link_selector = Column(String)
     image_selector = Column(String)
+
+class AlertSubscription(Base):
+    __tablename__ = 'alert_subscriptions'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_chat_id = Column(String, index=True)
+    product_id = Column(String, index=True)
+    platform = Column(String)
+    target_price = Column(Integer)
+    timestamp = Column(Float, default=time.time)

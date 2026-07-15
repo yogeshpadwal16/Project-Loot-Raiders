@@ -19,6 +19,7 @@ from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatri
 from config.settings import load_settings, save_settings
 from deal_engine.scorer import calculate_deal_score, should_publish_deal
 from deal_engine.notifier import start_notifier, enqueue_alert
+from deal_engine.bot_listener import start_telegram_bot_listener
 
 # Retailer Scraper Plugins
 from plugins.amazon import AmazonRetailerPlugin
@@ -740,7 +741,7 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Dispatch notifications if score is above the configured threshold
             if should_publish_deal(platform, deal_score):
-                enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
                 time.sleep(0.5)
                 
     except Exception as out_err:
@@ -800,6 +801,9 @@ def main():
     
     # 2. Start Asynchronous Notification Queue Thread
     start_notifier()
+    
+    # 3. Start Asynchronous Telegram Bot Updates Listener
+    start_telegram_bot_listener()
     
     single_run = "--single-run" in sys.argv or os.environ.get('GITHUB_ACTIONS') == 'true'
     
