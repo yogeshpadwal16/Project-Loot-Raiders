@@ -14,6 +14,13 @@ import threading
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+# Gracefully load environment variables if python-dotenv is installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ==========================================
 # ROOT SYSTEM MATRIX PATHING
 # ==========================================
@@ -27,11 +34,14 @@ CLICKS_TRACKER_FILE = os.path.join(BASE_DIR, "clicks_tracker.json")
 CLICKS_LOG_FILE = os.path.join(BASE_DIR, "clicks_activity.json")
 
 # 🚨 CONFIGURATION CONTROL INTERFACE
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "@LootRaidersDeals"
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "@LootRaidersDeals")
 
-AMAZON_TAG = "lootraiders-21"
-FLIPKART_AFFID = "YOUR_FLIPKART_AFFILIATE_ID"
+AMAZON_TAG = os.environ.get("AMAZON_TAG", "lootraiders-21")
+FLIPKART_AFFID = os.environ.get("FLIPKART_AFFID", "YOUR_FLIPKART_AFFILIATE_ID")
+
+DASHBOARD_USERNAME = os.environ.get("DASHBOARD_USERNAME", "yogeshpadwal16")
+DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "YOUR_DASHBOARD_PASSWORD")
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -55,6 +65,34 @@ scraper_state = {
     "uptime_start": time.time(), # Start timestamp
     "scan_trigger": False        # External trigger for manual scan
 }
+
+# Thread lock for safe JSON file reads and writes
+file_lock = threading.Lock()
+
+def read_json_file(filepath: str, default_val=None):
+    if default_val is None:
+        default_val = {}
+    if not os.path.exists(filepath):
+        return default_val
+    with file_lock:
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logging.error(f"Failed to read JSON from {filepath}: {e}")
+            return default_val
+
+def write_json_file(filepath: str, data):
+    with file_lock:
+        try:
+            temp_filepath = filepath + ".tmp"
+            with open(temp_filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_filepath, filepath)
+        except Exception as e:
+            logging.error(f"Failed to write JSON to {filepath}: {e}")
 
 def initialize_selectors_json():
     # Only create if the file doesn't exist, to preserve user customizations
@@ -91,53 +129,22 @@ def initialize_selectors_json():
             "image_selector": "img"
         }
     }
-    with open(SELECTOR_FILE, 'w', encoding='utf-8') as f:
-        json.dump(default_matrix, f, indent=4)
+    write_json_file(SELECTOR_FILE, default_matrix)
 
 def load_history() -> dict:
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, "r", encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {}
+    return read_json_file(HISTORY_FILE, default_val={})
 
 def save_and_flush_history(history: dict, unique_id: str):
     history[unique_id] = time.time()
-    try:
-        fd = os.open(HISTORY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-        with os.fdopen(fd, 'w', encoding='utf-8') as f:
-            json.dump(history, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-    except Exception as e:
-        logging.error(f"State Flash Failure: {e}")
+    write_json_file(HISTORY_FILE, history)
 
 def increment_click_count(deal_id: str):
-    stats = {}
-    if os.path.exists(CLICKS_TRACKER_FILE):
-        try:
-            with open(CLICKS_TRACKER_FILE, 'r', encoding='utf-8') as f:
-                stats = json.load(f)
-        except:
-            pass
+    stats = read_json_file(CLICKS_TRACKER_FILE, default_val={})
     stats[deal_id] = stats.get(deal_id, 0) + 1
-    try:
-        with open(CLICKS_TRACKER_FILE, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2)
-    except Exception as e:
-        logging.error(f"Failed to save click stats: {e}")
+    write_json_file(CLICKS_TRACKER_FILE, stats)
 
 def log_click_activity(deal_id: str, title: str, ip: str, user: str, user_agent: str):
-    activity = []
-    if os.path.exists(CLICKS_LOG_FILE):
-        try:
-            with open(CLICKS_LOG_FILE, 'r', encoding='utf-8') as f:
-                activity = json.load(f)
-        except:
-            pass
-            
+    activity = read_json_file(CLICKS_LOG_FILE, default_val=[])
     new_entry = {
         "deal_id": deal_id,
         "title": title,
@@ -146,25 +153,13 @@ def log_click_activity(deal_id: str, title: str, ip: str, user: str, user_agent:
         "user_agent": user_agent,
         "timestamp": time.time()
     }
-    
     activity.insert(0, new_entry)
     activity = activity[:50] # keep last 50 entries
-    
-    try:
-        with open(CLICKS_LOG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(activity, f, indent=2)
-    except Exception as e:
-        logging.error(f"Failed to save click activity: {e}")
+    write_json_file(CLICKS_LOG_FILE, activity)
 
 def save_deal_to_rich_history(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str):
-    deals = []
-    if os.path.exists(DEALS_HISTORY_FILE):
-        try:
-            with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                deals = json.load(f)
-        except:
-            pass
-            
+    deals = read_json_file(DEALS_HISTORY_FILE, default_val=[])
+    
     # Remove any existing deal with the same ID to prevent duplicates
     deals = [d for d in deals if d.get("id") != unique_id]
             
@@ -184,12 +179,7 @@ def save_deal_to_rich_history(platform: str, title: str, price: int, mrp: int, d
     # Prepend new deals, limit to last 100 entries
     deals.insert(0, new_deal)
     deals = deals[:100]
-    
-    try:
-        with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(deals, f, indent=2)
-    except Exception as e:
-        logging.error(f"Rich History Flash Failure: {e}")
+    write_json_file(DEALS_HISTORY_FILE, deals)
 
 def extract_amazon_asin(url: str) -> str:
     match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
@@ -237,29 +227,56 @@ def verify_historical_low(driver, product_url: str, current_price: int) -> bool:
         
         driver.execute_script("window.open('');")
         driver.switch_to.window(driver.window_handles[1])
-        driver.set_page_load_timeout(5)
+        driver.set_page_load_timeout(10)
+        
+        historical_prices = []
         try:
             driver.get(tracker_query_url)
-            time.sleep(1.5)
-            page_text = driver.find_element(By.TAG_NAME, "body").text.replace(',', '')
-            historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|₹)\s*([0-9]+)', page_text)]
-        except:
-            historical_prices = []
             
-        driver.close()
-        driver.switch_to.window(driver.window_handles[0])
+            # Dynamic polling to support fast loading and early-exit on 404 pages
+            start_time = time.time()
+            while time.time() - start_time < 5.0:
+                try:
+                    page_text = driver.find_element(By.TAG_NAME, "body").text
+                    clean_text = page_text.replace(',', '')
+                    
+                    # Early termination if BuyHatke displays a 404 or product not found
+                    if "404" in clean_text or "can't find that page" in clean_text.lower() or "uh-oh!" in clean_text.lower():
+                        break
+                    
+                    # Parse prices
+                    prices = [int(n) for n in re.findall(r'(?:Rs\.?|₹)\s*([0-9]+)', clean_text)]
+                    if prices:
+                        historical_prices = prices
+                        break
+                except Exception:
+                    pass
+                time.sleep(0.3)
+        except Exception as e:
+            logging.error(f"Error fetching BuyHatke page: {e}")
+            
+        try:
+            driver.close()
+        except Exception:
+            pass
+            
+        try:
+            driver.switch_to.window(driver.window_handles[0])
+        except Exception:
+            pass
         
         if historical_prices:
             lowest_ever = min(historical_prices)
             if current_price <= (lowest_ever * 1.05):
                 return True
         return False
-    except:
+    except Exception as e:
+        logging.error(f"Failed historical price check: {e}")
         try:
             if len(driver.window_handles) > 1:
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
-        except:
+        except Exception:
             pass
         return False
 
@@ -267,7 +284,7 @@ def verify_historical_low(driver, product_url: str, current_price: int) -> bool:
 # INTELLIGENT DISPATCH HUB
 # ==========================================
 def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool):
-    if "YOUR_TELEGRAM" in TELEGRAM_BOT_TOKEN:
+    if "YOUR_TELEGRAM" in TELEGRAM_BOT_TOKEN or not TELEGRAM_BOT_TOKEN:
         logging.warning("Skipping Broadcast: Secret Token parameters remain default.")
         return False
 
@@ -301,7 +318,7 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
             payload_fallback = {"chat_id": TELEGRAM_CHAT_ID, "text": caption, "parse_mode": "Markdown"}
             res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
             return res_fb.status_code == 200
-         except:
+         except Exception:
             return False
 
     try:
@@ -311,7 +328,7 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
         if res.status_code == 200:
             logging.info(f"Telegram Broadcast Success -> {truncated_title[:20]}...")
             return True
-    except:
+    except Exception:
         pass
 
     try:
@@ -319,7 +336,7 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
         payload_fallback = {"chat_id": TELEGRAM_CHAT_ID, "text": caption, "parse_mode": "Markdown"}
         res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
         return res_fb.status_code == 200
-    except:
+    except Exception:
         return False
 
 def init_driver() -> webdriver.Chrome:
@@ -388,33 +405,16 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            if os.path.exists(SELECTOR_FILE):
-                with open(SELECTOR_FILE, 'r', encoding='utf-8') as f:
-                    self.wfile.write(f.read().encode('utf-8'))
-            else:
-                self.wfile.write(b"{}")
+            selectors = read_json_file(SELECTOR_FILE, default_val={})
+            self.wfile.write(json.dumps(selectors).encode('utf-8'))
                 
         elif self.path == '/api/deals':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             
-            deals = []
-            if os.path.exists(DEALS_HISTORY_FILE):
-                try:
-                    with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                        deals = json.load(f)
-                except:
-                    pass
-            
-            # Merge click counts
-            clicks = {}
-            if os.path.exists(CLICKS_TRACKER_FILE):
-                try:
-                    with open(CLICKS_TRACKER_FILE, 'r', encoding='utf-8') as f:
-                        clicks = json.load(f)
-                except:
-                    pass
+            deals = read_json_file(DEALS_HISTORY_FILE, default_val=[])
+            clicks = read_json_file(CLICKS_TRACKER_FILE, default_val={})
             
             for d in deals:
                 d["clicks"] = clicks.get(d.get("id"), 0)
@@ -432,16 +432,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             
             # Identify title
             title = "Unknown Product"
-            if deal_id and os.path.exists(DEALS_HISTORY_FILE):
-                try:
-                    with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                        deals = json.load(f)
-                        for d in deals:
-                            if d.get("id") == deal_id:
-                                title = d.get("title", "Unknown Product")
-                                break
-                except:
-                    pass
+            if deal_id:
+                deals = read_json_file(DEALS_HISTORY_FILE, default_val=[])
+                for d in deals:
+                    if d.get("id") == deal_id:
+                        title = d.get("title", "Unknown Product")
+                        break
             
             if deal_id:
                 increment_click_count(deal_id)
@@ -464,13 +460,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            activity = []
-            if os.path.exists(CLICKS_LOG_FILE):
-                try:
-                    with open(CLICKS_LOG_FILE, 'r', encoding='utf-8') as f:
-                        activity = json.load(f)
-                except:
-                    pass
+            activity = read_json_file(CLICKS_LOG_FILE, default_val=[])
             self.wfile.write(json.dumps(activity).encode('utf-8'))
                 
         elif self.path == '/api/logs':
@@ -499,8 +489,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         if parsed_path == '/api/selectors':
             try:
                 data = json.loads(post_data.decode('utf-8'))
-                with open(SELECTOR_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=4)
+                write_json_file(SELECTOR_FILE, data)
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
@@ -531,7 +520,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 password = str(data.get('password', '')).strip()
                 logger.info(f"Auth attempt: username='{username}'")
                 
-                if username == 'yogeshpadwal16' and password == 'YOUR_DASHBOARD_PASSWORD':
+                if username == DASHBOARD_USERNAME.lower() and password == DASHBOARD_PASSWORD:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
@@ -562,20 +551,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "Missing deal ID"}).encode('utf-8'))
                     return
                 
-                deals = []
-                if os.path.exists(DEALS_HISTORY_FILE):
-                    try:
-                        with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                            deals = json.load(f)
-                    except Exception as e:
-                        logger.error(f"Error reading deals history: {e}")
-                
+                deals = read_json_file(DEALS_HISTORY_FILE, default_val=[])
                 original_len = len(deals)
                 deals = [d for d in deals if d.get("id") != deal_id]
                 
                 try:
-                    with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(deals, f, indent=2)
+                    write_json_file(DEALS_HISTORY_FILE, deals)
                 except Exception as e:
                     logger.error(f"Error saving deals history after deletion: {e}")
                     self.send_response(500)
@@ -658,8 +639,7 @@ def main():
 
             # Core scanning logic wrapped inside try block for selenium crash recovery
             try:
-                with open(SELECTOR_FILE, 'r', encoding='utf-8') as f:
-                    matrix = json.load(f)
+                matrix = read_json_file(SELECTOR_FILE, default_val={})
                 
                 history = load_history()
                 current_time = time.time()
@@ -734,7 +714,7 @@ def main():
                                         raw_title = title_el.get_attribute("textContent").strip()
                                     if raw_title:
                                         title = re.sub(r'\s+', ' ', raw_title)
-                                except:
+                                except Exception:
                                     pass
                                     
                                 # If title is still empty, or if it is truncated (ends with ellipsis), check other links inside the card
@@ -745,7 +725,7 @@ def main():
                                             if t_attr and len(t_attr) > len(title) and not (t_attr.endswith("...") or t_attr.endswith("")):
                                                 title = re.sub(r'\s+', ' ', t_attr).strip()
                                                 break
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                 if not title:
@@ -760,7 +740,7 @@ def main():
                                                 and not any(b in seg.lower() for b in blacklist)):
                                                 title = seg
                                                 break
-                                    except:
+                                    except Exception:
                                         pass
                                     
                                 if not title or len(title) < 5: continue
@@ -778,7 +758,7 @@ def main():
                                         if val and "http" in val and "base64" not in val:
                                             img_url = val
                                             break
-                                except:
+                                except Exception:
                                     pass
                                 
                                 if not img_url:
@@ -789,7 +769,7 @@ def main():
                                             if val and "http" in val and "base64" not in val:
                                                 img_url = val
                                                 break
-                                    except:
+                                    except Exception:
                                         pass
                                 
                                 price, mrp, true_discount = calculate_true_discount(card.text)
@@ -803,7 +783,7 @@ def main():
                                         save_deal_to_rich_history(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
                                         time.sleep(1)
                                         
-                            except Exception as inner_err:
+                            except Exception:
                                 continue
                     except Exception as out_err:
                         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
@@ -816,7 +796,7 @@ def main():
             except webdriver.exceptions.WebDriverException as wde:
                 logging.error(f"WebDriver crash recognized: {wde}. Terminating session for auto-recreation.")
                 try: driver.quit()
-                except: pass
+                except Exception: pass
                 driver = None
                 
             if single_run:
@@ -836,4 +816,4 @@ def main():
             driver.quit()
 
 if __name__ == "__main__":
-    main()
+    main()
