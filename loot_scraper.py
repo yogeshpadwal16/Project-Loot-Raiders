@@ -226,10 +226,6 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         finally:
             db.close()
             
-    # Fallback 2: If it's a new item, mark as verified low if discount is substantial (>= 60%)
-    if discount >= 60.0:
-        return True
-        
     return False
 
 

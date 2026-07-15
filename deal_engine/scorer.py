@@ -79,6 +79,13 @@ def calculate_deal_score(
             db.close()
             
     final_score += feedback_bonus
+    
+    # 7. Shield Against Fake Quoted Discounts / Fake MRPs
+    # If the price drop is not historically verified, cap the score below the publish threshold
+    if not is_verified_low:
+        min_publish = rules.get("min_publish_score", 70.0)
+        final_score = min(min_publish - 2.0, final_score)
+        
     final_score = max(0.0, min(100.0, final_score))
     
     logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
