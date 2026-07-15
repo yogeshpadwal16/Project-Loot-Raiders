@@ -1,5 +1,7 @@
 import logging
 from config.settings import load_settings
+from database.db_session import SessionLocal
+from knowledge_base.models import ClickLog
 
 def calculate_deal_score(
     platform: str, 
@@ -7,10 +9,12 @@ def calculate_deal_score(
     mrp: int, 
     discount: float, 
     is_verified_low: bool,
-    is_lightning: bool = False
+    is_lightning: bool = False,
+    product_id: str = None
 ) -> float:
     """
-    Calculates a normalized score (0 to 100) for a deal based on settings.json weights.
+    Calculates a normalized score (0 to 100) for a deal based on settings.json weights
+    and real-time click feedback loops.
     """
     settings = load_settings()
     rules = settings.get("scoring_rules", {})
@@ -61,8 +65,23 @@ def calculate_deal_score(
         (s_trust * weights.get("trust", 0.10))
     )
     
+    # 6. Real-time Feedback Popularity Bonus (s_feedback)
+    # Add +2 points for every 10 clicks, capped at +15 points max boost
+    feedback_bonus = 0.0
+    if product_id:
+        db = SessionLocal()
+        try:
+            click_count = db.query(ClickLog).filter_by(product_id=product_id).count()
+            feedback_bonus = min(15.0, (click_count // 10) * 2.0)
+        except Exception as db_err:
+            logging.error(f"Failed to query click logs for score feedback: {db_err}")
+        finally:
+            db.close()
+            
+    final_score += feedback_bonus
     final_score = max(0.0, min(100.0, final_score))
-    logging.info(f"Deal Scoring -> [Platform: {platform}] Price: ₹{price}, Discount: {discount:.1f}%, VerifiedLow: {is_verified_low} -> Final Score: {final_score:.1f}")
+    
+    logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
     return final_score
 
 def should_publish_deal(platform: str, score: float) -> bool:

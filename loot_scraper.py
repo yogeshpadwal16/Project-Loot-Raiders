@@ -518,6 +518,24 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     )
                     db.add(click)
                     db.commit()
+                    
+                    # Recalculate and update the deal_score of this product to reflect the click popularity boost
+                    latest_price = db.query(PriceHistory).filter_by(product_id=deal_id).order_by(PriceHistory.timestamp.desc()).first()
+                    if latest_price:
+                        new_score = calculate_deal_score(
+                            platform=product.platform if product else "amazon",
+                            price=latest_price.price,
+                            mrp=latest_price.mrp,
+                            discount=latest_price.discount,
+                            is_verified_low=latest_price.is_verified_low,
+                            is_lightning=("lightning" in product.platform.lower() if product else False),
+                            product_id=deal_id
+                        )
+                        latest_price.deal_score = new_score
+                        db.commit()
+                        
+                        # Sync static JSONs to keep dashboard UI elements in sync
+                        sync_database_to_json()
                 except Exception as e:
                     db.rollback()
                     logging.error(f"Redirect logging error: {e}")
