@@ -136,7 +136,11 @@ function applyFiltersAndRender() {
     } else if (platformFilter === 'flipkart') {
         filtered = filtered.filter(deal => (deal.platform || '').toLowerCase().includes('flipkart'));
     } else if (platformFilter === 'verified_low') {
-        filtered = filtered.filter(deal => deal.is_verified_low);
+        filtered = filtered.filter(deal => 
+            deal.is_verified_low === true || 
+            deal.is_verified_low === 1 || 
+            String(deal.is_verified_low).toLowerCase() === 'true'
+        );
     }
     
     // 3. Sorting
