@@ -1,0 +1,30 @@
+{
+    "amazon_master_lightning_deals": {
+        "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
+        "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
+        "title_selector": "span.a-truncate-full, .a-truncate-full",
+        "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
+        "image_selector": "img[class*='ProductCardImage-module__image'], img"
+    },
+    "amazon_sitewide_search_deals": {
+        "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
+        "card_selector": "div[data-component-type='s-search-result']",
+        "title_selector": "h2 a span",
+        "link_selector": "a.a-link-normal",
+        "image_selector": "img.s-image"
+    },
+    "flipkart_sitewide_offers": {
+        "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
+        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+        "title_selector": "div.KzDlHZ, a.IRpwTa, a.wjcEwN, a",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "flipkart_clearance_master_feed": {
+        "url": "https://www.flipkart.com/search?q=clearance+sale",
+        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+        "title_selector": "div.KzDlHZ, a.IRpwTa, a.wjcEwN, a",
+        "link_selector": "a",
+        "image_selector": "img"
+    }
+}

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loot Raiders Control Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="file-protocol-warning" class="protocol-warning-banner" style="display: none;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span><strong>Security Alert:</strong> Browser policies block data loading when opening the file directly. Please use the server URL: <a href="http://127.0.0.1:5555/" target="_blank"><strong>http://127.0.0.1:5555/</strong></a></span>
+    </div>
+
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="main-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-circle-nodes pulse-icon"></i>
+                <div class="title-meta">
+                    <h1>Loot Raiders</h1>
+                    <span class="sub-title">Automated Deal Matrix Engine</span>
+                </div>
+            </div>
+            
+            <div class="system-status-indicator">
+                <div class="status-badge" id="status-badge">
+                    <span class="status-dot"></span>
+                    <span class="status-text">INITIALIZING</span>
+                </div>
+                <div class="header-actions">
+                    <div class="user-identity-box">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="user-identity-input" placeholder="Enter Operator Name/ID" title="Your Operator Identity Name">
+                    </div>
+                    <button class="btn-logout" id="logout-btn" title="Sign Out Administrator">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                    <button class="btn-theme-toggle" id="theme-toggle-btn" title="Toggle Light/Dark Mode">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="toggle-btn" title="Pause / Resume Scanner">
+                        <i class="fa-solid fa-pause"></i> <span>Pause Scan</span>
+                    </button>
+                    <button class="btn btn-primary" id="scan-btn" title="Force Manual Scan Now">
+                        <i class="fa-solid fa-rotate"></i> <span>Trigger Scan</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- STATS GRID -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon orange-icon"><i class="fa-solid fa-server"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Scraper State</span>
+                    <span class="stat-value" id="stat-state">-</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue-icon"><i class="fa-solid fa-arrows-spin"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Completed Scans</span>
+                    <span class="stat-value" id="stat-scans">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green-icon"><i class="fa-solid fa-bullhorn"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Deals Broadcasted</span>
+                    <span class="stat-value" id="stat-broadcasted">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple-icon"><i class="fa-solid fa-clock"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Engine Uptime</span>
+                    <span class="stat-value" id="stat-uptime">00:00:00</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN LAYOUT -->
+        <main class="main-layout">
+            
+            <!-- LEFT WORKSPACE: DEALS STREAM -->
+            <section class="deals-section">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-bolt text-gold"></i> Live Broadcast Feed</h2>
+                    <span class="badge" id="deals-count">0 Deals</span>
+                </div>
+
+                <!-- Live Search, Filtering and Sorting Panel -->
+                <div class="feed-controls">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="feed-search" placeholder="Search deals...">
+                    </div>
+                    <div class="filter-selects">
+                        <select id="feed-filter-platform" title="Filter by Platform">
+                            <option value="all">All Platforms</option>
+                            <option value="amazon">Amazon Only</option>
+                            <option value="flipkart">Flipkart Only</option>
+                            <option value="verified_low">All-Time Lows</option>
+                        </select>
+                        <select id="feed-sort" title="Sort Feed">
+                            <option value="newest">Newest First</option>
+                            <option value="discount">Highest Discount</option>
+                            <option value="price_asc">Price: Low to High</option>
+                            <option value="price_desc">Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="deals-container" id="deals-container">
+                    <!-- Loading State -->
+                    <div class="loading-state">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <p>Syncing broadcast matrix...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT WORKSPACE: LIVE LOGS & SELECTOR CONFIG -->
+            <section class="control-section">
+                
+                <!-- LIVE CONSOLE TERMINAL -->
+                <div class="console-card">
+                    <div class="console-header">
+                        <h3><i class="fa-solid fa-terminal text-green"></i> Live Engine Logs</h3>
+                        <div class="terminal-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                    </div>
+                    <div class="console-body" id="console-logs">
+                        <div class="log-line system-line">[System]: Listening on websocket buffer...</div>
+                    </div>
+                </div>
+
+                <!-- LINK CLICK ANALYTICS -->
+                <div class="console-card clicks-card">
+                    <div class="console-header">
+                        <h3><i class="fa-solid fa-chart-line text-pink"></i> Link Click Analytics</h3>
+                        <span class="badge" id="clicks-total-badge">0 Clicks</span>
+                    </div>
+                    <div class="clicks-summary">
+                        <div class="clicks-summary-item">
+                            <span class="summary-label">Top Clicked Deal:</span>
+                            <span class="summary-val" id="top-clicked-deal" title="None">None</span>
+                        </div>
+                    </div>
+                    <div class="clicks-log" id="clicks-log-container">
+                        <div class="log-line system-line">Waiting for link click activity...</div>
+                    </div>
+                </div>
+
+                <!-- SELECTOR MANAGER -->
+                <div class="selector-card">
+                    <div class="selector-header">
+                        <h3><i class="fa-solid fa-gears text-blue"></i> Feed Selector Matrix</h3>
+                        <button class="btn btn-sm btn-success" id="save-selectors-btn">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Matrix
+                        </button>
+                    </div>
+                    <div class="selector-body">
+                        <div class="platform-tabs">
+                            <button class="tab-btn active" data-platform="amazon_lightning">Amazon Lightning</button>
+                            <button class="tab-btn" data-platform="amazon_search">Amazon Search</button>
+                            <button class="tab-btn" data-platform="flipkart_offers">Flipkart Offers</button>
+                            <button class="tab-btn" data-platform="flipkart_clearance">Flipkart Clearance</button>
+                        </div>
+                        
+                        <form id="selector-form" class="selector-form">
+                            <div class="input-group">
+                                <label for="feed-url">Target Stream URL</label>
+                                <input type="url" id="feed-url" required placeholder="https://...">
+                            </div>
+                            <div class="input-group">
+                                <label for="card-sel">Card Element CSS Selector</label>
+                                <input type="text" id="card-sel" required placeholder="div.card">
+                            </div>
+                            <div class="input-group">
+                                <label for="title-sel">Title Element CSS Selector</label>
+                                <input type="text" id="title-sel" required placeholder="h2 a">
+                            </div>
+                            <div class="input-group">
+                                <label for="link-sel">Link Element CSS Selector</label>
+                                <input type="text" id="link-sel" required placeholder="a">
+                            </div>
+                            <div class="input-group">
+                                <label for="image-sel">Image Element CSS Selector</label>
+                                <input type="text" id="image-sel" required placeholder="img">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- AUTH LOGIN OVERLAY -->
+    <div id="login-overlay" class="login-overlay" style="display: none;">
+        <div class="login-card">
+            <div class="login-header">
+                <i class="fa-solid fa-shield-halved login-shield"></i>
+                <h2>Loot Raiders Auth</h2>
+                <p>Enter administrator credentials to unlock the Deal Matrix dashboard</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="login-username"><i class="fa-solid fa-user"></i> Username</label>
+                    <input type="text" id="login-username" required placeholder="Enter username">
+                </div>
+                <div class="input-group">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <input type="password" id="login-password" required placeholder="Enter password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-login">
+                    <span>AUTHENTICATE</span> <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+                <div id="login-error" class="login-error-msg" style="display: none;">
+                    <i class="fa-solid fa-circle-exclamation"></i> Invalid administrator credentials.
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>

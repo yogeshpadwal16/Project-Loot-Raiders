@@ -1,0 +1,45 @@
+name: Automated Deal Matrix Scraper
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # Scrapes every 30 minutes
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write # Allows the action to commit and push changes back to the repo
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium requests
+
+      - name: Run Scraper
+        env:
+          GITHUB_ACTIONS: 'true'
+        run: |
+          python loot_scraper.py --single-run
+
+      - name: Commit and Push Updated Deals
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # Stage the updated files
+          git add dashboard/deals_history.json omega_history.json
+          
+          # Commit and push only if there are modifications
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update deals feed: $(date)" && git push)
