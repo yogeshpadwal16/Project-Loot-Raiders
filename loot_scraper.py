@@ -19,6 +19,15 @@ from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatri
 from config.settings import load_settings, save_settings
 from deal_engine.scorer import calculate_deal_score, should_publish_deal
 
+# Retailer Scraper Plugins
+from plugins.amazon import AmazonRetailerPlugin
+from plugins.flipkart import FlipkartRetailerPlugin
+
+RETAILER_PLUGINS = {
+    "amazon": AmazonRetailerPlugin(),
+    "flipkart": FlipkartRetailerPlugin()
+}
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ==========================================
@@ -197,44 +206,7 @@ def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: st
     finally:
         db.close()
 
-def extract_amazon_asin(url: str) -> str:
-    match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
-    return match.group(1) if match else None
 
-def extract_flipkart_pid(url: str) -> str:
-    parsed = urllib.parse.urlparse(url)
-    params = urllib.parse.parse_qs(parsed.query)
-    if 'pid' in params:
-        return params['pid'][0]
-    match = re.search(r'pid=([a-zA-Z0-9]{16})', url)
-    if match: return match.group(1)
-    match_path = re.search(r'/p/([a-zA-Z0-9]{16})', url)
-    if match_path: return match_path.group(1)
-    return None
-
-def calculate_true_discount(text_content: str):
-    # Pre-strip percentage discounts (e.g. "50% off", "82%") so they don't concatenate with price numbers
-    clean_text = re.sub(r'[0-9]{1,2}\s*%\s*(?:off)?', ' ', text_content, flags=re.IGNORECASE)
-    
-    clean_text = clean_text.replace(',', '').replace('\n', ' ')
-    clean_text = re.sub(r'(?:₹|Rs\.?)\s*[0-9]+\s*/\s*[a-zA-Z]+', '', clean_text)
-    clean_text = re.sub(r'\(\s*(?:₹|Rs\.?)\s*[0-9]+\s*[^)]*\)', '', clean_text)
-
-    numbers = [int(n) for n in re.findall(r'(?:₹|Rs\.?)\s*([0-9]+)', clean_text)]
-    if len(numbers) < 2:
-        numbers = [int(n) for n in re.findall(r'\b[0-9]{2,7}\b', clean_text) if int(n) > 49]
-
-    if len(numbers) < 2:
-        return None, None, None
-        
-    selling_price = numbers[0]
-    mrp = max(numbers)
-    
-    if mrp == 0 or selling_price >= mrp:
-        return None, None, None
-        
-    true_discount = ((mrp - selling_price) / mrp) * 100
-    return selling_price, mrp, true_discount
 
 def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
     historical_prices = []
@@ -766,152 +738,61 @@ def scrape_platform(platform: str, config: dict, history: set):
     logging.info(f"Scanning target feed stream: {platform.upper()} (Multi-threaded)")
     driver = None
     
+    # 1. Resolve matched plugin for platform
+    plugin = None
+    for key, instance in RETAILER_PLUGINS.items():
+        if key in platform.lower():
+            plugin = instance
+            break
+            
+    if not plugin:
+        logging.warning(f"No suitable retailer plugin registered for platform: {platform}")
+        return
+        
     settings = load_settings()
-    amazon_tag = settings.get("amazon_tag", "lootraiders-21")
-    flipkart_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID")
     
     try:
         driver = init_driver()
         driver.set_page_load_timeout(30)
-        driver.get(config['url'])
-        time.sleep(4)
         
-        # 1. Human-Simulated Scroll Matrix to load images completely
-        for scroll in range(1, 6):
-            driver.execute_script(f"window.scrollTo(0, {scroll * 500});")
-            time.sleep(1.5) 
+        # 2. Delegate extraction to plugin
+        extracted_deals = plugin.extract_deals(driver, config, settings)
+        logging.info(f"Plugin [{plugin.retailer_id}] extracted {len(extracted_deals)} deal candidates for platform: {platform}")
         
-        cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
-        logging.info(f"Targeting matrix: Found {len(cards)} node objects inside {platform}")
-        
-        for card in cards:
+        # 3. Process extracted deal candidates
+        for deal in extracted_deals:
             if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
                 logging.info(f"Scraper execution halted by user request on stream {platform}.")
                 break
                 
-            try:
-                links = card.find_elements(By.TAG_NAME, "a")
-                raw_url = None
-                
-                for l in links:
-                    href = l.get_attribute("href")
-                    if href and ("javascript" not in href) and ("/p/" in href or "pid=" in href or "/dp/" in href):
-                        raw_url = href
-                        break
-                        
-                if not raw_url and links:
-                    for l in links:
-                        href = l.get_attribute("href")
-                        if href and ("javascript" not in href):
-                            raw_url = href
-                            break
-                            
-                if not raw_url: continue
-                
-                unique_id = None
-                clean_base_url = ""
-                norm_plat = platform.lower()
-                
-                if "amazon" in norm_plat:
-                    unique_id = extract_amazon_asin(raw_url)
-                    if unique_id:
-                        clean_base_url = f"https://www.amazon.in/dp/{unique_id}"
-                        final_url = f"{clean_base_url}?tag={amazon_tag}"
-                elif "flipkart" in norm_plat:
-                    unique_id = extract_flipkart_pid(raw_url)
-                    if not unique_id:
-                        unique_id = str(hash(card.text[:40]))
-                    clean_base_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}"
-                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={flipkart_affid}"
-                
-                if not unique_id:
-                    continue
-                    
-                if unique_id in history:
-                    continue
-                
-                title = ""
-                try:
-                    title_el = card.find_element(By.CSS_SELECTOR, config['title_selector'])
-                    raw_title = title_el.get_attribute("title")
-                    if not raw_title:
-                        raw_title = title_el.get_attribute("textContent").strip()
-                    if raw_title:
-                        title = re.sub(r'\s+', ' ', raw_title)
-                except:
-                    pass
-                    
-                if not title or title.endswith("...") or title.endswith(""):
-                    try:
-                        for a_el in card.find_elements(By.TAG_NAME, "a"):
-                            t_attr = a_el.get_attribute("title")
-                            if t_attr and len(t_attr) > len(title) and not (t_attr.endswith("...") or t_attr.endswith("")):
-                                title = re.sub(r'\s+', ' ', t_attr).strip()
-                                break
-                    except:
-                        pass
-                    
-                if not title:
-                    try:
-                        blacklist = ["limited time deal", "deal of the day", "lowest price", "super deals", "bank offer", "only few left", "mobiles & accessories", "showing 1 -", "other colors/patterns", "colors/patterns", "other colors"]
-                        for text_segment in card.text.split("\n"):
-                            seg = text_segment.strip()
-                            if (len(seg) > 15 
-                                and not seg.startswith("₹") 
-                                and "OFF" not in seg 
-                                and "%" not in seg
-                                and not any(b in seg.lower() for b in blacklist)):
-                                title = seg
-                                break
-                    except:
-                        pass
-                    
-                if not title or len(title) < 5: continue
-                
-                if any(h in title.lower() for h in ["showing 1 -", "results for", "showing 1–", "showing 1-"]):
-                    continue
-                
-                img_url = None
-                try:
-                    img_element = card.find_element(By.CSS_SELECTOR, config['image_selector'])
-                    for attr in ["src", "data-src", "srcset", "original"]:
-                        val = img_element.get_attribute(attr)
-                        if val and "http" in val and "base64" not in val:
-                            img_url = val
-                            break
-                except:
-                    pass
-                
-                if not img_url:
-                    try:
-                        img_element = card.find_element(By.TAG_NAME, "img")
-                        for attr in ["src", "data-src", "srcset", "original"]:
-                            val = img_element.get_attribute(attr)
-                            if val and "http" in val and "base64" not in val:
-                                img_url = val
-                                break
-                    except:
-                        pass
-                
-                price, mrp, true_discount = calculate_true_discount(card.text)
-                
-                if price and mrp and (30.0 <= true_discount <= 98.0):
-                    is_verified_low = verify_historical_low(driver, clean_base_url, price, unique_id, true_discount)
-                    
-                    # Calculate Deal score using our intelligence scorer
-                    deal_score = calculate_deal_score(platform, price, mrp, true_discount, is_verified_low)
-                    
-                    # Always save to the Knowledge Base (SQLite) to construct historical intelligence
-                    save_deal_to_db(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id, deal_score)
-                    history.add(unique_id)
-                    
-                    # Check if the score is sufficient for public dispatch
-                    if should_publish_deal(platform, deal_score):
-                        dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, deal_score)
-                        time.sleep(1)
-                        
-            except Exception as inner_err:
+            unique_id = deal["id"]
+            if unique_id in history:
                 continue
+                
+            price = deal["price"]
+            mrp = deal["mrp"]
+            discount = deal["discount"]
+            title = deal["title"]
+            img_url = deal["image_url"]
+            final_url = deal["url"]
+            is_lightning = deal["is_lightning"]
+            
+            # Extract base URL to check price tracker history
+            clean_url = final_url.split("?")[0].split("&")[0]
+            is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
+            
+            # Calculate final AI Deal score
+            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning)
+            
+            # Persist inside Knowledge Base database
+            save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
+            history.add(unique_id)
+            
+            # Dispatch notifications if score is above the configured threshold
+            if should_publish_deal(platform, deal_score):
+                dispatch_rich_media_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                time.sleep(1)
+                
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
     finally:
