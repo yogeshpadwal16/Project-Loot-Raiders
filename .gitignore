@@ -44,9 +44,10 @@ dist/
 
 # Runtime generated files
 execution.log
+*.db
+*.sqlite
+*.sqlite3
 
-# Uncomment these if they are automatically generated
-# deals_history.json
-# omega_history.json
-# clicks_activity.json
-# clicks_tracker.json
+# Clicks tracking temporary outputs
+clicks_activity.json
+clicks_tracker.json

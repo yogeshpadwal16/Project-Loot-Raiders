@@ -13,6 +13,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+# Core database and configurations imports
+from database.db_session import SessionLocal, init_db
+from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
+from config.settings import load_settings, save_settings
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ==========================================
@@ -20,19 +25,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
-SELECTOR_FILE = os.path.join(BASE_DIR, "selectors.json")
-HISTORY_FILE = os.path.join(BASE_DIR, "omega_history.json")
-DEALS_HISTORY_FILE = os.path.join(DASHBOARD_DIR, "deals_history.json")
 LOG_FILE = os.path.join(BASE_DIR, "execution.log")
-CLICKS_TRACKER_FILE = os.path.join(BASE_DIR, "clicks_tracker.json")
-CLICKS_LOG_FILE = os.path.join(BASE_DIR, "clicks_activity.json")
-
-# 🚨 CONFIGURATION CONTROL INTERFACE
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-TELEGRAM_CHAT_ID = "@LootRaidersDeals"
-
-AMAZON_TAG = "lootraiders-21"
-FLIPKART_AFFID = "YOUR_FLIPKART_AFFILIATE_ID"
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -43,6 +36,8 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
@@ -57,79 +52,58 @@ scraper_state = {
     "scan_trigger": False        # External trigger for manual scan
 }
 
-def initialize_selectors_json():
-    # Only create if the file doesn't exist, to preserve user customizations
-    if os.path.exists(SELECTOR_FILE):
-        return
-        
-    default_matrix = {
-        "amazon_master_lightning_deals": {
-            "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
-            "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
-            "title_selector": "span.a-truncate-full, .a-truncate-full",
-            "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
-            "image_selector": "img[class*='ProductCardImage-module__image'], img"
-        },
-        "amazon_sitewide_search_deals": {
-            "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
-            "card_selector": "div[data-component-type='s-search-result']",
-            "title_selector": "h2 a span",
-            "link_selector": "a.a-link-normal",
-            "image_selector": "img.s-image"
-        },
-        "flipkart_sitewide_offers": {
-            "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
-            "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-            "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-            "link_selector": "a",
-            "image_selector": "img"
-        },
-        "flipkart_clearance_master_feed": {
-            "url": "https://www.flipkart.com/search?q=clearance+sale",
-            "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-            "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-            "link_selector": "a",
-            "image_selector": "img"
-        }
-    }
-    with open(SELECTOR_FILE, 'w', encoding='utf-8') as f:
-        json.dump(default_matrix, f, indent=4)
-
-# Thread synchronization locks
-history_lock = threading.Lock()
-deals_history_lock = threading.Lock()
-
-SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
-
-def load_settings() -> dict:
-    default_settings = {
-        "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
-        "telegram_chat_id": "@LootRaidersDeals",
-        "amazon_tag": "lootraiders-21",
-        "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
-        "discord_webhook_url": "",
-        "min_discount": 30.0,
-        "proxy_list": [],
-        "proxies_enabled": False
-    }
-    if os.path.exists(SETTINGS_FILE):
-        try:
-            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                saved = json.load(f)
-                for k, v in default_settings.items():
-                    if k not in saved:
-                        saved[k] = v
-                return saved
-        except:
-            pass
-    return default_settings
-
-def save_settings(settings: dict):
+def initialize_database_selectors():
+    db = SessionLocal()
     try:
-        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(settings, f, indent=2)
+        matrices = db.query(SelectorMatrix).all()
+        if not matrices:
+            default_matrix = {
+                "amazon_master_lightning_deals": {
+                    "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
+                    "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
+                    "title_selector": "span.a-truncate-full, .a-truncate-full",
+                    "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
+                    "image_selector": "img[class*='ProductCardImage-module__image'], img"
+                },
+                "amazon_sitewide_search_deals": {
+                    "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
+                    "card_selector": "div[data-component-type='s-search-result']",
+                    "title_selector": "h2 a span",
+                    "link_selector": "a.a-link-normal",
+                    "image_selector": "img.s-image"
+                },
+                "flipkart_sitewide_offers": {
+                    "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
+                    "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+                    "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+                    "link_selector": "a",
+                    "image_selector": "img"
+                },
+                "flipkart_clearance_master_feed": {
+                    "url": "https://www.flipkart.com/search?q=clearance sale",
+                    "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+                    "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+                    "link_selector": "a",
+                    "image_selector": "img"
+                }
+            }
+            for plat_key, config in default_matrix.items():
+                matrix = SelectorMatrix(
+                    platform=plat_key,
+                    url=config.get("url", ""),
+                    card_selector=config.get("card_selector", ""),
+                    title_selector=config.get("title_selector", ""),
+                    link_selector=config.get("link_selector", ""),
+                    image_selector=config.get("image_selector", "")
+                )
+                db.add(matrix)
+            db.commit()
+            logging.info("Default scrapers selector matrix bootstrapped in database.")
     except Exception as e:
-        logging.error(f"Failed to save settings.json: {e}")
+        db.rollback()
+        logging.error(f"Failed to bootstrap selector matrix in DB: {e}")
+    finally:
+        db.close()
 
 def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool) -> bool:
     try:
@@ -165,105 +139,60 @@ def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, dis
         logging.error(f"Discord Webhook broadcast failure: {e}")
     return False
 
-def load_history() -> dict:
-    with history_lock:
-        if os.path.exists(HISTORY_FILE):
-            try:
-                with open(HISTORY_FILE, "r", encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                pass
-        return {}
-
-def save_and_flush_history(history: dict, unique_id: str):
-    with history_lock:
-        history[unique_id] = time.time()
-        try:
-            fd = os.open(HISTORY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
-            with os.fdopen(fd, 'w', encoding='utf-8') as f:
-                json.dump(history, f, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-        except Exception as e:
-            logging.error(f"State Flash Failure: {e}")
-
-def increment_click_count(deal_id: str):
-    stats = {}
-    if os.path.exists(CLICKS_TRACKER_FILE):
-        try:
-            with open(CLICKS_TRACKER_FILE, 'r', encoding='utf-8') as f:
-                stats = json.load(f)
-        except:
-            pass
-    stats[deal_id] = stats.get(deal_id, 0) + 1
+def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str):
+    db = SessionLocal()
     try:
-        with open(CLICKS_TRACKER_FILE, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2)
+        product = db.query(Product).filter_by(id=unique_id).first()
+        if not product:
+            product = Product(
+                id=unique_id,
+                platform=platform,
+                title=title,
+                image_url=img_url,
+                url=final_url
+            )
+            db.add(product)
+            db.flush()
+        else:
+            # Keep details up-to-date
+            product.title = title
+            product.image_url = img_url
+            product.url = final_url
+        
+        price_hist = PriceHistory(
+            product_id=unique_id,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            is_verified_low=is_verified_low,
+            timestamp=time.time()
+        )
+        db.add(price_hist)
+        db.commit()
     except Exception as e:
-        logging.error(f"Failed to save click stats: {e}")
+        db.rollback()
+        logging.error(f"Failed to save deal to database: {e}")
+    finally:
+        db.close()
 
-def log_click_activity(deal_id: str, title: str, ip: str, user: str, user_agent: str):
-    activity = []
-    if os.path.exists(CLICKS_LOG_FILE):
-        try:
-            with open(CLICKS_LOG_FILE, 'r', encoding='utf-8') as f:
-                activity = json.load(f)
-        except:
-            pass
-            
-    new_entry = {
-        "deal_id": deal_id,
-        "title": title,
-        "ip": ip,
-        "user": user,
-        "user_agent": user_agent,
-        "timestamp": time.time()
-    }
-    
-    activity.insert(0, new_entry)
-    activity = activity[:50] # keep last 50 entries
-    
+def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: str):
+    db = SessionLocal()
     try:
-        with open(CLICKS_LOG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(activity, f, indent=2)
+        click = ClickLog(
+            product_id=deal_id,
+            title=title,
+            ip=ip,
+            user=user,
+            user_agent=user_agent,
+            timestamp=time.time()
+        )
+        db.add(click)
+        db.commit()
     except Exception as e:
-        logging.error(f"Failed to save click activity: {e}")
-
-def save_deal_to_rich_history(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str):
-    with deals_history_lock:
-        deals = []
-        if os.path.exists(DEALS_HISTORY_FILE):
-            try:
-                with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                    deals = json.load(f)
-            except:
-                pass
-                
-        # Remove any existing deal with the same ID to prevent duplicates
-        deals = [d for d in deals if d.get("id") != unique_id]
-                
-        new_deal = {
-            "id": unique_id,
-            "platform": platform,
-            "title": title,
-            "price": price,
-            "mrp": mrp,
-            "discount": discount,
-            "image_url": img_url,
-            "url": final_url,
-            "is_verified_low": is_verified_low,
-            "timestamp": time.time()
-        }
-        
-        # Prepend new deals, limit to last 100 entries
-        deals.insert(0, new_deal)
-        deals = deals[:100]
-        
-        try:
-            with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
-                json.dump(deals, f, indent=2)
-        except Exception as e:
-            logging.error(f"Rich History Flash Failure: {e}")
+        db.rollback()
+        logging.error(f"Failed to log click to database: {e}")
+    finally:
+        db.close()
 
 def extract_amazon_asin(url: str) -> str:
     match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
@@ -339,19 +268,19 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         return False
         
     # Fallback 1: Compare against our local historical deals database
-    if unique_id and os.path.exists(DEALS_HISTORY_FILE):
+    if unique_id:
+        db = SessionLocal()
         try:
-            with deals_history_lock:
-                with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                    deals = json.load(f)
-            matching_deals = [d for d in deals if d.get("id") == unique_id]
-            if matching_deals:
-                min_price = min(int(d.get("price", 999999)) for d in matching_deals)
+            prices = db.query(PriceHistory.price).filter_by(product_id=unique_id).all()
+            if prices:
+                min_price = min(p[0] for p in prices)
                 if current_price <= min_price:
                     return True
                 return False
         except Exception as e:
             logging.error(f"Local price check failed: {e}")
+        finally:
+            db.close()
             
     # Fallback 2: If it's a new item, mark as verified low if discount is substantial (>= 60%)
     if discount >= 60.0:
@@ -528,41 +457,61 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            if os.path.exists(SELECTOR_FILE):
-                with open(SELECTOR_FILE, 'r', encoding='utf-8') as f:
-                    self.wfile.write(f.read().encode('utf-8'))
-            else:
+            db = SessionLocal()
+            try:
+                matrices = db.query(SelectorMatrix).all()
+                data = {}
+                for m in matrices:
+                    data[m.platform] = {
+                        "url": m.url,
+                        "card_selector": m.card_selector,
+                        "title_selector": m.title_selector,
+                        "link_selector": m.link_selector,
+                        "image_selector": m.image_selector
+                    }
+                self.wfile.write(json.dumps(data).encode('utf-8'))
+            except Exception as e:
                 self.wfile.write(b"{}")
+            finally:
+                db.close()
                 
         elif self.path == '/api/deals':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
             
-            deals = []
-            if os.path.exists(DEALS_HISTORY_FILE):
-                try:
-                    with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                        deals = json.load(f)
-                except:
-                    pass
-            
-            # Merge click counts
-            clicks = {}
-            if os.path.exists(CLICKS_TRACKER_FILE):
-                try:
-                    with open(CLICKS_TRACKER_FILE, 'r', encoding='utf-8') as f:
-                        clicks = json.load(f)
-                except:
-                    pass
-            
-            for d in deals:
-                d["clicks"] = clicks.get(d.get("id"), 0)
-                
-            self.wfile.write(json.dumps(deals).encode('utf-8'))
+            db = SessionLocal()
+            try:
+                products = db.query(Product).all()
+                deals = []
+                for p in products:
+                    latest_price = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
+                    if not latest_price:
+                        continue
+                    
+                    click_count = db.query(ClickLog).filter_by(product_id=p.id).count()
+                    
+                    deals.append({
+                        "id": p.id,
+                        "platform": p.platform,
+                        "title": p.title,
+                        "price": latest_price.price,
+                        "mrp": latest_price.mrp,
+                        "discount": latest_price.discount,
+                        "image_url": p.image_url,
+                        "url": p.url,
+                        "is_verified_low": latest_price.is_verified_low,
+                        "timestamp": latest_price.timestamp,
+                        "clicks": click_count
+                    })
+                deals.sort(key=lambda x: x["timestamp"], reverse=True)
+                self.wfile.write(json.dumps(deals).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(b"[]")
+            finally:
+                db.close()
             
         elif self.path.startswith('/api/redirect'):
-            # Parse query params
             from urllib.parse import urlparse, parse_qs
             parsed_url = urlparse(self.path)
             params = parse_qs(parsed_url.query)
@@ -570,27 +519,34 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             target_url = params.get('url', [None])[0]
             user = params.get('user', ['Anonymous'])[0]
             
-            # Identify title
             title = "Unknown Product"
-            if deal_id and os.path.exists(DEALS_HISTORY_FILE):
-                try:
-                    with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                        deals = json.load(f)
-                        for d in deals:
-                            if d.get("id") == deal_id:
-                                title = d.get("title", "Unknown Product")
-                                break
-                except:
-                    pass
-            
             if deal_id:
-                increment_click_count(deal_id)
-                # Capture caller details
-                client_ip = self.client_address[0]
-                user_agent = self.headers.get('User-Agent', 'Unknown')
-                log_click_activity(deal_id, title, client_ip, user, user_agent)
-                
-            # Send redirect
+                db = SessionLocal()
+                try:
+                    product = db.query(Product).filter_by(id=deal_id).first()
+                    if product:
+                        title = product.title
+                        
+                    client_ip = self.client_address[0]
+                    user_agent = self.headers.get('User-Agent', 'Unknown')
+                    
+                    # Log click directly to database
+                    click = ClickLog(
+                        product_id=deal_id,
+                        title=title,
+                        ip=client_ip,
+                        user=user,
+                        user_agent=user_agent,
+                        timestamp=time.time()
+                    )
+                    db.add(click)
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    logging.error(f"Redirect logging error: {e}")
+                finally:
+                    db.close()
+                    
             if target_url:
                 self.send_response(302)
                 self.send_header('Location', target_url)
@@ -604,14 +560,23 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            activity = []
-            if os.path.exists(CLICKS_LOG_FILE):
-                try:
-                    with open(CLICKS_LOG_FILE, 'r', encoding='utf-8') as f:
-                        activity = json.load(f)
-                except:
-                    pass
-            self.wfile.write(json.dumps(activity).encode('utf-8'))
+            
+            db = SessionLocal()
+            try:
+                clicks = db.query(ClickLog).order_by(ClickLog.timestamp.desc()).limit(50).all()
+                data = [{
+                    "deal_id": c.product_id,
+                    "title": c.title,
+                    "ip": c.ip,
+                    "user": c.user,
+                    "user_agent": c.user_agent,
+                    "timestamp": c.timestamp
+                } for c in clicks]
+                self.wfile.write(json.dumps(data).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(b"[]")
+            finally:
+                db.close()
                 
         elif self.path == '/api/settings':
             self.send_response(200)
@@ -646,8 +611,25 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         if parsed_path == '/api/selectors':
             try:
                 data = json.loads(post_data.decode('utf-8'))
-                with open(SELECTOR_FILE, 'w', encoding='utf-8') as f:
-                    json.dump(data, f, indent=4)
+                db = SessionLocal()
+                try:
+                    for plat_key, config in data.items():
+                        matrix = db.query(SelectorMatrix).filter_by(platform=plat_key).first()
+                        if not matrix:
+                            matrix = SelectorMatrix(platform=plat_key)
+                            db.add(matrix)
+                        matrix.url = config.get("url", "")
+                        matrix.card_selector = config.get("card_selector", "")
+                        matrix.title_selector = config.get("title_selector", "")
+                        matrix.link_selector = config.get("link_selector", "")
+                        matrix.image_selector = config.get("image_selector", "")
+                    db.commit()
+                except Exception as db_err:
+                    db.rollback()
+                    raise db_err
+                finally:
+                    db.close()
+                
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
@@ -722,32 +704,25 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"error": "Missing deal ID"}).encode('utf-8'))
                     return
                 
-                deals = []
-                if os.path.exists(DEALS_HISTORY_FILE):
-                    try:
-                        with open(DEALS_HISTORY_FILE, 'r', encoding='utf-8') as f:
-                            deals = json.load(f)
-                    except Exception as e:
-                        logger.error(f"Error reading deals history: {e}")
-                
-                original_len = len(deals)
-                deals = [d for d in deals if d.get("id") != deal_id]
-                
+                db = SessionLocal()
                 try:
-                    with open(DEALS_HISTORY_FILE, 'w', encoding='utf-8') as f:
-                        json.dump(deals, f, indent=2)
-                except Exception as e:
-                    logger.error(f"Error saving deals history after deletion: {e}")
-                    self.send_response(500)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"error": f"Failed to save deals: {e}"}).encode('utf-8'))
-                    return
+                    product = db.query(Product).filter_by(id=deal_id).first()
+                    if product:
+                        db.delete(product)
+                        db.commit()
+                        deleted_count = 1
+                    else:
+                        deleted_count = 0
+                except Exception as db_err:
+                    db.rollback()
+                    raise db_err
+                finally:
+                    db.close()
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
-                self.wfile.write(json.dumps({"status": "success", "deleted": original_len - len(deals)}).encode('utf-8'))
+                self.wfile.write(json.dumps({"status": "success", "deleted": deleted_count}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.end_headers()
@@ -779,12 +754,17 @@ def start_api_server(port=5555):
 # ==========================================
 # CORE SCANNERS MAIN LOOP
 # ==========================================
-def scrape_platform(platform: str, config: dict, history: dict):
+def scrape_platform(platform: str, config: dict, history: set):
     if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
         return
         
     logging.info(f"Scanning target feed stream: {platform.upper()} (Multi-threaded)")
     driver = None
+    
+    settings = load_settings()
+    amazon_tag = settings.get("amazon_tag", "lootraiders-21")
+    flipkart_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID")
+    
     try:
         driver = init_driver()
         driver.set_page_load_timeout(30)
@@ -831,20 +811,18 @@ def scrape_platform(platform: str, config: dict, history: dict):
                     unique_id = extract_amazon_asin(raw_url)
                     if unique_id:
                         clean_base_url = f"https://www.amazon.in/dp/{unique_id}"
-                        final_url = f"{clean_base_url}?tag={AMAZON_TAG}"
+                        final_url = f"{clean_base_url}?tag={amazon_tag}"
                 elif "flipkart" in norm_plat:
                     unique_id = extract_flipkart_pid(raw_url)
                     if not unique_id:
                         unique_id = str(hash(card.text[:40]))
                     clean_base_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}"
-                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={FLIPKART_AFFID}"
+                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={flipkart_affid}"
                 
                 if not unique_id:
                     continue
                     
-                with history_lock:
-                    in_history = unique_id in history
-                if in_history:
+                if unique_id in history:
                     continue
                 
                 title = ""
@@ -916,8 +894,8 @@ def scrape_platform(platform: str, config: dict, history: dict):
                     is_verified_low = verify_historical_low(driver, clean_base_url, price, unique_id, true_discount)
                     
                     if dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low):
-                        save_and_flush_history(history, unique_id)
-                        save_deal_to_rich_history(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
+                        history.add(unique_id)
+                        save_deal_to_db(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
                         time.sleep(1)
                         
             except Exception as inner_err:
@@ -929,8 +907,52 @@ def scrape_platform(platform: str, config: dict, history: dict):
             try: driver.quit()
             except: pass
 
+def sync_database_to_json():
+    db = SessionLocal()
+    try:
+        products = db.query(Product).all()
+        deals = []
+        for p in products:
+            latest_price = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
+            if not latest_price:
+                continue
+            
+            click_count = db.query(ClickLog).filter_by(product_id=p.id).count()
+            
+            deals.append({
+                "id": p.id,
+                "platform": p.platform,
+                "title": p.title,
+                "price": latest_price.price,
+                "mrp": latest_price.mrp,
+                "discount": latest_price.discount,
+                "image_url": p.image_url,
+                "url": p.url,
+                "is_verified_low": latest_price.is_verified_low,
+                "timestamp": latest_price.timestamp,
+                "clicks": click_count
+            })
+        deals.sort(key=lambda x: x["timestamp"], reverse=True)
+        
+        deals_file = os.path.join(DASHBOARD_DIR, "deals_history.json")
+        with open(deals_file, 'w', encoding='utf-8') as f:
+            json.dump(deals, f, indent=2)
+            
+        omega = {p.id: time.time() for p in products}
+        history_file = os.path.join(BASE_DIR, "omega_history.json")
+        with open(history_file, 'w', encoding='utf-8') as f:
+            json.dump(omega, f, indent=2)
+            
+        logging.info("SQLite database synchronized to static JSON files successfully.")
+    except Exception as e:
+        logging.error(f"Failed to sync database to JSON exports: {e}")
+    finally:
+        db.close()
+
 def main():
-    initialize_selectors_json()
+    # 1. Initialize SQLite Database Tables & Seed Selectors
+    init_db()
+    initialize_database_selectors()
     
     single_run = "--single-run" in sys.argv or os.environ.get('GITHUB_ACTIONS') == 'true'
     
@@ -952,12 +974,23 @@ def main():
                     scraper_state["scan_trigger"] = False
                 
             try:
-                with open(SELECTOR_FILE, 'r', encoding='utf-8') as f:
-                    matrix = json.load(f)
-                
-                history = load_history()
-                current_time = time.time()
-                history = {k: v for k, v in history.items() if current_time - v < 86400}
+                db = SessionLocal()
+                try:
+                    # Query active platform matrices from SQLite
+                    matrices = db.query(SelectorMatrix).all()
+                    matrix = {m.platform: {
+                        "url": m.url,
+                        "card_selector": m.card_selector,
+                        "title_selector": m.title_selector,
+                        "link_selector": m.link_selector,
+                        "image_selector": m.image_selector
+                    } for m in matrices}
+                    
+                    # Fetch all existing product IDs to track duplicates
+                    products = db.query(Product.id).all()
+                    history = {p[0] for p in products}
+                finally:
+                    db.close()
                 
                 with ThreadPoolExecutor(max_workers=2) as executor:
                     futures = []
@@ -969,6 +1002,9 @@ def main():
                             fut.result()
                         except Exception as thread_err:
                             logging.error(f"Thread execution error: {thread_err}")
+                
+                # Export SQLite state to JSON for static host environment (like GitHub Pages)
+                sync_database_to_json()
                 
                 scraper_state["scans_completed"] += 1
                 scraper_state["last_scan_time"] = time.time()
