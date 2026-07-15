@@ -18,6 +18,7 @@ from database.db_session import SessionLocal, init_db
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings, save_settings
 from deal_engine.scorer import calculate_deal_score, should_publish_deal
+from deal_engine.notifier import start_notifier, enqueue_alert
 
 # Retailer Scraper Plugins
 from plugins.amazon import AmazonRetailerPlugin
@@ -115,40 +116,7 @@ def initialize_database_selectors():
     finally:
         db.close()
 
-def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0) -> bool:
-    try:
-        is_amazon = "amazon" in final_url.lower()
-        embed = {
-            "title": title[:250],
-            "url": final_url,
-            "color": 16750848 if is_amazon else 114686,
-            "fields": [
-                {"name": "Price", "value": f"₹{price:,}", "inline": True},
-                {"name": "MRP", "value": f"₹{mrp:,}", "inline": True},
-                {"name": "Discount", "value": f"{discount:.1f}% OFF", "inline": True},
-                {"name": "Deal Score", "value": f"{deal_score:.1f}/100", "inline": True}
-            ],
-            "footer": {
-                "text": "Loot Raiders Deal Alert • Curated by Yogesh Padwal"
-            }
-        }
-        if is_verified_low:
-            embed["description"] = "🔥 **VERIFIED ALL-TIME LOW PRICE!**"
-        if img_url and "base64" not in img_url:
-            embed["image"] = {"url": img_url}
-            
-        payload = {
-            "embeds": [embed]
-        }
-        r = requests.post(webhook_url, json=payload, timeout=10)
-        if r.status_code in [200, 204]:
-            logging.info("Discord Webhook broadcast success.")
-            return True
-        else:
-            logging.warning(f"Discord Webhook returned status {r.status_code}: {r.text}")
-    except Exception as e:
-        logging.error(f"Discord Webhook broadcast failure: {e}")
-    return False
+
 
 def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0):
     db = SessionLocal()
@@ -263,82 +231,7 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         
     return False
 
-# ==========================================
-# INTELLIGENT DISPATCH HUB
-# ==========================================
-def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0):
-    settings = load_settings()
-    telegram_success = False
-    discord_success = False
-    
-    bot_token = settings.get("telegram_bot_token")
-    chat_id = settings.get("telegram_chat_id")
-    min_disc = settings.get("min_discount", 30.0)
-    
-    if discount < min_disc:
-        logging.info(f"Skipping broadcast: discount ({discount:.1f}%) is below minimum threshold ({min_disc}%)")
-        return False
 
-    is_amazon = "amazon" in platform.lower()
-    platform_header = "🍊 [ AMAZON INDIA ]" if is_amazon else "💣 [ FLIPKART ]"
-    
-    clean_title = title.split('\n')[0].strip()
-    truncated_title = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
-    
-    validation_badge = "🔥 [ VERIFIED ALL-TIME LOW PRICE ]\n" if is_verified_low else ""
-    
-    caption = (
-        f"{platform_header}\n"
-        f"{validation_badge}"
-        f"📌 *{truncated_title}*\n\n"
-        f"```\n"
-        f"💰 Deal Price: ₹{price:,}\n"
-        f"❌ True MRP:   ₹{mrp:,}\n"
-        f"📉 Discount:   {discount:.1f}% OFF\n"
-        f"🔥 Deal Score: {deal_score:.1f}/100\n"
-        f"```\n"
-        f"⚡ *HURRY, PRICE DROP SEEN!*\n"
-        f"👉 [GRAB THIS LAUNCH DEAL NOW]({final_url})\n\n"
-        f"--- \n"
-        f"🛒 Curated by: *Yogesh Padwal*"
-    )
-    
-    # 1. Telegram Alert dispatch
-    if bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "":
-        if img_url and "base64" not in img_url:
-            try:
-                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-                payload = {"chat_id": chat_id, "photo": img_url, "caption": caption, "parse_mode": "Markdown"}
-                res = requests.post(endpoint, json=payload, timeout=15)
-                if res.status_code == 200:
-                    logging.info(f"Telegram Broadcast Success -> {truncated_title[:20]}...")
-                    telegram_success = True
-            except Exception as e:
-                logging.error(f"Telegram Photo Method Failed: {e}")
-                
-        if not telegram_success:
-            try:
-                text_endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-                payload_fallback = {"chat_id": chat_id, "text": caption, "parse_mode": "Markdown"}
-                res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
-                if res_fb.status_code == 200:
-                    logging.info(f"Telegram Text Broadcast Success -> {truncated_title[:20]}...")
-                    telegram_success = True
-            except Exception as e:
-                logging.error(f"Telegram Text Method Failed: {e}")
-
-    # 2. Discord Alert dispatch
-    discord_webhook = settings.get("discord_webhook_url")
-    if discord_webhook and discord_webhook.strip() != "":
-        discord_success = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
-        
-    has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
-    has_discord = (discord_webhook and discord_webhook.strip() != "")
-    
-    if not has_telegram and not has_discord:
-        return True # Save local history anyway
-        
-    return telegram_success or discord_success
 
 def init_driver() -> webdriver.Chrome:
     options = Options()
@@ -847,8 +740,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Dispatch notifications if score is above the configured threshold
             if should_publish_deal(platform, deal_score):
-                dispatch_rich_media_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
-                time.sleep(1)
+                enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                time.sleep(0.5)
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
@@ -904,6 +797,9 @@ def main():
     # 1. Initialize SQLite Database Tables & Seed Selectors
     init_db()
     initialize_database_selectors()
+    
+    # 2. Start Asynchronous Notification Queue Thread
+    start_notifier()
     
     single_run = "--single-run" in sys.argv or os.environ.get('GITHUB_ACTIONS') == 'true'
     
