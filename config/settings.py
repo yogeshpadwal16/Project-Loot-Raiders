@@ -14,6 +14,13 @@ def load_settings() -> dict:
         "min_discount": 30.0,
         "min_deal_price": 299,
         "min_deal_savings": 250,
+        "blocklist_keywords": [
+            "back cover", "case", "cover", "tempered glass", "screen guard", 
+            "screen protector", "camera lens protector", "camera protector",
+            "keychain", "pouch", "skin", "strap", "cable", "usb cable", 
+            "charging cable", "otg", "ring light", "tripod", "selfie stick",
+            "sticker", "decal", "stand", "holder", "mobile holder"
+        ],
         "proxy_list": [],
         "proxies_enabled": False,
         "scoring_rules": {

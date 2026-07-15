@@ -744,6 +744,19 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Filter out low-value cheap products or minor savings spams
             settings = load_settings()
+            
+            # Title keyword blocklist check
+            blocklist = settings.get("blocklist_keywords", [])
+            title_lower = title.lower()
+            blocked_match = None
+            for b_word in blocklist:
+                if b_word.lower().strip() in title_lower:
+                    blocked_match = b_word
+                    break
+            if blocked_match:
+                logging.info(f"Skipping blocklisted accessory deal: {title[:35]}... (Matched: '{blocked_match}')")
+                continue
+                
             min_price = settings.get("min_deal_price", 299)
             min_savings = settings.get("min_deal_savings", 250)
             savings = mrp - price
