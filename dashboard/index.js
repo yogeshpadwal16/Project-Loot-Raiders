@@ -495,6 +495,35 @@ scanBtn.addEventListener('click', async () => {
     }, 3000);
 });
 
+// Trigger zombie cleanup
+const cleanupBtn = document.getElementById('cleanup-btn');
+if (cleanupBtn) {
+    cleanupBtn.addEventListener('click', async () => {
+        cleanupBtn.disabled = true;
+        const icon = cleanupBtn.querySelector('i');
+        if (icon) icon.classList.add('fa-spin');
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/processes/cleanup`, { method: 'POST' });
+            if (!response.ok) throw new Error('Cleanup command error');
+            const data = await response.json();
+            const count = (data.killed && data.killed.length) || 0;
+            if (count > 0) {
+                showToast(`Cleaned up ${count} zombie processes: ${data.killed.join(', ')}.`);
+            } else {
+                showToast('No zombie processes detected. Server is running cleanly!');
+            }
+        } catch (err) {
+            showToast('Could not execute zombie cleanup.', 'error');
+        } finally {
+            setTimeout(() => {
+                cleanupBtn.disabled = false;
+                if (icon) icon.classList.remove('fa-spin');
+            }, 2000);
+        }
+    });
+}
+
 // Handle selector forms changes and tab toggles
 tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {

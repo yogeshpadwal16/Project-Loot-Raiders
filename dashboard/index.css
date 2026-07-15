@@ -320,6 +320,24 @@ body::after {
     background-color: #244b7d;
 }
 
+/* Danger / Cleanup Button */
+.btn-danger {
+    background-color: #f8dbdb;
+    color: #8c1d1d;
+    border: 1px solid #f5baba;
+}
+.btn-danger:hover {
+    background-color: #f5c2c2;
+}
+.dark-mode .btn-danger {
+    background-color: rgba(140, 29, 29, 0.2);
+    color: #ffb4ab;
+    border: 1px solid rgba(255, 180, 171, 0.4);
+}
+.dark-mode .btn-danger:hover {
+    background-color: rgba(140, 29, 29, 0.35);
+}
+
 /* ==========================================
    STATS GRID
    ========================================== */
