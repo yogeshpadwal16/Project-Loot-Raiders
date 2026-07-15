@@ -580,6 +580,45 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             settings = load_settings()
             self.wfile.write(json.dumps(settings).encode('utf-8'))
             
+        elif self.path == '/api/logs/stream':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.end_headers()
+            
+            # Send initial logs
+            initial_lines = []
+            if os.path.exists(LOG_FILE):
+                try:
+                    with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f:
+                        initial_lines = f.readlines()[-60:]
+                except:
+                    pass
+            for line in initial_lines:
+                try:
+                    self.wfile.write(f"data: {json.dumps(line.strip())}\n\n".encode('utf-8'))
+                except:
+                    return
+            try:
+                self.wfile.flush()
+            except:
+                return
+            
+            # Tail log file
+            try:
+                with open(LOG_FILE, 'r', encoding='utf-8', errors='ignore') as f:
+                    f.seek(0, 2)
+                    while True:
+                        line = f.readline()
+                        if not line:
+                            time.sleep(0.5)
+                            continue
+                        self.wfile.write(f"data: {json.dumps(line.strip())}\n\n".encode('utf-8'))
+                        self.wfile.flush()
+            except Exception as e:
+                pass
+                
         elif self.path == '/api/logs':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

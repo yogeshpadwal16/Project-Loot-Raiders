@@ -157,6 +157,87 @@ function applyFiltersAndRender() {
     updateDealsUI(filtered);
 }
 
+let logEventSource = null;
+
+function appendSingleLogLine(line) {
+    if (!consoleLogs) return;
+    
+    let cleanLine = line.replace('\n', '');
+    let timePart = '';
+    let rest = cleanLine;
+    const timeMatch = cleanLine.match(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})/);
+    
+    if (timeMatch) {
+        timePart = timeMatch[1];
+        rest = cleanLine.substring(timePart.length);
+    }
+    
+    let levelClass = 'log-level-info';
+    if (rest.includes('[WARNING]')) {
+        levelClass = 'log-level-warning';
+    } else if (rest.includes('[ERROR]')) {
+        levelClass = 'log-level-error';
+    }
+    
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'log-line';
+    
+    let html = '';
+    if (timePart) {
+        html += `<span class="log-time">[${timePart.split(' ')[1]}]</span>`;
+    }
+    html += `<span class="${levelClass}">${rest}</span>`;
+    
+    lineDiv.innerHTML = html;
+    consoleLogs.appendChild(lineDiv);
+    
+    consoleLogs.scrollTop = consoleLogs.scrollHeight;
+    
+    while (consoleLogs.childNodes.length > 150) {
+        consoleLogs.removeChild(consoleLogs.firstChild);
+    }
+}
+
+function connectLogsStream() {
+    if (IS_STATIC_MODE) return;
+    
+    if (logEventSource) {
+        logEventSource.close();
+    }
+    
+    if (consoleLogs) {
+        consoleLogs.innerHTML = '<div class="log-line system-line">Connecting to live logs stream...</div>';
+    }
+    
+    logEventSource = new EventSource(`${API_BASE}/api/logs/stream`);
+    
+    let isCleared = false;
+    logEventSource.onmessage = function(event) {
+        try {
+            if (!isCleared && consoleLogs) {
+                consoleLogs.innerHTML = '';
+                isCleared = true;
+            }
+            const line = JSON.parse(event.data);
+            appendSingleLogLine(line);
+        } catch (err) {
+            console.error('Error parsing SSE log line:', err);
+        }
+    };
+    
+    logEventSource.onerror = function() {
+        console.warn("Logs SSE connection interrupted. Retrying in 5 seconds...");
+        logEventSource.close();
+        if (consoleLogs) {
+            const errLine = document.createElement('div');
+            errLine.className = 'log-line error-line';
+            errLine.textContent = 'Connection lost. Reconnecting in 5s...';
+            consoleLogs.appendChild(errLine);
+        }
+        setTimeout(connectLogsStream, 5000);
+    };
+}
+
 async function fetchLogs() {
     try {
         const response = await fetch(`${API_BASE}/api/logs`);
@@ -676,14 +757,13 @@ function init() {
         return;
     }
     
-    fetchLogs();
+    connectLogsStream();
     fetchSelectors();
     fetchClicks();
     
     // Set periodic polling
     setInterval(fetchStatus, 3000);
     setInterval(fetchDeals, 5000);
-    setInterval(fetchLogs, 3000);
     setInterval(fetchClicks, 4000);
 
     // Event delegation for delete buttons
