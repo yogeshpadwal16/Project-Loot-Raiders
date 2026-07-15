@@ -219,6 +219,11 @@ def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: st
 
 
 def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
+    # If the platform is not Amazon or Flipkart, we cannot query buyhatke, so we default to True
+    is_supported = any(r in product_url.lower() for r in ["amazon", "flipkart"])
+    if not is_supported:
+        return True
+        
     historical_prices = []
     try:
         encoded_url = urllib.parse.quote_plus(product_url)
@@ -865,6 +870,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             if should_publish_deal(platform, deal_score):
                 enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
                 time.sleep(0.5)
+            else:
+                logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
