@@ -25,6 +25,7 @@ class PriceHistory(Base):
     mrp = Column(Integer)
     discount = Column(Float)
     is_verified_low = Column(Boolean, default=False)
+    deal_score = Column(Float, default=0.0)
     timestamp = Column(Float, default=time.time)
     
     product = relationship("Product", back_populates="prices")

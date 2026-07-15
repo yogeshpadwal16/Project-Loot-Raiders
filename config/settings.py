@@ -13,7 +13,23 @@ def load_settings() -> dict:
         "discord_webhook_url": "",
         "min_discount": 30.0,
         "proxy_list": [],
-        "proxies_enabled": False
+        "proxies_enabled": False,
+        "scoring_rules": {
+            "min_publish_score": 70.0,
+            "weights": {
+                "discount": 0.35,
+                "savings": 0.20,
+                "history": 0.25,
+                "urgency": 0.10,
+                "trust": 0.10
+            },
+            "retailer_trust_scores": {
+                "amazon_master_lightning_deals": 95,
+                "amazon_sitewide_search_deals": 80,
+                "flipkart_sitewide_offers": 80,
+                "flipkart_clearance_master_feed": 85
+            }
+        }
     }
     if os.path.exists(SETTINGS_FILE):
         try:

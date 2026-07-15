@@ -1498,3 +1498,27 @@ body::after {
     background: #ffffff !important;
 }
 
+/* AI Deal Score Badge */
+.score-tag {
+    background: rgba(255, 180, 0, 0.12) !important;
+    color: #ffcc00 !important;
+    border: 1px solid rgba(255, 180, 0, 0.3) !important;
+    padding: 3px 8px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.light-mode .score-tag {
+    background: rgba(230, 81, 0, 0.06) !important;
+    color: #d84315 !important;
+    border: 1px solid rgba(230, 81, 0, 0.25) !important;
+}
+.score-tag i {
+    font-size: 0.8rem;
+}
+

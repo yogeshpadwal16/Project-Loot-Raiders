@@ -263,6 +263,11 @@ function updateDealsUI(deals) {
             ? `<span class="deal-clicks" title="Total clicks from this dashboard"><i class="fa-solid fa-fire text-red"></i> ${deal.clicks} clicks</span>` 
             : '';
 
+        const scoreVal = deal.deal_score ? parseFloat(deal.deal_score).toFixed(0) : '0';
+        const scoreBadge = scoreVal > 0 
+            ? `<span class="score-tag" title="AI Deal Score"><i class="fa-solid fa-bolt text-yellow"></i> Score: ${scoreVal}</span>` 
+            : '';
+        
         html += `
             <div class="deal-item">
                 <div class="deal-img-wrapper">
@@ -274,10 +279,11 @@ function updateDealsUI(deals) {
                         <h4 class="deal-title" title="${titleStr}">${displayTitle}</h4>
                         ${lowBadge}
                     </div>
-                    <div class="deal-price-block">
+                    <div class="deal-price-block" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <span class="current-price">₹${priceVal}</span>
                         <span class="mrp-price">₹${mrpVal}</span>
                         <span class="discount-tag">${discountVal}% OFF</span>
+                        ${scoreBadge}
                     </div>
                     <div class="deal-footer">
                         <span class="deal-time"><i class="fa-solid fa-clock"></i> Broadcasted at ${dealTime} ${clicksLabel}</span>

@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from database.db_session import SessionLocal, init_db
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings, save_settings
+from deal_engine.scorer import calculate_deal_score, should_publish_deal
 
 sys.stdout.reconfigure(encoding='utf-8')
 
@@ -105,7 +106,7 @@ def initialize_database_selectors():
     finally:
         db.close()
 
-def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool) -> bool:
+def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0) -> bool:
     try:
         is_amazon = "amazon" in final_url.lower()
         embed = {
@@ -115,7 +116,8 @@ def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, dis
             "fields": [
                 {"name": "Price", "value": f"₹{price:,}", "inline": True},
                 {"name": "MRP", "value": f"₹{mrp:,}", "inline": True},
-                {"name": "Discount", "value": f"{discount:.1f}% OFF", "inline": True}
+                {"name": "Discount", "value": f"{discount:.1f}% OFF", "inline": True},
+                {"name": "Deal Score", "value": f"{deal_score:.1f}/100", "inline": True}
             ],
             "footer": {
                 "text": "Loot Raiders Deal Alert • Curated by Yogesh Padwal"
@@ -139,7 +141,7 @@ def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, dis
         logging.error(f"Discord Webhook broadcast failure: {e}")
     return False
 
-def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str):
+def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0):
     db = SessionLocal()
     try:
         product = db.query(Product).filter_by(id=unique_id).first()
@@ -165,6 +167,7 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             mrp=mrp,
             discount=discount,
             is_verified_low=is_verified_low,
+            deal_score=deal_score,
             timestamp=time.time()
         )
         db.add(price_hist)
@@ -291,7 +294,7 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
 # ==========================================
 # INTELLIGENT DISPATCH HUB
 # ==========================================
-def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool):
+def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0):
     settings = load_settings()
     telegram_success = False
     discord_success = False
@@ -320,6 +323,7 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
         f"💰 Deal Price: ₹{price:,}\n"
         f"❌ True MRP:   ₹{mrp:,}\n"
         f"📉 Discount:   {discount:.1f}% OFF\n"
+        f"🔥 Deal Score: {deal_score:.1f}/100\n"
         f"```\n"
         f"⚡ *HURRY, PRICE DROP SEEN!*\n"
         f"👉 [GRAB THIS LAUNCH DEAL NOW]({final_url})\n\n"
@@ -354,7 +358,7 @@ def dispatch_rich_media_alert(platform: str, title: str, price: int, mrp: int, d
     # 2. Discord Alert dispatch
     discord_webhook = settings.get("discord_webhook_url")
     if discord_webhook and discord_webhook.strip() != "":
-        discord_success = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low)
+        discord_success = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
         
     has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
     has_discord = (discord_webhook and discord_webhook.strip() != "")
@@ -501,6 +505,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "image_url": p.image_url,
                         "url": p.url,
                         "is_verified_low": latest_price.is_verified_low,
+                        "deal_score": latest_price.deal_score,
                         "timestamp": latest_price.timestamp,
                         "clicks": click_count
                     })
@@ -893,9 +898,16 @@ def scrape_platform(platform: str, config: dict, history: set):
                 if price and mrp and (30.0 <= true_discount <= 98.0):
                     is_verified_low = verify_historical_low(driver, clean_base_url, price, unique_id, true_discount)
                     
-                    if dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low):
-                        history.add(unique_id)
-                        save_deal_to_db(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id)
+                    # Calculate Deal score using our intelligence scorer
+                    deal_score = calculate_deal_score(platform, price, mrp, true_discount, is_verified_low)
+                    
+                    # Always save to the Knowledge Base (SQLite) to construct historical intelligence
+                    save_deal_to_db(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, unique_id, deal_score)
+                    history.add(unique_id)
+                    
+                    # Check if the score is sufficient for public dispatch
+                    if should_publish_deal(platform, deal_score):
+                        dispatch_rich_media_alert(platform, title, price, mrp, true_discount, img_url, final_url, is_verified_low, deal_score)
                         time.sleep(1)
                         
             except Exception as inner_err:
@@ -929,6 +941,7 @@ def sync_database_to_json():
                 "image_url": p.image_url,
                 "url": p.url,
                 "is_verified_low": latest_price.is_verified_low,
+                "deal_score": latest_price.deal_score,
                 "timestamp": latest_price.timestamp,
                 "clicks": click_count
             })
