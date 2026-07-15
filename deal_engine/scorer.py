@@ -27,13 +27,13 @@ def calculate_deal_score(
     })
     
     # 1. Discount Score (s_disc)
-    # Scale discount from 30% (score 0) to 80% (score 100)
-    if discount < 30.0:
+    # Scale discount from 45% (score 0) to 85% (score 100)
+    if discount < 45.0:
         s_disc = 0.0
-    elif discount >= 80.0:
+    elif discount >= 85.0:
         s_disc = 100.0
     else:
-        s_disc = ((discount - 30.0) / (80.0 - 30.0)) * 100.0
+        s_disc = ((discount - 45.0) / (85.0 - 45.0)) * 100.0
         
     # 2. Absolute Savings Score (s_save)
     # Scale absolute savings from ₹0 (score 0) to ₹3000 (score 100)

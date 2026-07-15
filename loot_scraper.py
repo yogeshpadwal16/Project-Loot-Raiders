@@ -207,7 +207,16 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
     # If external tracker succeeded, use its data
     if historical_prices:
         lowest_ever = min(historical_prices)
-        if current_price <= (lowest_ever * 1.05):
+        highest_ever = max(historical_prices)
+        
+        is_near_low = current_price <= (lowest_ever * 1.05)
+        has_real_drop = False
+        if highest_ever > current_price:
+            drop_from_peak = ((highest_ever - current_price) / highest_ever) * 100
+            if drop_from_peak >= 15.0:
+                has_real_drop = True
+                
+        if is_near_low and has_real_drop:
             return True
         return False
         
@@ -217,10 +226,19 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         try:
             prices = db.query(PriceHistory.price).filter_by(product_id=unique_id).all()
             if prices:
-                min_price = min(p[0] for p in prices)
-                if current_price <= min_price:
+                prices_list = [p[0] for p in prices]
+                min_price = min(prices_list)
+                max_price = max(prices_list)
+                
+                is_near_low = current_price <= min_price
+                has_real_drop = False
+                if max_price > current_price:
+                    drop_from_peak = ((max_price - current_price) / max_price) * 100
+                    if drop_from_peak >= 15.0:
+                        has_real_drop = True
+                        
+                if is_near_low and has_real_drop:
                     return True
-                return False
         except Exception as e:
             logging.error(f"Local price check failed: {e}")
         finally:
@@ -724,6 +742,16 @@ def scrape_platform(platform: str, config: dict, history: set):
             final_url = deal["url"]
             is_lightning = deal["is_lightning"]
             
+            # Filter out low-value cheap products or minor savings spams
+            settings = load_settings()
+            min_price = settings.get("min_deal_price", 299)
+            min_savings = settings.get("min_deal_savings", 250)
+            savings = mrp - price
+            
+            if price < min_price or savings < min_savings:
+                logging.info(f"Skipping basic/cheap deal: {title[:35]}... (Price: ₹{price}, Savings: ₹{savings})")
+                continue
+                
             # Extract base URL to check price tracker history
             clean_url = final_url.split("?")[0].split("&")[0]
             is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)

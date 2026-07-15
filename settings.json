@@ -6,5 +6,7 @@
   "discord_webhook_url": "",
   "min_discount": 30.0,
   "proxy_list": [],
-  "proxies_enabled": false
+  "proxies_enabled": false,
+  "min_deal_price": 299,
+  "min_deal_savings": 250
 }
