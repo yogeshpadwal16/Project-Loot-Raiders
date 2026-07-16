@@ -163,6 +163,58 @@ function applyFiltersAndRender() {
     }
     
     updateDealsUI(filtered);
+    updateSpotlightDeal(filtered);
+}
+
+function updateSpotlightDeal(deals) {
+    const card = document.getElementById('spotlight-deal-card');
+    const body = document.getElementById('spotlight-deal-body');
+    if (!card || !body) return;
+    
+    if (!deals || deals.length === 0) {
+        card.style.display = 'none';
+        return;
+    }
+    
+    // Find the deal with the highest discount percentage
+    let topDeal = deals[0];
+    for (const d of deals) {
+        if ((parseFloat(d.discount) || 0) > (parseFloat(topDeal.discount) || 0)) {
+            topDeal = d;
+        }
+    }
+    
+    card.style.display = 'block';
+    
+    const titleStr = topDeal.title || 'Untitled Deal';
+    const displayTitle = titleStr.length > 55 ? titleStr.substring(0, 52) + '...' : titleStr;
+    const noImageFallback = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyNzMwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTU4Zjk5Ij5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+    const displayImage = (topDeal.image_url && !topDeal.image_url.startsWith('data:')) 
+        ? topDeal.image_url 
+        : noImageFallback;
+    const priceVal = topDeal.price ? parseInt(topDeal.price).toLocaleString() : '0';
+    const mrpVal = topDeal.mrp ? parseInt(topDeal.mrp).toLocaleString() : '0';
+    const discountVal = topDeal.discount ? parseFloat(topDeal.discount).toFixed(0) : '0';
+    const dealUrl = topDeal.url || '#';
+    const operatorName = encodeURIComponent(localStorage.getItem('operator_identity') || 'Anonymous');
+    const redirectUrl = IS_STATIC_MODE 
+        ? dealUrl
+        : `${API_BASE}/api/redirect?id=${topDeal.id}&user=${operatorName}&url=${encodeURIComponent(dealUrl)}`;
+        
+    body.innerHTML = `
+        <div style="margin-bottom: 12px; position: relative; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border-radius: 8px;">
+            <img src="${displayImage}" alt="Spotlight Deal" style="max-height: 110px; max-width: 90%; object-fit: contain;" onerror="this.onerror=null; this.src='${noImageFallback}';">
+            <span style="position: absolute; top: 5px; right: 5px; background: #ff4e50; color: white; padding: 4px 8px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.25);">${discountVal}% OFF</span>
+        </div>
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: var(--md-sys-color-on-background); line-height: 1.3; text-align: left;" title="${titleStr}">${displayTitle}</h4>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; justify-content: center;">
+            <span style="font-size: 1.3rem; font-weight: 800; color: var(--accent-orange);">₹${priceVal}</span>
+            <span style="text-decoration: line-through; color: var(--md-sys-color-outline); font-size: 0.85rem;">₹${mrpVal}</span>
+        </div>
+        <a href="${redirectUrl}" target="_blank" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; text-decoration: none; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #ff4e50, #f9d423); border: none; color: white; box-shadow: 0 4px 15px rgba(255, 78, 80, 0.4); text-transform: uppercase;">
+            GRAB NOW <i class="fa-solid fa-up-right-from-square"></i>
+        </a>
+    `;
 }
 
 let logEventSource = null;
