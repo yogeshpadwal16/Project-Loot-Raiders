@@ -961,7 +961,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnPostWhatsapp = document.getElementById('btn-post-whatsapp');
     
     if (btnCrawlManual) {
-        btnCrawlManual.addEventListener('click', async () => {
+        btnCrawlManual.addEventListener('click', async (e) => {
+            e.preventDefault();
             const urlInput = document.getElementById('manual-url');
             const url = urlInput.value.trim();
             if (!url) {
@@ -1018,7 +1019,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (btnPostTelegram) {
-        btnPostTelegram.addEventListener('click', async () => {
+        btnPostTelegram.addEventListener('click', async (e) => {
+            e.preventDefault();
             const title = document.getElementById('manual-title').value.trim();
             const price = parseInt(document.getElementById('manual-price').value) || 0;
             const mrp = parseInt(document.getElementById('manual-mrp').value) || 0;
@@ -1067,7 +1069,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (btnPostWhatsapp) {
-        btnPostWhatsapp.addEventListener('click', () => {
+        btnPostWhatsapp.addEventListener('click', (e) => {
+            e.preventDefault();
             const title = document.getElementById('manual-title').value.trim();
             const price = parseInt(document.getElementById('manual-price').value) || 0;
             const mrp = parseInt(document.getElementById('manual-mrp').value) || 0;
