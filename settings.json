@@ -7,8 +7,8 @@
   "min_discount": 30.0,
   "proxy_list": [],
   "proxies_enabled": false,
-  "min_deal_price": 299,
-  "min_deal_savings": 250,
+  "min_deal_price": 149,
+  "min_deal_savings": 100,
   "blocklist_keywords": [
     "back cover",
     "case",

@@ -2,7 +2,8 @@ import re
 import urllib.parse
 
 def extract_amazon_asin(url: str) -> str:
-    match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', url)
+    decoded_url = urllib.parse.unquote(url)
+    match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', decoded_url)
     return match.group(1) if match else None
 
 def extract_flipkart_pid(url: str) -> str:

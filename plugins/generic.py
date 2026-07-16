@@ -45,6 +45,14 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             raw_url = links[0].get_attribute("href")
                             
                     if not raw_url:
+                        # Check if the card itself or its ancestor is wrapped in an a tag
+                        try:
+                            parent_a = card.find_element(By.XPATH, "./ancestor::a")
+                            raw_url = parent_a.get_attribute("href")
+                        except:
+                            pass
+                            
+                    if not raw_url:
                         continue
                         
                     # Extract unique ID from URL path or fallback
