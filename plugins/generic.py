@@ -39,16 +39,22 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         for l in links:
                             href = l.get_attribute("href")
                             if href and ("javascript" not in href) and len(href) > 15:
-                                raw_url = href
-                                break
+                                # Exclude search, category, or browse pages
+                                if "/search" not in href and "/s/" not in href and "/c/" not in href and "/pr?" not in href and "/all-" not in href:
+                                    raw_url = href
+                                    break
                         if not raw_url:
-                            raw_url = links[0].get_attribute("href")
+                            first_href = links[0].get_attribute("href")
+                            if first_href and "/search" not in first_href and "/s/" not in first_href and "/c/" not in first_href and "/pr?" not in first_href and "/all-" not in first_href:
+                                raw_url = first_href
                             
                     if not raw_url:
                         # Check if the card itself or its ancestor is wrapped in an a tag
                         try:
                             parent_a = card.find_element(By.XPATH, "./ancestor::a")
-                            raw_url = parent_a.get_attribute("href")
+                            parent_href = parent_a.get_attribute("href")
+                            if parent_href and "/search" not in parent_href and "/s/" not in parent_href and "/c/" not in parent_href and "/pr?" not in parent_href and "/all-" not in parent_href:
+                                raw_url = parent_href
                         except:
                             pass
                             

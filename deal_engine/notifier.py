@@ -265,17 +265,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    # Fallback to Text Alert if photo card failed
-    try:
-        text_endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload_fallback = {"chat_id": chat_id, "text": caption, "parse_mode": "HTML"}
-        res_fb = requests.post(text_endpoint, json=payload_fallback, timeout=15)
-        if res_fb.status_code == 200:
-            logging.info(f"Telegram Fallback Text Broadcast Success -> {truncated_title[:20]}...")
-            return True
-    except Exception as text_err:
-        logging.error(f"Telegram Text Fallback Failed: {text_err}")
-        
+    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping text-only fallback per product rules.")
     return False
 
 def send_daily_digest_if_time():
@@ -405,6 +395,12 @@ def notifier_worker():
         
         # B. Dispatch channel updates
         if has_telegram:
+            # Enforce compulsory product image rule
+            if not img_url or img_url.strip() == "" or "base64" in img_url:
+                logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
+                notification_queue.task_done()
+                continue
+                
             telegram_ok = send_telegram_alert(
                 bot_token=bot_token,
                 chat_id=chat_id,

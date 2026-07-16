@@ -36,10 +36,14 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                     for l in links:
                         href = l.get_attribute("href")
                         if href and ("javascript" not in href) and ("/p/" in href or "pid=" in href):
-                            raw_url = href
-                            break
+                            # Exclude search/category pages to prevent masterlist links
+                            if "/pr" not in href and "/search" not in href and "/s/" not in href and "/c/" not in href:
+                                raw_url = href
+                                break
                     if not raw_url and links:
-                        raw_url = links[0].get_attribute("href")
+                        first_href = links[0].get_attribute("href")
+                        if first_href and "/pr" not in first_href and "/search" not in first_href and "/s/" not in first_href and "/c/" not in first_href:
+                            raw_url = first_href
                         
                     if not raw_url:
                         continue

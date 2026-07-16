@@ -35,11 +35,15 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
                     raw_url = None
                     for l in links:
                         href = l.get_attribute("href")
-                        if href and ("javascript" not in href) and ("/dp/" in href or "product" in href):
-                            raw_url = href
-                            break
+                        if href and ("javascript" not in href) and ("/dp/" in href or "product" in href or "/gp/product/" in href):
+                            # Exclude browse nodes and search URLs to prevent masterlist links
+                            if "/s?" not in href and "/b?" not in href and "node=" not in href:
+                                raw_url = href
+                                break
                     if not raw_url and links:
-                        raw_url = links[0].get_attribute("href")
+                        first_href = links[0].get_attribute("href")
+                        if first_href and "/s?" not in first_href and "/b?" not in first_href and "node=" not in first_href:
+                            raw_url = first_href
                         
                     if not raw_url:
                         continue
