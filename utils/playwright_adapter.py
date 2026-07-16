@@ -48,7 +48,7 @@ class PlaywrightElementAdapter:
     def _map_selector(self, by, selector):
         by_str = str(by).lower()
         if "xpath" in by_str:
-            if not (selector.startswith("xpath=") or selector.startswith("//") or selector.startswith("./")):
+            if not selector.startswith("xpath="):
                 return f"xpath={selector}"
         return selector
 
@@ -144,7 +144,7 @@ class PlaywrightSeleniumAdapter:
     def _map_selector(self, by, selector):
         by_str = str(by).lower()
         if "xpath" in by_str:
-            if not (selector.startswith("xpath=") or selector.startswith("//") or selector.startswith("./")):
+            if not selector.startswith("xpath="):
                 return f"xpath={selector}"
         return selector
 
