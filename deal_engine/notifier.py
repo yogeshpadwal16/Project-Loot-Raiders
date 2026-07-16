@@ -249,7 +249,9 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         # Cleanup local card path if we already successfully sent raw image URL
         try: os.remove(local_card_path)
         except: pass
-            
+    if photo_sent:
+        return True
+        
     # Fallback to Text Alert if photo card failed
     try:
         text_endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
