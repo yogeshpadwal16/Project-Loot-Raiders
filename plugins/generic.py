@@ -15,6 +15,9 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
         return self._platform_id
 
     def extract_deals(self, driver, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
+        if "ajio" in self._platform_id.lower():
+            return self._extract_ajio_deals(config)
+            
         deals = []
         try:
             if not self.load_page_with_retries(driver, config['url'], delay=5.0):
@@ -197,5 +200,97 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     continue
         except Exception as e:
             logging.error(f"Error in Generic Scraper for {self._platform_id}: {e}")
+            
+        return deals
+
+    def _extract_ajio_deals(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+        deals = []
+        try:
+            from curl_cffi import requests
+            import urllib.parse
+            parsed_url = urllib.parse.urlparse(config.get('url', ''))
+            query_term = "offers"
+            
+            qs = urllib.parse.parse_qs(parsed_url.query)
+            if 'text' in qs:
+                query_term = qs['text'][0]
+            elif parsed_url.path.startswith("/s/"):
+                term = parsed_url.path.replace("/s/", "").replace("-", " ")
+                if term:
+                    query_term = term
+            
+            api_url = f"https://www.ajio.com/api/search?fields=SITE&currentPage=0&pageSize=45&format=json&query={urllib.parse.quote(query_term)}"
+            logging.info(f"[Ajio Scraper] Fetching JSON API via curl_cffi: {api_url}")
+            
+            headers = {
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Origin": "https://www.ajio.com",
+                "Referer": config.get('url', 'https://www.ajio.com/')
+            }
+            
+            r = requests.get(api_url, headers=headers, impersonate="chrome", timeout=20)
+            if r.status_code != 200:
+                logging.error(f"[Ajio Scraper] API call failed with status: {r.status_code}")
+                return []
+                
+            data = r.json()
+            products = data.get("products", [])
+            logging.info(f"[Ajio Scraper] Successfully parsed {len(products)} products from API!")
+            
+            for p in products:
+                try:
+                    code = p.get("code")
+                    if not code:
+                        continue
+                    
+                    title = p.get("name", "")
+                    price_val = p.get("price", {}).get("value")
+                    mrp_val = p.get("wasPriceData", {}).get("value") or price_val
+                    
+                    if not price_val:
+                        continue
+                        
+                    price = int(price_val)
+                    mrp = int(mrp_val)
+                    
+                    discount_str = p.get("discountPercent", "0")
+                    discount = 0.0
+                    if discount_str:
+                        discount_str = discount_str.replace("% off", "").strip()
+                        try:
+                            discount = float(discount_str)
+                        except:
+                            pass
+                            
+                    if mrp > price and not discount:
+                        discount = ((mrp - price) / mrp) * 100
+                        
+                    img_url = p.get("fnlColorVariantData", {}).get("outfitPictureURL")
+                    if not img_url and p.get("images"):
+                        for img in p["images"]:
+                            if img.get("url"):
+                                img_url = img["url"]
+                                break
+                                
+                    prod_url = p.get("url", "")
+                    if prod_url and not prod_url.startswith("http"):
+                        prod_url = "https://www.ajio.com" + prod_url
+                        
+                    deals.append({
+                        "id": f"{self._platform_id}_{code}",
+                        "title": title,
+                        "price": price,
+                        "mrp": mrp,
+                        "discount": discount,
+                        "image_url": img_url,
+                        "url": prod_url,
+                        "is_lightning": False
+                    })
+                except Exception as card_err:
+                    logging.warning(f"[Ajio Scraper] Error parsing API product: {card_err}")
+                    continue
+        except Exception as e:
+            logging.error(f"[Ajio Scraper] Error fetching Ajio deals: {e}", exc_info=True)
             
         return deals
