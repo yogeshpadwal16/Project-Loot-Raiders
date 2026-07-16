@@ -48,8 +48,12 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                     if not pid:
                         pid = str(hash(card.text[:40]))
                         
-                    clean_base_url = f"https://www.flipkart.com/product/p/itm?pid={pid}"
-                    final_url = raw_url if "affid=" in raw_url else f"{clean_base_url}&affid={flipkart_affid}"
+                    # Preserving the original SEO-rich product URL and appending the affiliate tracking tag
+                    if "affid=" not in raw_url:
+                        sep = "&" if "?" in raw_url else "?"
+                        final_url = f"{raw_url}{sep}affid={flipkart_affid}"
+                    else:
+                        final_url = raw_url
                     
                     # 2. Extract Title
                     title = ""
