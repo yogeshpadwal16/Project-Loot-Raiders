@@ -7,7 +7,7 @@ SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 def load_settings() -> dict:
     default_settings = {
         "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
-        "telegram_chat_id": "@LootRaidersDeals",
+        "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
         "amazon_tag": "lootraiders-21",
         "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
         "discord_webhook_url": "",
@@ -40,22 +40,38 @@ def load_settings() -> dict:
             }
         }
     }
+    
+    saved = default_settings.copy()
     if os.path.exists(SETTINGS_FILE):
         try:
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                saved = json.load(f)
-                for k, v in default_settings.items():
-                    if k not in saved:
-                        saved[k] = v
-                return saved
+                loaded = json.load(f)
+                for k, v in loaded.items():
+                    saved[k] = v
         except:
             pass
-    return default_settings
+            
+    # Environmental variable overrides for secure cloud environments (e.g. GitHub Actions)
+    env_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if env_token:
+        saved["telegram_bot_token"] = env_token
+    env_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+    if env_chat_id:
+        saved["telegram_chat_id"] = env_chat_id
+        
+    return saved
 
 def save_settings(settings: dict):
     try:
+        # Don't save environment variables overrides back to local settings.json
+        to_save = settings.copy()
+        if os.environ.get("TELEGRAM_BOT_TOKEN") and to_save.get("telegram_bot_token") == os.environ.get("TELEGRAM_BOT_TOKEN"):
+            to_save["telegram_bot_token"] = "YOUR_TELEGRAM_BOT_TOKEN"
+        if os.environ.get("TELEGRAM_CHAT_ID") and to_save.get("telegram_chat_id") == os.environ.get("TELEGRAM_CHAT_ID"):
+            to_save["telegram_chat_id"] = "YOUR_TELEGRAM_CHAT_ID"
+            
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(settings, f, indent=2)
+            json.dump(to_save, f, indent=2)
     except Exception as e:
         import logging
         logging.error(f"Failed to save settings.json: {e}")

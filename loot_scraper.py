@@ -778,10 +778,10 @@ def start_api_server(port=5555):
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
     
-    server = ThreadingHTTPServer(('127.0.0.1', port), ScraperAPIHandler)
+    server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
-    logging.info(f"Dashboard REST API engine running at http://127.0.0.1:{port}/")
+    logging.info(f"Dashboard REST API engine running at http://0.0.0.0:{port}/")
 
 # ==========================================
 # CORE SCANNERS MAIN LOOP
