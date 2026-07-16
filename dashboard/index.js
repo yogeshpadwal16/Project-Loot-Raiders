@@ -722,6 +722,7 @@ async function fetchSettings() {
         document.getElementById('set-telegram-chat').value = settings.telegram_chat_id || '';
         document.getElementById('set-min-discount').value = settings.min_discount || 30;
         document.getElementById('set-discord-webhook').value = settings.discord_webhook_url || '';
+        document.getElementById('set-gemini-key').value = settings.gemini_api_key || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         
         const proxyList = settings.proxy_list || [];
@@ -740,6 +741,7 @@ async function saveSettings(e) {
     const telegram_chat_id = document.getElementById('set-telegram-chat').value.trim();
     const min_discount = parseFloat(document.getElementById('set-min-discount').value) || 30;
     const discord_webhook_url = document.getElementById('set-discord-webhook').value.trim();
+    const gemini_api_key = document.getElementById('set-gemini-key').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     
     const proxyText = document.getElementById('set-proxy-list').value;
@@ -754,6 +756,7 @@ async function saveSettings(e) {
         telegram_chat_id,
         min_discount,
         discord_webhook_url,
+        gemini_api_key,
         proxies_enabled,
         proxy_list
     };

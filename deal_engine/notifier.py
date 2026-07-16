@@ -5,6 +5,7 @@ import time
 import logging
 import requests
 import json
+import re
 from datetime import datetime
 from config.settings import load_settings, save_settings
 from database.db_session import SessionLocal
@@ -13,6 +14,55 @@ from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 
 notification_queue = queue.Queue()
+
+def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str) -> str:
+    settings = load_settings()
+    api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
+    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
+        return None
+        
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        
+        prompt = (
+            f"You are a professional, high-energy, witty shopping deal alert bot. Write a Telegram post in HTML formatting for this deal:\n\n"
+            f"Product: {title}\n"
+            f"Retailer: {platform.upper()}\n"
+            f"Loot Price: Rs. {price:,}\n"
+            f"Original MRP: Rs. {mrp:,}\n"
+            f"Discount: {discount:.0f}% OFF\n"
+            f"Verified 90-Day Low? {'Yes' if is_verified_low else 'No'}\n"
+            f"Deal Score: {deal_score:.0f}/100\n"
+            f"Affiliate Buy Link: {final_url}\n"
+        )
+        
+        if comparison:
+            prompt += f"Price Comparison on other platforms:\n{comparison}\n\n"
+            
+        prompt += (
+            "Formatting Rules:\n"
+            "- Use bold <b>...</b>, italics <i>...</i>, strike <s>...</s> for MRP, and code <code>...</code> for prices.\n"
+            "- Include exact buy link in this HTML format: <a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a>\n"
+            "- Keep it exciting, short, and use engaging shopping/warning emojis.\n"
+            "- Write in clean, valid HTML tags that Telegram supports (only <b>, <i>, <s>, <u>, <code>, <pre>, <a>).\n"
+            "- Return ONLY the post text (no markdown ```html wrappers, no extra explanation text)."
+        )
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
+        }
+        res = requests.post(url, json=payload, timeout=12)
+        if res.status_code == 200:
+            data = res.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if text.startswith("```"):
+                text = "\n".join(text.split("\n")[1:-1])
+            return text
+    except Exception as e:
+        logging.error(f"Gemini API caption failed: {e}")
+    return None
 
 def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0) -> bool:
     try:
@@ -73,25 +123,57 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     clean_title = title.split('\n')[0].strip()
     truncated_title = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
     
+    # Query database for price comparisons on other platforms
+    comparison_text = ""
+    db = SessionLocal()
+    try:
+        words = [w.strip() for w in re.split(r'[^a-zA-Z0-9]', clean_title) if len(w) > 2]
+        if len(words) >= 2:
+            search_term = "%" + "%".join(words[:3]) + "%"
+            matches = db.query(Product).filter(
+                Product.title.like(search_term),
+                Product.id != unique_id
+            ).all()
+            
+            comparison_list = []
+            seen_platforms = set()
+            for match in matches:
+                lp = db.query(PriceHistory).filter_by(product_id=match.id).order_by(PriceHistory.timestamp.desc()).first()
+                if lp and match.platform != platform and match.platform not in seen_platforms:
+                    comparison_list.append(f"  • {match.platform.upper()}: ₹{lp.price:,}")
+                    seen_platforms.add(match.platform)
+                    
+            if comparison_list:
+                comparison_text = "\n\n📊 <b>Multi-Retailer Comparison:</b>\n" + "\n".join(comparison_list)
+    except Exception as db_err:
+        logging.error(f"Error querying comparisons in notifier: {db_err}")
+    finally:
+        db.close()
+        
     savings = mrp - price
     rating_score = deal_score / 10.0
     stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
     
-    caption = (
-        f"{header}\n"
-        f"📌 <b>{truncated_title}</b>\n\n"
-        f"{badge}\n"
-        f"💰 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
-        f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
-        f"💸 <b>Direct Savings:</b> <code>₹{savings:,}</code> (<b>{discount:.0f}% OFF</b>)\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⭐ <b>Deal Rating:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-        f"🛡️ <b>Status:</b> <code>📉 Verified 90-Day Low</code>\n\n"
-        f"⚡ <i>Hurry, price drop seen! Grab it before stock ends!</i>\n"
-        f"👉 <b><a href='{final_url}'>CLICK HERE TO BUY NOW</a></b>\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📢 <b>Join @LootRaidersDeals for more loot deals!</b>"
-    )
+    # Attempt Gemini generation
+    caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text)
+    
+    if not caption:
+        caption = (
+            f"{header}\n"
+            f"📌 <b>{truncated_title}</b>\n\n"
+            f"{badge}\n"
+            f"💰 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
+            f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
+            f"💸 <b>Direct Savings:</b> <code>₹{savings:,}</code> (<b>{discount:.0f}% OFF</b>)\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"⭐ <b>Deal Rating:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
+            f"🛡️ <b>Status:</b> <code>📉 Verified 90-Day Low</code>"
+            f"{comparison_text}\n\n"
+            f"⚡ <i>Hurry, price drop seen! Grab it before stock ends!</i>\n"
+            f"👉 <b><a href='{final_url}'>CLICK HERE TO BUY NOW</a></b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📢 <b>Join @LootRaidersDeals for more loot deals!</b>"
+        )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
     local_card_path = None

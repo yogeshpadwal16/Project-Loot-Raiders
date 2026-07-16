@@ -8,6 +8,7 @@ def load_settings() -> dict:
     default_settings = {
         "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
         "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
+        "gemini_api_key": "YOUR_GEMINI_API_KEY",
         "amazon_tag": "lootraiders-21",
         "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
         "discord_webhook_url": "",
@@ -58,6 +59,9 @@ def load_settings() -> dict:
     env_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if env_chat_id:
         saved["telegram_chat_id"] = env_chat_id
+    env_gemini_key = os.environ.get("GEMINI_API_KEY")
+    if env_gemini_key:
+        saved["gemini_api_key"] = env_gemini_key
         
     return saved
 
@@ -69,6 +73,8 @@ def save_settings(settings: dict):
             to_save["telegram_bot_token"] = "YOUR_TELEGRAM_BOT_TOKEN"
         if os.environ.get("TELEGRAM_CHAT_ID") and to_save.get("telegram_chat_id") == os.environ.get("TELEGRAM_CHAT_ID"):
             to_save["telegram_chat_id"] = "YOUR_TELEGRAM_CHAT_ID"
+        if os.environ.get("GEMINI_API_KEY") and to_save.get("gemini_api_key") == os.environ.get("GEMINI_API_KEY"):
+            to_save["gemini_api_key"] = "YOUR_GEMINI_API_KEY"
             
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(to_save, f, indent=2)
