@@ -142,18 +142,13 @@
             <!-- RIGHT WORKSPACE: LOOT PROMOTIONS & WIDGETS -->
             <section class="control-section">
                 
-                <!-- TELEGRAM CHANNEL PROMO WIDGET -->
-                <div class="selector-card promo-card telegram-promo">
-                    <div class="selector-header">
-                        <h3><i class="fa-brands fa-telegram text-blue" style="font-size: 1.4rem; vertical-align: middle;"></i> Join Telegram Channel</h3>
+                <!-- SPOTLIGHT DEAL WIDGET -->
+                <div class="selector-card promo-card spotlight-card" id="spotlight-deal-card" style="display: none; border: 2px solid var(--accent-orange); box-shadow: 0 4px 20px rgba(255, 153, 0, 0.15);">
+                    <div class="selector-header" style="background: linear-gradient(135deg, #ff4e50, #f9d423); color: white; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <h3><i class="fa-solid fa-fire" style="font-size: 1.3rem; vertical-align: middle;"></i> DEAL OF THE HOUR</h3>
                     </div>
-                    <div class="selector-body" style="padding: 15px;">
-                        <p style="font-size: 0.9rem; line-height: 1.4; color: var(--md-sys-color-on-background-variant); margin-bottom: 15px;">
-                            Never miss a flash deal, error pricing, or massive discount! We broadcast all active loot deals instantly.
-                        </p>
-                        <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn btn-primary" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; text-decoration: none; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; background: #0088cc; border: none; color: white;">
-                            <i class="fa-brands fa-telegram"></i> JOIN TELEGRAM ALERTS
-                        </a>
+                    <div class="selector-body" id="spotlight-deal-body" style="padding: 15px; text-align: center;">
+                        <!-- Dynamically populated by JS -->
                     </div>
                 </div>
 
