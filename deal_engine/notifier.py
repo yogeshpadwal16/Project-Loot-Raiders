@@ -167,7 +167,10 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # Attempt Gemini generation
     caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text)
     
-    if not caption:
+    if caption:
+        # Prepend the official branded header so the platform is ALWAYS clear!
+        caption = f"{header}\n\n{caption}"
+    else:
         verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
         caption = (
             f"{header}\n"
