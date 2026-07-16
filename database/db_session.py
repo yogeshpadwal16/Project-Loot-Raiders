@@ -10,10 +10,13 @@ engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread"
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+from contextlib import contextmanager
+
+@contextmanager
 def get_db():
     db = SessionLocal()
     try:
-        return db
+        yield db
     finally:
         db.close()
 

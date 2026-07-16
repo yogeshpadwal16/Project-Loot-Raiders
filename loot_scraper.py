@@ -20,6 +20,7 @@ from config.settings import load_settings, save_settings
 from deal_engine.scorer import calculate_deal_score, should_publish_deal
 from deal_engine.notifier import start_notifier, enqueue_alert
 from deal_engine.bot_listener import start_telegram_bot_listener
+from utils.playwright_adapter import get_playwright_driver
 
 # Retailer Scraper Plugins
 from plugins.amazon import AmazonRetailerPlugin
@@ -47,6 +48,8 @@ LOG_FILE = os.path.join(BASE_DIR, "execution.log")
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+for h in logger.handlers[:]:
+    logger.removeHandler(h)
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 
 file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
@@ -56,8 +59,7 @@ logger.addHandler(file_handler)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+
 
 # ==========================================
 # SYSTEM STATE FOR WEB DASHBOARD CONTROL
@@ -320,44 +322,9 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
 
 
 
-def init_driver() -> webdriver.Chrome:
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-    
+def init_driver():
     settings = load_settings()
-    if settings.get("proxies_enabled") and settings.get("proxy_list"):
-        import random
-        # Clean and pick a random proxy
-        valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
-        if valid_proxies:
-            proxy = random.choice(valid_proxies)
-            options.add_argument(f"--proxy-server={proxy}")
-            logging.info(f"WebDriver initialized using proxy: {proxy}")
-            
-    try:
-        driver = webdriver.Chrome(options=options)
-    except Exception as e:
-        logging.warning(f"Default Chrome WebDriver initialization failed: {e}. Trying webdriver-manager fallback...")
-        try:
-            from webdriver_manager.chrome import ChromeDriverManager
-            from selenium.webdriver.chrome.service import Service
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
-            logging.info("Chrome WebDriver successfully initialized using webdriver-manager fallback.")
-        except Exception as fallback_err:
-            logging.error(f"webdriver-manager fallback initialization also failed: {fallback_err}")
-            raise e
-            
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
-    })
-    return driver
+    return get_playwright_driver(settings)
 
 # ==========================================
 # BUILT-IN LIGHTWEIGHT REST API & SERVER
@@ -1129,6 +1096,7 @@ def sync_database_to_json():
                 "clicks": click_count
             })
         deals.sort(key=lambda x: x["timestamp"], reverse=True)
+        deals = deals[:300]
         
         deals_file = os.path.join(DASHBOARD_DIR, "deals_history.json")
         with open(deals_file, 'w', encoding='utf-8') as f:
@@ -1285,20 +1253,11 @@ def main():
         logging.warning("SIGINT operational interrupt recognized. Turning pipeline off safely.")
 
 def scrape_product_details(url: str) -> dict:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
     import time
     import re
     
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-    
-    driver = webdriver.Chrome(options=chrome_options)
+    driver = init_driver()
     try:
         driver.get(url)
         time.sleep(5)  # Wait for dynamic JS content to fully load
