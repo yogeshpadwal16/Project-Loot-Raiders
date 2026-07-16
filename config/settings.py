@@ -25,7 +25,7 @@ def load_settings() -> dict:
         "proxy_list": [],
         "proxies_enabled": False,
         "scoring_rules": {
-            "min_publish_score": 70.0,
+            "min_publish_score": 45.0,
             "weights": {
                 "discount": 0.35,
                 "savings": 0.20,
