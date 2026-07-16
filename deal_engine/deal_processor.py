@@ -18,13 +18,19 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     """
     logging.info(f"[Deal Processor] Initiating processing for URL: {url}")
     
-    # 1. Expand shortened URLs
+    # 1. Expand shortened URLs / affiliate redirects dynamically
     expanded_url = url
     try:
-        if any(domain in url.lower() for domain in ["bit.ly", "tinyurl.com", "t.co", "mxtr.im", "shorturl.at", "amzn.to", "fkrt.it"]):
-            res = requests.head(url, allow_redirects=True, timeout=10)
+        is_direct = ("amazon.in/dp/" in url.lower() or "amazon.in/gp/product/" in url.lower() or ("flipkart.com/" in url.lower() and "pid=" in url.lower()))
+        if not is_direct:
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+            # Use HEAD request for speed
+            res = requests.head(url, headers=headers, allow_redirects=True, timeout=10)
+            if res.status_code >= 400 or res.url == url:
+                # Fall back to GET with stream=True (only downloads headers, very fast)
+                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=10)
             expanded_url = res.url
-            logging.info(f"[Deal Processor] URL expanded: {url} -> {expanded_url}")
+            logging.info(f"[Deal Processor] URL expanded successfully: {url} -> {expanded_url}")
     except Exception as e:
         logging.warning(f"[Deal Processor] URL expansion failed: {e}")
         
