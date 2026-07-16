@@ -49,19 +49,24 @@ async def mirror_main():
         await client.start()
         logging.info("[Channel Mirror] Telegram Client authenticated successfully.")
         
-        # Now resolve target channels
+        # Now resolve and join target channels
         target_channels = ['Loot_shoppingdeals123', 'EPM_Deals']
         resolved_chats = []
         for chat in target_channels:
             try:
                 entity = await client.get_input_entity(chat)
                 resolved_chats.append(entity)
-                logging.info(f"[Channel Mirror] Resolved and cached channel entity: @{chat}")
+                logging.info(f"[Channel Mirror] Resolved channel entity: @{chat}")
+                
+                # Join the channel to receive real-time push updates from Telegram
+                from telethon.tl.functions.channels import JoinChannelRequest
+                await client(JoinChannelRequest(entity))
+                logging.info(f"[Channel Mirror] Successfully joined and subscribed to channel: @{chat}")
             except Exception as resolve_err:
-                logging.error(f"[Channel Mirror] Error resolving channel @{chat}: {resolve_err}")
+                logging.error(f"[Channel Mirror] Error resolving/joining channel @{chat}: {resolve_err}")
                 
         if not resolved_chats:
-            logging.error("[Channel Mirror] No channels could be resolved. Mirror listener halted.")
+            logging.error("[Channel Mirror] No channels could be resolved or joined. Mirror listener halted.")
             return
             
         # Define message handler
