@@ -107,14 +107,14 @@ def initialize_database_selectors():
                 "card_selector": "li.product-base",
                 "title_selector": "h4.product-product, h3.product-brand",
                 "link_selector": "a",
-                "image_selector": "img.product-thumb"
+                "image_selector": "img"
             },
             "ajio_deals": {
                 "url": "https://www.ajio.com/s/discount-50-percent-and-above",
                 "card_selector": "div.item",
                 "title_selector": "div.name",
                 "link_selector": "a",
-                "image_selector": "img.rilrtl-lazy-img"
+                "image_selector": "img"
             },
             "meesho_deals": {
                 "url": "https://www.meesho.com/search?q=offers",
@@ -141,15 +141,13 @@ def initialize_database_selectors():
         for plat_key, config in default_matrix.items():
             existing = db.query(SelectorMatrix).filter_by(platform=plat_key).first()
             if not existing:
-                matrix = SelectorMatrix(
-                    platform=plat_key,
-                    url=config.get("url", ""),
-                    card_selector=config.get("card_selector", ""),
-                    title_selector=config.get("title_selector", ""),
-                    link_selector=config.get("link_selector", ""),
-                    image_selector=config.get("image_selector", "")
-                )
-                db.add(matrix)
+                existing = SelectorMatrix(platform=plat_key)
+                db.add(existing)
+            existing.url = config.get("url", "")
+            existing.card_selector = config.get("card_selector", "")
+            existing.title_selector = config.get("title_selector", "")
+            existing.link_selector = config.get("link_selector", "")
+            existing.image_selector = config.get("image_selector", "")
         db.commit()
         logging.info("Default scrapers selector matrix bootstrapped/updated in database.")
     except Exception as e:
@@ -1231,13 +1229,33 @@ def scrape_product_details(url: str) -> dict:
         if platform == "amazon":
             for selector in ["#landingImage", "#imgBlkFront", ".imgTagWrapper img", "#main-image"]:
                 try:
-                    image_url = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("src")
+                    element = driver.find_element(By.CSS_SELECTOR, selector)
+                    for attr in ["data-old-hires", "data-a-dynamic-image", "src"]:
+                        val = element.get_attribute(attr)
+                        if val:
+                            val = val.strip()
+                            if val.startswith("{"):
+                                try:
+                                    import json
+                                    urls = json.loads(val)
+                                    if urls:
+                                        image_url = list(urls.keys())[-1]
+                                        break
+                                except: pass
+                            elif val.startswith("http"):
+                                image_url = val
+                                break
                     if image_url: break
                 except: pass
         elif platform == "flipkart":
             for selector in ["img.DByoR4", "img._396cs4", "img.jfZQxf", "div.CXW8mj img"]:
                 try:
-                    image_url = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("src")
+                    element = driver.find_element(By.CSS_SELECTOR, selector)
+                    for attr in ["data-src", "src"]:
+                        val = element.get_attribute(attr)
+                        if val and val.startswith("http"):
+                            image_url = val
+                            break
                     if image_url: break
                 except: pass
                 

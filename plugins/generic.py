@@ -87,7 +87,15 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     img_url = None
                     try:
                         img_element = card.find_element(By.CSS_SELECTOR, config['image_selector'])
-                        img_url = img_element.get_attribute("src") or img_element.get_attribute("data-src")
+                        for attr in ["data-src", "data-original", "data-img-src", "data-lazy-src", "src", "srcset"]:
+                            val = img_element.get_attribute(attr)
+                            if val:
+                                val = val.strip()
+                                if val.startswith("http") or val.startswith("data:image"):
+                                    if attr == "srcset":
+                                        val = val.split()[0]
+                                    img_url = val
+                                    break
                     except:
                         pass
                         
