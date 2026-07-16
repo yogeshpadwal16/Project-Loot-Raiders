@@ -4,12 +4,32 @@ import json
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 
+def load_dotenv():
+    dotenv_path = os.path.join(BASE_DIR, ".env")
+    if os.path.exists(dotenv_path):
+        try:
+            with open(dotenv_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip()
+                    if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                        val = val[1:-1]
+                    os.environ[key] = val
+        except Exception as e:
+            pass
+
 def load_settings() -> dict:
+    load_dotenv()
+    
     default_settings = {
         "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
         "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
         "gemini_api_key": "YOUR_GEMINI_API_KEY",
-        "amazon_tag": "lootraiders-21",
+        "amazon_tag": "YOUR_AMAZON_TAG",
         "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
         "discord_webhook_url": "",
         "min_discount": 30.0,
@@ -24,6 +44,7 @@ def load_settings() -> dict:
         ],
         "proxy_list": [],
         "proxies_enabled": False,
+        "scraper_concurrency": 3,
         "scoring_rules": {
             "min_publish_score": 45.0,
             "weights": {
@@ -52,7 +73,7 @@ def load_settings() -> dict:
         except:
             pass
             
-    # Environmental variable overrides for secure cloud environments (e.g. GitHub Actions)
+    # Environmental variable overrides for secure production environments
     env_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if env_token:
         saved["telegram_bot_token"] = env_token
@@ -62,6 +83,15 @@ def load_settings() -> dict:
     env_gemini_key = os.environ.get("GEMINI_API_KEY")
     if env_gemini_key:
         saved["gemini_api_key"] = env_gemini_key
+    env_flipkart = os.environ.get("FLIPKART_AFFID")
+    if env_flipkart:
+        saved["flipkart_affid"] = env_flipkart
+    env_amazon = os.environ.get("AMAZON_TAG")
+    if env_amazon:
+        saved["amazon_tag"] = env_amazon
+    env_discord = os.environ.get("DISCORD_WEBHOOK_URL")
+    if env_discord:
+        saved["discord_webhook_url"] = env_discord
         
     return saved
 
@@ -69,12 +99,16 @@ def save_settings(settings: dict):
     try:
         # Don't save environment variables overrides back to local settings.json
         to_save = settings.copy()
-        if os.environ.get("TELEGRAM_BOT_TOKEN") and to_save.get("telegram_bot_token") == os.environ.get("TELEGRAM_BOT_TOKEN"):
-            to_save["telegram_bot_token"] = "YOUR_TELEGRAM_BOT_TOKEN"
-        if os.environ.get("TELEGRAM_CHAT_ID") and to_save.get("telegram_chat_id") == os.environ.get("TELEGRAM_CHAT_ID"):
-            to_save["telegram_chat_id"] = "YOUR_TELEGRAM_CHAT_ID"
-        if os.environ.get("GEMINI_API_KEY") and to_save.get("gemini_api_key") == os.environ.get("GEMINI_API_KEY"):
-            to_save["gemini_api_key"] = "YOUR_GEMINI_API_KEY"
+        for env_key, setting_key in [
+            ("TELEGRAM_BOT_TOKEN", "telegram_bot_token"),
+            ("TELEGRAM_CHAT_ID", "telegram_chat_id"),
+            ("GEMINI_API_KEY", "gemini_api_key"),
+            ("FLIPKART_AFFID", "flipkart_affid"),
+            ("AMAZON_TAG", "amazon_tag"),
+            ("DISCORD_WEBHOOK_URL", "discord_webhook_url"),
+        ]:
+            if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):
+                to_save[setting_key] = f"YOUR_{env_key}"
             
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(to_save, f, indent=2)

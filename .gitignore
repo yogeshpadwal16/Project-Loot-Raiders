@@ -51,3 +51,6 @@ execution.log
 # Clicks tracking temporary outputs
 clicks_activity.json
 clicks_tracker.json
+
+# Scratch files and generated cards
+scratch/

@@ -374,6 +374,7 @@ function updateDealsUI(deals) {
                         <span class="deal-time"><i class="fa-solid fa-clock"></i> Broadcasted at ${dealTime} ${clicksLabel}</span>
                         <div class="deal-actions-row" style="display: flex; gap: 8px; align-items: center;">
                             ${isAuthorized() ? `<button class="btn-delete-deal" data-id="${deal.id}" title="Remove this deal from feed"><i class="fa-solid fa-trash"></i></button>` : ''}
+                            <button class="btn-price-history" data-id="${deal.id}" title="View Price History"><i class="fa-solid fa-chart-line"></i> History</button>
                             <a href="${redirectUrl}" target="_blank" class="btn-grab">GRAB DEAL <i class="fa-solid fa-up-right-from-square"></i></a>
                         </div>
                     </div>
@@ -798,30 +799,37 @@ function init() {
     setInterval(fetchDeals, 5000);
     setInterval(fetchClicks, 4000);
 
-    // Event delegation for delete buttons
+    // Event delegation for delete and history buttons
     if (dealsContainer) {
         dealsContainer.addEventListener('click', async (e) => {
             const deleteBtn = e.target.closest('.btn-delete-deal');
-            if (!deleteBtn) return;
+            const historyBtn = e.target.closest('.btn-price-history');
             
-            const dealId = deleteBtn.getAttribute('data-id');
-            if (!dealId) return;
-            
-            if (confirm('Are you sure you want to remove this deal from the feed?')) {
-                try {
-                    const response = await fetch(`${API_BASE}/api/deals/delete`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: dealId })
-                    });
-                    if (response.ok) {
-                        showToast('Deal removed from matrix.');
-                        fetchDeals();
-                    } else {
-                        showToast('Failed to delete deal.', 'error');
+            if (deleteBtn) {
+                const dealId = deleteBtn.getAttribute('data-id');
+                if (!dealId) return;
+                
+                if (confirm('Are you sure you want to remove this deal from the feed?')) {
+                    try {
+                        const response = await fetch(`${API_BASE}/api/deals/delete`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: dealId })
+                        });
+                        if (response.ok) {
+                            showToast('Deal removed from matrix.');
+                            fetchDeals();
+                        } else {
+                            showToast('Failed to delete deal.', 'error');
+                        }
+                    } catch (err) {
+                        showToast('Connection error. Could not delete deal.', 'error');
                     }
-                } catch (err) {
-                    showToast('Connection error. Could not delete deal.', 'error');
+                }
+            } else if (historyBtn) {
+                const dealId = historyBtn.getAttribute('data-id');
+                if (dealId) {
+                    showPriceHistory(dealId);
                 }
             }
         });
@@ -1096,6 +1104,138 @@ document.addEventListener('DOMContentLoaded', () => {
             const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
             window.open(shareUrl, '_blank');
             showToast('Opened WhatsApp Share dialog!');
+        });
+    }
+});
+
+// ==========================================
+// PRICE HISTORY CHART MODAL CONTROLLER
+// ==========================================
+let priceHistoryChartInstance = null;
+
+async function showPriceHistory(dealId) {
+    const deal = currentDeals.find(d => d.id === dealId);
+    if (!deal) return;
+    
+    // Set up product details in modal
+    document.getElementById('modal-product-title').textContent = deal.title;
+    document.getElementById('modal-product-img').src = deal.image_url || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyNzMwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTU4Zjk5Ij5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+    document.getElementById('modal-stat-current').textContent = `₹${parseInt(deal.price).toLocaleString()}`;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/deals/history?id=${dealId}`);
+        if (!response.ok) throw new Error('Failed to fetch history');
+        const historyData = await response.json();
+        
+        if (historyData.length === 0) {
+            showToast('No history records found for this deal.', 'error');
+            return;
+        }
+        
+        // Calculate stats
+        const prices = historyData.map(h => h.price);
+        const lowestPrice = Math.min(...prices);
+        const highestPrice = Math.max(...prices);
+        const maxDiscount = Math.max(...historyData.map(h => h.discount));
+        
+        document.getElementById('modal-stat-lowest').textContent = `₹${lowestPrice.toLocaleString()}`;
+        document.getElementById('modal-stat-highest').textContent = `₹${highestPrice.toLocaleString()}`;
+        document.getElementById('modal-stat-discount').textContent = `${Math.round(maxDiscount)}%`;
+        
+        // Open modal
+        const modal = document.getElementById('price-history-modal');
+        modal.style.display = 'flex';
+        
+        // Prepare chart data
+        const labels = historyData.map(h => {
+            const date = new Date(h.timestamp * 1000);
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + 
+                   date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        });
+        
+        const isDarkMode = !document.body.classList.contains('light-mode');
+        const textColor = isDarkMode ? '#94a3b8' : '#475569';
+        const gridColor = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const lineColor = isDarkMode ? '#ff9900' : '#1b64da';
+        const areaColor = isDarkMode ? 'rgba(255, 153, 0, 0.15)' : 'rgba(27, 100, 218, 0.1)';
+        
+        if (priceHistoryChartInstance) {
+            priceHistoryChartInstance.destroy();
+        }
+        
+        const canvas = document.getElementById('price-history-chart');
+        const ctx = canvas.getContext('2d');
+        priceHistoryChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Price (₹)',
+                    data: prices,
+                    borderColor: lineColor,
+                    backgroundColor: areaColor,
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2.5,
+                    pointBackgroundColor: lineColor,
+                    pointRadius: 3,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return `Price: ₹${context.raw.toLocaleString()}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: textColor, maxTicksLimit: 6 },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        ticks: { 
+                            color: textColor,
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString();
+                            }
+                        },
+                        grid: { color: gridColor }
+                    }
+                }
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        showToast('Could not load price history chart.', 'error');
+    }
+}
+
+// Close price history modal listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('price-history-modal');
+    const closeBtn = document.getElementById('close-history-modal');
+    
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        // Close modal when clicking outside the card
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
         });
     }
 });

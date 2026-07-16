@@ -16,8 +16,9 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
         amazon_tag = settings.get("amazon_tag", "lootraiders-21")
         
         try:
-            driver.get(config['url'])
-            time.sleep(4)
+            if not self.load_page_with_retries(driver, config['url'], delay=4.0):
+                logging.error(f"[Amazon Plugin] Failed to load target URL: {config['url']}")
+                return []
             
             # Simulated human scrolling
             for scroll in range(1, 6):

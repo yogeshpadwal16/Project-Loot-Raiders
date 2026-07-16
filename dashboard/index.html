@@ -373,6 +373,45 @@
         </div>
     </div>
 
+    <!-- PRICE HISTORY CHART MODAL -->
+    <div id="price-history-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-chart-line text-blue"></i> Price History & Analytics</h3>
+                <button class="btn-close-modal" id="close-history-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="product-summary-badge">
+                    <img id="modal-product-img" src="" alt="Product" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyNzMwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmaWxsPSIjOTU4Zjk5Ij5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='">
+                    <div class="product-summary-details">
+                        <h4 id="modal-product-title">Product Title</h4>
+                        <div class="modal-price-stats">
+                            <div class="stat-box">
+                                <span class="lbl">Current Price</span>
+                                <span class="val text-gold" id="modal-stat-current">₹0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="lbl">Lowest Price</span>
+                                <span class="val text-green" id="modal-stat-lowest">₹0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="lbl">Highest Price</span>
+                                <span class="val text-red" id="modal-stat-highest">₹0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="lbl">Max Discount</span>
+                                <span class="val text-blue" id="modal-stat-discount">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-chart-container">
+                    <canvas id="price-history-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="index.js"></script>
 </body>
 </html>

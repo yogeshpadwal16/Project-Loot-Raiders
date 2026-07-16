@@ -38,3 +38,22 @@ def calculate_true_discount(text_content: str):
         
     true_discount = ((mrp - selling_price) / mrp) * 100
     return selling_price, mrp, true_discount
+
+def get_high_res_image_url(url: str) -> str:
+    if not url:
+        return url
+    
+    # 1. Clean Amazon Image CDN suffixes (e.g. ._AC_SF226,225_ -> original)
+    if "amazon" in url.lower() or "media-amazon" in url.lower():
+        # Match ._XXXX_ before the file extension
+        url = re.sub(r"\._[A-Za-z0-9,_\-]+(?=\.\w+$)", "", url)
+        # Match pattern ._SRXXX,YYY_
+        url = re.sub(r"\._SR\d+,\d+_(?=\.\w+$)", "", url)
+        return url
+        
+    # 2. Upgrade Flipkart Image CDN dimensions from /image/612/612/ to /image/832/832/
+    if "flixcart" in url.lower():
+        url = re.sub(r"/image/\d+/\d+/", "/image/832/832/", url)
+        return url
+        
+    return url

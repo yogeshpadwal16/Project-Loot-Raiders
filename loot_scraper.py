@@ -312,7 +312,20 @@ def init_driver() -> webdriver.Chrome:
             options.add_argument(f"--proxy-server={proxy}")
             logging.info(f"WebDriver initialized using proxy: {proxy}")
             
-    driver = webdriver.Chrome(options=options)
+    try:
+        driver = webdriver.Chrome(options=options)
+    except Exception as e:
+        logging.warning(f"Default Chrome WebDriver initialization failed: {e}. Trying webdriver-manager fallback...")
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager
+            from selenium.webdriver.chrome.service import Service
+            service = Service(ChromeDriverManager().install())
+            driver = webdriver.Chrome(service=service, options=options)
+            logging.info("Chrome WebDriver successfully initialized using webdriver-manager fallback.")
+        except Exception as fallback_err:
+            logging.error(f"webdriver-manager fallback initialization also failed: {fallback_err}")
+            raise e
+            
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
     })
@@ -435,6 +448,40 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     })
                 deals.sort(key=lambda x: x["timestamp"], reverse=True)
                 self.wfile.write(json.dumps(deals).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(b"[]")
+            finally:
+                db.close()
+                
+        elif self.path.startswith('/api/deals/history'):
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(self.path)
+            params = parse_qs(parsed_url.query)
+            deal_id = params.get('id', [None])[0]
+            
+            if not deal_id:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Missing product ID"}).encode('utf-8'))
+                return
+                
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            db = SessionLocal()
+            try:
+                history = db.query(PriceHistory).filter_by(product_id=deal_id).order_by(PriceHistory.timestamp.asc()).all()
+                data = [{
+                    "price": h.price,
+                    "mrp": h.mrp,
+                    "discount": h.discount,
+                    "timestamp": h.timestamp,
+                    "is_verified_low": h.is_verified_low,
+                    "deal_score": h.deal_score
+                } for h in history]
+                self.wfile.write(json.dumps(data).encode('utf-8'))
             except Exception as e:
                 self.wfile.write(b"[]")
             finally:
@@ -659,13 +706,18 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 password = str(data.get('password', '')).strip()
                 logger.info(f"Auth attempt: username='{username}'")
                 
-                if username == 'yogeshpadwal16' and password == 'YOUR_DASHBOARD_PASSWORD':
+                # Retrieve credentials from environment variables
+                env_user = os.environ.get("DASHBOARD_USERNAME", "yogeshpadwal16").strip().lower()
+                env_pass = os.environ.get("DASHBOARD_PASSWORD", "YOUR_DASHBOARD_PASSWORD").strip()
+                env_token = os.environ.get("DASHBOARD_SESSION_TOKEN", "admin_session_key_default").strip()
+                
+                if username == env_user and password == env_pass:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
                     response = {
                         "status": "success",
-                        "token": "admin_session_key_vihan_143",
+                        "token": env_token,
                         "name": "Yogesh Padwal"
                     }
                     self.wfile.write(json.dumps(response).encode('utf-8'))
@@ -932,8 +984,10 @@ def scrape_platform(platform: str, config: dict, history: set):
         driver.set_page_load_timeout(30)
         
         # 2. Delegate extraction to plugin
+        start_time = time.time()
         extracted_deals = plugin.extract_deals(driver, config, settings)
-        logging.info(f"Plugin [{plugin.retailer_id}] extracted {len(extracted_deals)} deal candidates for platform: {platform}")
+        elapsed = time.time() - start_time
+        logging.info(f"Plugin [{plugin.retailer_id}] extracted {len(extracted_deals)} deal candidates in {elapsed:.2f}s for platform: {platform}")
         
         # 3. Process extracted deal candidates
         for deal in extracted_deals:
@@ -942,9 +996,6 @@ def scrape_platform(platform: str, config: dict, history: set):
                 break
                 
             unique_id = deal["id"]
-            if unique_id in history:
-                continue
-                
             price = deal["price"]
             mrp = deal["mrp"]
             discount = deal["discount"]
@@ -953,6 +1004,25 @@ def scrape_platform(platform: str, config: dict, history: set):
             final_url = deal["url"]
             is_lightning = deal["is_lightning"]
             
+            # Fetch latest price from DB to see if it's a duplicate or if the price changed
+            price_changed = True
+            is_price_drop = True
+            db = SessionLocal()
+            try:
+                latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
+                if latest:
+                    if latest.price == price:
+                        price_changed = False
+                    else:
+                        is_price_drop = price < latest.price
+            except Exception as db_err:
+                logging.error(f"Error querying latest price for duplicate check: {db_err}")
+            finally:
+                db.close()
+                
+            if not price_changed and unique_id in history:
+                continue
+                
             # Filter out low-value cheap products or minor savings spams
             settings = load_settings()
             
@@ -987,12 +1057,15 @@ def scrape_platform(platform: str, config: dict, history: set):
             save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
             history.add(unique_id)
             
-            # Dispatch notifications if score is above the configured threshold
-            if should_publish_deal(platform, deal_score):
+            # Dispatch notifications if score is above the configured threshold and it's a price drop (or new product)
+            if should_publish_deal(platform, deal_score) and is_price_drop:
                 enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
                 time.sleep(0.5)
             else:
-                logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
+                if not is_price_drop:
+                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
+                else:
+                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
@@ -1044,7 +1117,45 @@ def sync_database_to_json():
     finally:
         db.close()
 
+def run_zombie_cleanup():
+    try:
+        import psutil
+        my_pid = os.getpid()
+        parent_pid = os.getppid()
+        terminated_list = []
+        
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                pinfo = proc.info
+                pid = pinfo['pid']
+                name = pinfo['name']
+                cmdline = pinfo['cmdline']
+                
+                if pid in (my_pid, parent_pid):
+                    continue
+                    
+                # Terminate other python processes executing loot_scraper
+                if name and 'python' in name.lower():
+                    if cmdline and any('loot_scraper.py' in arg for arg in cmdline):
+                        proc.kill()
+                        terminated_list.append(f"Python (PID {pid})")
+                        continue
+                        
+                # Terminate zombie webdrivers / browser sessions
+                if name and ('chromedriver' in name.lower() or 'chrome' in name.lower()):
+                    proc.kill()
+                    terminated_list.append(f"{name} (PID {pid})")
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        if terminated_list:
+            logging.info(f"Automated startup zombie cleanup executed. Terminated: {', '.join(terminated_list)}")
+    except Exception as e:
+        logging.warning(f"Startup zombie cleanup warning: {e}")
+
 def main():
+    # 0. Clean up zombie chrome and python processes
+    run_zombie_cleanup()
+    
     # 1. Initialize SQLite Database Tables & Seed Selectors
     init_db()
     initialize_database_selectors()
@@ -1093,7 +1204,11 @@ def main():
                 finally:
                     db.close()
                 
-                with ThreadPoolExecutor(max_workers=1) as executor:
+                settings = load_settings()
+                concurrency = settings.get("scraper_concurrency", 3)
+                logging.info(f"Initiating scraping scan frame using {concurrency} parallel workers.")
+                
+                with ThreadPoolExecutor(max_workers=concurrency) as executor:
                     futures = []
                     for platform, config in matrix.items():
                         futures.append(executor.submit(scrape_platform, platform, config, history))

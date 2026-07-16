@@ -17,8 +17,9 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
     def extract_deals(self, driver, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         deals = []
         try:
-            driver.get(config['url'])
-            time.sleep(5)
+            if not self.load_page_with_retries(driver, config['url'], delay=5.0):
+                logging.error(f"[Generic Plugin - {self._platform_id}] Failed to load target URL: {config['url']}")
+                return []
             
             # Simulated human scrolling
             for scroll in range(1, 4):

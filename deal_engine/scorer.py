@@ -27,13 +27,13 @@ def calculate_deal_score(
     })
     
     # 1. Discount Score (s_disc)
-    # Scale discount from 45% (score 0) to 85% (score 100)
-    if discount < 45.0:
+    # Scale discount from 30% (score 0) to 80% (score 100)
+    if discount < 30.0:
         s_disc = 0.0
-    elif discount >= 85.0:
+    elif discount >= 80.0:
         s_disc = 100.0
     else:
-        s_disc = ((discount - 45.0) / (85.0 - 45.0)) * 100.0
+        s_disc = ((discount - 30.0) / (80.0 - 30.0)) * 100.0
         
     # 2. Absolute Savings Score (s_save)
     # Scale absolute savings from ₹0 (score 0) to ₹3000 (score 100)
@@ -83,7 +83,7 @@ def calculate_deal_score(
     # 7. Shield Against Fake Quoted Discounts / Fake MRPs
     # If the price drop is not historically verified, cap the score below the publish threshold
     if not is_verified_low:
-        min_publish = rules.get("min_publish_score", 70.0)
+        min_publish = rules.get("min_publish_score", 45.0)
         final_score = min(min_publish - 2.0, final_score)
         
     final_score = max(0.0, min(100.0, final_score))
@@ -94,5 +94,5 @@ def calculate_deal_score(
 def should_publish_deal(platform: str, score: float) -> bool:
     settings = load_settings()
     rules = settings.get("scoring_rules", {})
-    min_score = rules.get("min_publish_score", 70.0)
+    min_score = rules.get("min_publish_score", 45.0)
     return score >= min_score
