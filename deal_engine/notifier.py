@@ -159,20 +159,32 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     
     if not caption:
         caption = (
-            f"{header}\n"
-            f"📌 <b>{truncated_title}</b>\n\n"
-            f"{badge}\n"
-            f"💰 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
-            f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
-            f"💸 <b>Direct Savings:</b> <code>₹{savings:,}</code> (<b>{discount:.0f}% OFF</b>)\n\n"
+            f"⚡ <b>[ HOT {platform.upper()} DEAL ALERT ]</b> ⚡\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"⭐ <b>Deal Rating:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-            f"🛡️ <b>Status:</b> <code>📉 Verified 90-Day Low</code>"
+            f"🛍️ <b>{truncated_title}</b>\n\n"
+            f"💎 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
+            f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
+            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b> (Save <b>₹{savings:,}</b>!)\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 <b>Deal Score:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
+            f"📉 <b>Price Trend:</b> <code>Verified 90-Day Low</code>"
             f"{comparison_text}\n\n"
-            f"⚡ <i>Hurry, price drop seen! Grab it before stock ends!</i>\n"
+            f"🚀 <i>Hurry! Stock is limited and price can rise anytime!</i>\n"
             f"👉 <b><a href='{final_url}'>CLICK HERE TO BUY NOW</a></b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"📢 <b>Join @LootRaidersDeals for more loot deals!</b>"
+            f"📢 <b>Join @LootRaidersDeals for more verified loot!</b>"
+        )
+        
+    # Guardrail: If caption exceeds 1000 chars, Telegram photo API fails.
+    # Trim caption to a clean, high-impact format if it's too long.
+    if len(caption) > 1000:
+        caption = (
+            f"⚡ <b>[ HOT {platform.upper()} DEAL ]</b> ⚡\n\n"
+            f"🛍️ <b>{truncated_title}</b>\n\n"
+            f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
+            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n\n"
+            f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n\n"
+            f"📢 <b>Join @LootRaidersDeals for more!</b>"
         )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
@@ -382,6 +394,8 @@ def notifier_worker():
                 logging.error(f"Failed to broadcast notification after 3 attempts: {title[:30]}...")
                 
         notification_queue.task_done()
+        # Spacer delay to avoid Telegram 429 rate limit
+        time.sleep(3.5)
 
 def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str):
     job = {
