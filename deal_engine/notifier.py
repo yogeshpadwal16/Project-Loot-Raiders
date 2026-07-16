@@ -15,7 +15,7 @@ from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 
 notification_queue = queue.Queue()
 
-def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str) -> str:
+def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None) -> str:
     settings = load_settings()
     api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
     if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
@@ -36,11 +36,19 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
             f"Affiliate Buy Link: {final_url}\n"
         )
         
+        if price_stats:
+            prompt += (
+                f"\nLocal tracked historical price trends for this product (over past {price_stats['points_count']} price checks):\n"
+                f"- Lowest tracked price: Rs. {price_stats['lowest']:,}\n"
+                f"- Highest tracked price: Rs. {price_stats['highest']:,}\n"
+                f"- Average tracked price: Rs. {int(price_stats['average']):,}\n"
+            )
+            
         if comparison:
-            prompt += f"Price Comparison on other platforms:\n{comparison}\n\n"
+            prompt += f"\nPrice Comparison on other platforms:\n{comparison}\n"
             
         prompt += (
-            "Formatting Rules:\n"
+            "\nFormatting Rules:\n"
             "- Use bold <b>...</b>, italics <i>...</i>, strike <s>...</s> for MRP, and code <code>...</code> for prices.\n"
             "- Include exact buy link in this HTML format: <a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a>\n"
             "- Keep it exciting, short, and use engaging shopping/warning emojis.\n"
@@ -97,6 +105,44 @@ def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, dis
             logging.warning(f"Discord Webhook returned status {r.status_code}: {r.text}")
     except Exception as e:
         logging.error(f"Discord Webhook background broadcast failure: {e}")
+    return False
+
+def send_whatsapp_alert(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float) -> bool:
+    settings = load_settings()
+    sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    from_whatsapp = os.environ.get("TWILIO_WHATSAPP_FROM")
+    to_whatsapp = os.environ.get("WHATSAPP_TO")
+    
+    if not (sid and auth_token and from_whatsapp and to_whatsapp):
+        return False
+        
+    try:
+        url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
+        
+        message_body = (
+            f"🍊💣 *Loot Raiders Deal Alert!* 💣*🍊\n\n"
+            f"🛍️ *{title[:60]}...*\n\n"
+            f"🔥 *Loot Price:* ₹{price:,} (MRP: ~₹{mrp:,}~)\n"
+            f"📉 *Discount:* {discount:.0f}% OFF\n"
+            f"💎 *Deal Score:* {deal_score:.0f}/100\n\n"
+            f"👉 *Buy Link:* {final_url}"
+        )
+        
+        payload = {
+            "From": from_whatsapp if from_whatsapp.startswith("whatsapp:") else f"whatsapp:{from_whatsapp}",
+            "To": to_whatsapp if to_whatsapp.startswith("whatsapp:") else f"whatsapp:{to_whatsapp}",
+            "Body": message_body
+        }
+        
+        res = requests.post(url, data=payload, auth=(sid, auth_token), timeout=10)
+        if res.status_code in [200, 201]:
+            logging.info("WhatsApp (Twilio) alert successfully dispatched.")
+            return True
+        else:
+            logging.warning(f"WhatsApp alert dispatch failed: {res.status_code} - {res.text}")
+    except Exception as e:
+        logging.error(f"WhatsApp alert dispatch exception: {e}")
     return False
 
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str) -> bool:
@@ -164,8 +210,26 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     rating_score = deal_score / 10.0
     stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
     
+    # Calculate price stats from local database
+    price_stats = None
+    db = SessionLocal()
+    try:
+        hist_prices = db.query(PriceHistory.price).filter_by(product_id=unique_id).all()
+        if hist_prices:
+            prices_list = [p[0] for p in hist_prices]
+            price_stats = {
+                "lowest": min(prices_list),
+                "highest": max(prices_list),
+                "average": sum(prices_list) / len(prices_list),
+                "points_count": len(prices_list)
+            }
+    except Exception as e:
+        logging.error(f"Error querying price history stats: {e}")
+    finally:
+        db.close()
+        
     # Attempt Gemini generation
-    caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text)
+    caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text, price_stats)
     
     if caption:
         # Prepend the official branded header so the platform is ALWAYS clear!
@@ -185,7 +249,6 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             f"🛡️ <b>Verification:</b> <code>{verification_text}</code>"
             f"{comparison_text}\n\n"
             f"🚀 <i>Price drops don't last! Grab it before stock ends!</i>\n"
-            f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"📢 <b>Join @LootRaidersDeals for more verified loot!</b>"
         )
@@ -200,7 +263,6 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
             f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n"
             f"🛡️ <b>Verification:</b> <code>{verification_text}</code>\n\n"
-            f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n\n"
             f"📢 <b>Join @LootRaidersDeals for more!</b>"
         )
     
@@ -221,7 +283,21 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     except Exception as img_gen_err:
         logging.error(f"Image generation failed inside notifier: {img_gen_err}")
 
-    # 3. Upload raw product image or dynamic image card to Telegram
+    # 3. Build Inline Buy Button markup
+    import json
+    reply_markup = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": "🛍️ CLICK HERE TO BUY NOW 🛍️",
+                    "url": final_url
+                }
+            ]
+        ]
+    }
+    reply_markup_json = json.dumps(reply_markup)
+
+    # 4. Upload raw product image or dynamic image card to Telegram
     photo_sent = False
     
     # Try sending raw image first if it's a valid remote URL
@@ -232,7 +308,8 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 "chat_id": chat_id,
                 "photo": img_url,
                 "caption": caption,
-                "parse_mode": "HTML"
+                "parse_mode": "HTML",
+                "reply_markup": reply_markup_json
             }
             res = requests.post(endpoint, json=payload, timeout=25)
             if res.status_code == 200:
@@ -249,7 +326,12 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
-                payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
+                payload = {
+                    "chat_id": chat_id, 
+                    "caption": caption, 
+                    "parse_mode": "HTML",
+                    "reply_markup": reply_markup_json
+                }
                 res = requests.post(endpoint, data=payload, files=files, timeout=25)
                 if res.status_code == 200:
                     logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
@@ -421,6 +503,12 @@ def notifier_worker():
             
         if has_discord:
             discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+            
+        # C. Dispatch WhatsApp alerts (Optional, conditional on Twilio settings in .env)
+        try:
+            send_whatsapp_alert(title, price, mrp, discount, final_url, is_verified_low, deal_score)
+        except Exception as wa_err:
+            logging.error(f"WhatsApp alert dispatch failed: {wa_err}")
             
         # Retry with exponential backoff on failure
         if (has_telegram and not telegram_ok) or (has_discord and not discord_ok):

@@ -50,20 +50,72 @@ async def mirror_main():
         logging.info("[Channel Mirror] Telegram Client authenticated successfully.")
         
         # Now resolve and join target channels
-        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals']
+        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1']
         resolved_chats = []
+        
+        from telethon.tl.functions.channels import JoinChannelRequest
+        from telethon.tl.functions.messages import ImportChatInviteRequest, CheckChatInviteRequest
+        from telethon.tl.types import ChatInviteAlready
+        
         for chat in target_channels:
+            chat_clean = chat.strip()
             try:
-                entity = await client.get_input_entity(chat)
-                resolved_chats.append(entity)
-                logging.info(f"[Channel Mirror] Resolved channel entity: @{chat}")
-                
-                # Join the channel to receive real-time push updates from Telegram
-                from telethon.tl.functions.channels import JoinChannelRequest
-                await client(JoinChannelRequest(entity))
-                logging.info(f"[Channel Mirror] Successfully joined and subscribed to channel: @{chat}")
+                if chat_clean.startswith("+") or "joinchat/" in chat_clean:
+                    # Extract private invite hash
+                    invite_hash = chat_clean.split("joinchat/")[-1].split("+")[-1].strip("/")
+                    logging.info(f"[Channel Mirror] Processing private invite hash: {invite_hash}")
+                    try:
+                        # First check if we are already in the channel or retrieve details
+                        invite_info = await client(CheckChatInviteRequest(invite_hash))
+                        
+                        if isinstance(invite_info, ChatInviteAlready):
+                            # Already joined
+                            entity = await client.get_input_entity(invite_info.chat)
+                            resolved_chats.append(entity)
+                            logging.info(f"[Channel Mirror] Already participant of private channel: {invite_info.chat.title}")
+                        else:
+                            # Join the private channel
+                            updates = await client(ImportChatInviteRequest(invite_hash))
+                            if hasattr(updates, "chats") and updates.chats:
+                                entity = await client.get_input_entity(updates.chats[0])
+                                resolved_chats.append(entity)
+                                logging.info(f"[Channel Mirror] Successfully joined private channel: {updates.chats[0].title}")
+                            else:
+                                # Fallback: scan dialogue to match
+                                logging.info(f"[Channel Mirror] Private invite joined. Loading dialogues...")
+                                dialogs = await client.get_dialogs()
+                                # We'll check again via CheckChatInviteRequest which now should return ChatInviteAlready
+                                double_check = await client(CheckChatInviteRequest(invite_hash))
+                                if hasattr(double_check, "chat"):
+                                    entity = await client.get_input_entity(double_check.chat)
+                                    resolved_chats.append(entity)
+                                    logging.info(f"[Channel Mirror] Resolved private channel: {double_check.chat.title}")
+                    except Exception as invite_err:
+                        # Fallback for UserAlreadyParticipant or other RpcErrors
+                        if "ALREADY_PARTICIPANT" in str(invite_err):
+                            try:
+                                # Try checking the invite again to fetch the chat details
+                                invite_info = await client(CheckChatInviteRequest(invite_hash))
+                                if hasattr(invite_info, "chat"):
+                                    entity = await client.get_input_entity(invite_info.chat)
+                                    resolved_chats.append(entity)
+                                    logging.info(f"[Channel Mirror] Resolved already joined private channel: {invite_info.chat.title}")
+                            except Exception as inner_err:
+                                logging.error(f"[Channel Mirror] Failed to resolve already joined private channel {invite_hash}: {inner_err}")
+                        else:
+                            logging.error(f"[Channel Mirror] Error joining private invite {invite_hash}: {invite_err}")
+                else:
+                    # Public channel username
+                    clean_username = chat_clean.lstrip("@")
+                    entity = await client.get_input_entity(clean_username)
+                    resolved_chats.append(entity)
+                    logging.info(f"[Channel Mirror] Resolved public channel: @{clean_username}")
+                    
+                    # Join the public channel
+                    await client(JoinChannelRequest(entity))
+                    logging.info(f"[Channel Mirror] Successfully joined/subscribed to public channel: @{clean_username}")
             except Exception as resolve_err:
-                logging.error(f"[Channel Mirror] Error resolving/joining channel @{chat}: {resolve_err}")
+                logging.error(f"[Channel Mirror] Error resolving/joining channel {chat_clean}: {resolve_err}")
                 
         if not resolved_chats:
             logging.error("[Channel Mirror] No channels could be resolved or joined. Mirror listener halted.")

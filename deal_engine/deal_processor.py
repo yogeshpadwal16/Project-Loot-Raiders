@@ -108,6 +108,18 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     if mrp > price:
         discount = ((mrp - price) / mrp) * 100.0
         
+    # 4.5 Check if we already have this deal at the exact same price
+    db = SessionLocal()
+    try:
+        latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
+        if latest and latest.price == price:
+            logging.info(f"[Deal Processor] Deal {unique_id} has unchanged price (₹{price}). Skipping duplicate competitor alert.")
+            return True
+    except Exception as db_err:
+        logging.error(f"[Deal Processor] Price duplicate check error: {db_err}")
+    finally:
+        db.close()
+        
     # 5. Format/Clean affiliate URL
     settings = load_settings()
     final_url = expanded_url
@@ -143,15 +155,8 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     # 7. Check Price Trend History
     is_verified_low = True
     try:
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        # Spawn short driver just for verification
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        temp_driver = webdriver.Chrome(options=chrome_options)
+        from utils.playwright_adapter import get_playwright_driver
+        temp_driver = get_playwright_driver(settings)
         try:
             is_verified_low = verify_historical_low(temp_driver, expanded_url, price, unique_id, discount)
         finally:
@@ -165,11 +170,8 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
     
     # 9. Dispatch alerts
-    # Since mirror/catalog deals are highly targeted, we broadcast them immediately if they score >= 60
-    if deal_score >= 60.0:
-        enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
-        logging.info(f"[Deal Processor] Deal alert successfully dispatched for: {title[:35]}")
-    else:
-        logging.info(f"[Deal Processor] Deal score ({deal_score:.1f}) below priority threshold. Saved but not posted.")
+    # Competitor mirror deals are broadcasted immediately with no score restrictions
+    enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
+    logging.info(f"[Deal Processor] Competitor deal alert successfully dispatched for: {title[:35]}")
         
     return True

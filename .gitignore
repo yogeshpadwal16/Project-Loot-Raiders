@@ -54,3 +54,9 @@ clicks_tracker.json
 
 # Scratch files and generated cards
 scratch/
+
+# Telegram session files
+*.session
+
+# Root level test files
+/deals_history.json
