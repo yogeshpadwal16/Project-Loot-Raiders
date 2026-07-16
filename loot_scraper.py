@@ -1095,7 +1095,7 @@ def main():
                 finally:
                     db.close()
                 
-                with ThreadPoolExecutor(max_workers=2) as executor:
+                with ThreadPoolExecutor(max_workers=1) as executor:
                     futures = []
                     for platform, config in matrix.items():
                         futures.append(executor.submit(scrape_platform, platform, config, history))
