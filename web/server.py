@@ -86,7 +86,8 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 "is_running": state["is_running"],
                 "scans_completed": state["scans_completed"],
                 "last_scan_time": state["last_scan_time"],
-                "uptime": time.time() - state["uptime_start"]
+                "uptime": time.time() - state["uptime_start"],
+                "crawler_health": state.get("crawler_health", {})
             }
             self.wfile.write(json.dumps(status).encode('utf-8'))
             
