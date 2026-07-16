@@ -7,6 +7,19 @@ DB_PATH = os.path.join(BASE_DIR, "loot_raiders.db")
 
 # check_same_thread=False is required for sharing the SQLite connection across Selenium worker threads
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False, "timeout": 30})
+
+from sqlalchemy import event
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    try:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+    except Exception as e:
+        import logging
+        logging.warning(f"Failed to set SQLite PRAGMA journal_mode=WAL: {e}")
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

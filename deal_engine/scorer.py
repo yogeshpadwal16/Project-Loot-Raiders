@@ -5,7 +5,7 @@ import logging
 import requests
 from config.settings import load_settings
 from database.db_session import SessionLocal
-from knowledge_base.models import ClickLog, Product
+from knowledge_base.models import ClickLog, Product, PriceHistory
 
 _ai_score_cache = {}
 
@@ -205,16 +205,47 @@ def calculate_deal_score(
             
     final_score += feedback_bonus
     
+    # Check if this is a price glitch / extreme price error
+    is_glitch = check_if_glitch(price, mrp, discount, product_id)
+    if is_glitch:
+        final_score += 15.0
+        logging.info(f"[AI Scorer] Price glitch detected for product {product_id}! Score boosted.")
+    
     # 7. Shield Against Fake Quoted Discounts / Fake MRPs
-    # If the price drop is not historically verified, cap the score below the publish threshold
-    if not is_verified_low:
+    # If the price drop is not historically verified and it's not a glitch, cap the score below the publish threshold
+    if not is_verified_low and not is_glitch:
         min_publish = rules.get("min_publish_score", 45.0)
         final_score = min(min_publish - 2.0, final_score)
         
     final_score = max(0.0, min(100.0, final_score))
     
-    logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, AI Score: {ai_score}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
+    logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, AI Score: {ai_score}, Glitch: {is_glitch}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
     return final_score
+
+def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None) -> bool:
+    """
+    Checks if a deal is an extreme price glitch/error based on high discount thresholds
+    or sudden massive drops compared to tracked historical price averages.
+    """
+    if discount >= 85.0:
+        return True
+        
+    if unique_id:
+        db = SessionLocal()
+        try:
+            hist = db.query(PriceHistory.price).filter_by(product_id=unique_id).all()
+            if hist:
+                prices = [h[0] for h in hist if h[0] > 0]
+                if len(prices) >= 3:
+                    avg_price = sum(prices) / len(prices)
+                    if price <= (avg_price * 0.35): # 65% drop from average
+                        return True
+        except Exception as e:
+            logging.error(f"Error checking glitch status against history: {e}")
+        finally:
+            db.close()
+            
+    return False
 
 def should_publish_deal(platform: str, score: float) -> bool:
     settings = load_settings()

@@ -438,6 +438,9 @@ function updateDealsUI(deals) {
                         <span class="mrp-price">₹${mrpVal}</span>
                         <span class="discount-tag">${discountVal}% OFF</span>
                         ${scoreBadge}
+                        <div class="deal-sparkline-container" style="width: 80px; height: 24px; margin-left: auto; display: inline-block;">
+                            <canvas class="deal-sparkline-canvas" id="sparkline-${deal.id}" style="width: 80px; height: 24px; pointer-events: none;"></canvas>
+                        </div>
                     </div>
                     <div class="deal-footer">
                         <span class="deal-time"><i class="fa-solid fa-clock"></i> Broadcasted at ${dealTime} ${clicksLabel}</span>
@@ -454,6 +457,54 @@ function updateDealsUI(deals) {
     });
     
     dealsContainer.innerHTML = html;
+    
+    // Render mini price sparklines
+    deals.forEach(deal => {
+        const canvas = document.getElementById(`sparkline-${deal.id}`);
+        if (!canvas) return;
+        
+        const history = deal.price_history || [];
+        if (history.length < 2) {
+            canvas.style.display = 'none';
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        const prices = history.map(h => h.price);
+        const labels = history.map((_, idx) => idx);
+        
+        const firstPrice = prices[0];
+        const lastPrice = prices[prices.length - 1];
+        const isDrop = lastPrice < firstPrice;
+        const lineColor = isDrop ? '#25d366' : '#958f99';
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: prices,
+                    borderColor: lineColor,
+                    borderWidth: 1.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                }
+            }
+        });
+    });
 }
 
 // Log streaming console
