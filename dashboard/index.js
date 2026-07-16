@@ -9,7 +9,8 @@ const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || window.
 // Helper to check if logged in as administrator
 function isAuthorized() {
     if (IS_STATIC_MODE) return false;
-    return localStorage.getItem('admin_token') === 'admin_session_key_vihan_143';
+    const token = localStorage.getItem('admin_token');
+    return token && token.startsWith('admin_session_key');
 }
 
 // State management
@@ -854,7 +855,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auth helper
     function isAuthorized() {
-        return localStorage.getItem('admin_token') === 'admin_session_key_vihan_143';
+        const token = localStorage.getItem('admin_token');
+        return token && token.startsWith('admin_session_key');
     }
 
     function checkAuthentication() {
