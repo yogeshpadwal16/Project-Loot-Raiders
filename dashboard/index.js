@@ -468,41 +468,45 @@ function updateLocalSelectorsState() {
 // ==========================================
 
 // Toggle running status
-toggleBtn.addEventListener('click', async () => {
-    try {
-        const response = await fetch(`${API_BASE}/api/toggle`, { method: 'POST' });
-        if (!response.ok) throw new Error('Toggle error');
-        const data = await response.json();
-        
-        if (data.is_running) {
-            showToast('Deals scanner is now active.');
-        } else {
-            showToast('Deals scanner has been paused.', 'error');
+if (toggleBtn) {
+    toggleBtn.addEventListener('click', async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/toggle`, { method: 'POST' });
+            if (!response.ok) throw new Error('Toggle error');
+            const data = await response.json();
+            
+            if (data.is_running) {
+                showToast('Deals scanner is now active.');
+            } else {
+                showToast('Deals scanner has been paused.', 'error');
+            }
+            fetchStatus();
+        } catch (err) {
+            showToast('Connection failed. Could not communicate with server.', 'error');
         }
-        fetchStatus();
-    } catch (err) {
-        showToast('Connection failed. Could not communicate with server.', 'error');
-    }
-});
+    });
+}
 
 // Trigger manual scan
-scanBtn.addEventListener('click', async () => {
-    scanBtn.disabled = true;
-    scanBtn.querySelector('i').classList.add('fa-spin');
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/scan`, { method: 'POST' });
-        if (!response.ok) throw new Error('Scan command error');
-        showToast('Immediate manual scan execution loop triggered.');
-    } catch (err) {
-        showToast('Could not trigger manual scan.', 'error');
-    }
-    
-    setTimeout(() => {
-        scanBtn.disabled = false;
-        scanBtn.querySelector('i').classList.remove('fa-spin');
-    }, 3000);
-});
+if (scanBtn) {
+    scanBtn.addEventListener('click', async () => {
+        scanBtn.disabled = true;
+        scanBtn.querySelector('i').classList.add('fa-spin');
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/scan`, { method: 'POST' });
+            if (!response.ok) throw new Error('Scan command error');
+            showToast('Immediate manual scan execution loop triggered.');
+        } catch (err) {
+            showToast('Could not trigger manual scan.', 'error');
+        }
+        
+        setTimeout(() => {
+            scanBtn.disabled = false;
+            scanBtn.querySelector('i').classList.remove('fa-spin');
+        }, 3000);
+    });
+}
 
 // Trigger zombie cleanup
 const cleanupBtn = document.getElementById('cleanup-btn');
@@ -551,25 +555,27 @@ tabButtons.forEach(btn => {
 });
 
 // Save selectors back to backend API
-saveSelectorsBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if (!selectorForm.reportValidity()) return;
-    
-    // Refresh state from form values
-    updateLocalSelectorsState();
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/selectors`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentSelectors)
-        });
-        if (!response.ok) throw new Error('Selector save failure');
-        showToast('Scraper selectors matrix updated successfully!');
-    } catch (err) {
-        showToast('Failed to save selectors to server.', 'error');
-    }
-});
+if (saveSelectorsBtn) {
+    saveSelectorsBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (!selectorForm.reportValidity()) return;
+        
+        // Refresh state from form values
+        updateLocalSelectorsState();
+        
+        try {
+            const response = await fetch(`${API_BASE}/api/selectors`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentSelectors)
+            });
+            if (!response.ok) throw new Error('Selector save failure');
+            showToast('Scraper selectors matrix updated successfully!');
+        } catch (err) {
+            showToast('Failed to save selectors to server.', 'error');
+        }
+    });
+}
 
 // ==========================================
 // INITIALIZATION
