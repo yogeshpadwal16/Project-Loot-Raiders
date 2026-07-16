@@ -147,7 +147,8 @@ def send_whatsapp_alert(title: str, price: int, mrp: int, discount: float, final
 
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str) -> bool:
     is_amazon = "amazon" in platform.lower()
-    is_glitch = discount >= 75.0
+    from deal_engine.scorer import check_if_glitch
+    is_glitch = check_if_glitch(price, mrp, discount, unique_id)
     
     # 1. Premium Headers
     if is_glitch:
