@@ -166,7 +166,7 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
         is_verified_low = True
         
     # 8. Calculate score and save
-    deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, False, product_id=unique_id)
+    deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, False, product_id=unique_id, title=title)
     save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
     
     # 9. Dispatch alerts
