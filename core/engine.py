@@ -47,7 +47,8 @@ scraper_state = {
     "scans_completed": 0,        # Count of completed scan loops
     "last_scan_time": 0,         # Epoch timestamp of last completed loop
     "uptime_start": time.time(), # Start timestamp
-    "scan_trigger": False        # External trigger for manual scan
+    "scan_trigger": False,       # External trigger for manual scan
+    "crawler_health": {}         # Platform monitoring logs
 }
 
 def init_driver():
@@ -64,6 +65,19 @@ def scrape_platform(platform: str, config: dict, history: set):
     logging.info(f"Scanning target feed stream: {platform.upper()} (Multi-threaded)")
     driver = None
     
+    # Initialize health state for this crawler
+    if platform not in scraper_state["crawler_health"]:
+        scraper_state["crawler_health"][platform] = {
+            "status": "Starting",
+            "consecutive_failures": 0,
+            "success_count": 0,
+            "fail_count": 0,
+            "last_success": 0,
+            "last_failure": 0,
+            "last_error": ""
+        }
+    health = scraper_state["crawler_health"][platform]
+    
     # 1. Resolve matched plugin for platform
     plugin = None
     for key, instance in RETAILER_PLUGINS.items():
@@ -73,6 +87,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             
     if not plugin:
         logging.warning(f"No suitable retailer plugin registered for platform: {platform}")
+        health["status"] = "Offline"
+        health["last_error"] = "Plugin not found"
         return
         
     settings = load_settings()
@@ -87,6 +103,20 @@ def scrape_platform(platform: str, config: dict, history: set):
         elapsed = time.time() - start_time
         logging.info(f"Plugin [{plugin.retailer_id}] extracted {len(extracted_deals)} deal candidates in {elapsed:.2f}s for platform: {platform}")
         
+        # Update health based on extraction results
+        if len(extracted_deals) > 0:
+            health["status"] = "Healthy"
+            health["consecutive_failures"] = 0
+            health["success_count"] += 1
+            health["last_success"] = time.time()
+        else:
+            health["consecutive_failures"] += 1
+            health["fail_count"] += 1
+            health["last_failure"] = time.time()
+            health["last_error"] = "0 deals extracted (possible selector drift or no deals available)"
+            if health["consecutive_failures"] >= 3:
+                health["status"] = "Degraded"
+                
         # 3. Process extracted deal candidates
         for deal in extracted_deals:
             if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
@@ -99,7 +129,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             discount = deal["discount"]
             title = deal["title"]
             img_url = deal["image_url"]
-            final_url = deal["url"]
+            from utils.affiliate import generate_affiliate_url
+            final_url = generate_affiliate_url(deal["url"], platform, settings)
             is_lightning = deal["is_lightning"]
             
             # Fetch latest price from DB to see if it's a duplicate or if the price changed
@@ -167,6 +198,13 @@ def scrape_platform(platform: str, config: dict, history: set):
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
+        if platform in scraper_state["crawler_health"]:
+            health = scraper_state["crawler_health"][platform]
+            health["consecutive_failures"] += 1
+            health["fail_count"] += 1
+            health["last_failure"] = time.time()
+            health["last_error"] = str(out_err)
+            health["status"] = "Offline"
     finally:
         if driver:
             try: driver.quit()

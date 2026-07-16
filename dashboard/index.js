@@ -352,6 +352,51 @@ function updateStatusUI(status) {
         toggleBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Resume Scan</span>';
         toggleBtn.className = 'btn btn-primary';
     }
+
+    // Render Crawler Health statuses
+    const healthBody = document.getElementById('crawler-health-body');
+    if (healthBody && status.crawler_health) {
+        let healthHtml = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+        const platforms = Object.keys(status.crawler_health);
+        
+        if (platforms.length === 0) {
+            healthHtml += `<p style="font-size: 0.8rem; color: var(--md-sys-color-on-background-variant); text-align: center; padding: 10px 0;">No scraper execution metrics tracked yet.</p>`;
+        } else {
+            platforms.forEach(plat => {
+                const h = status.crawler_health[plat];
+                let badgeColor = '#25d366'; // Healthy
+                let statusLabel = h.status.toUpperCase();
+                
+                if (h.status === 'Degraded') {
+                    badgeColor = '#ff9800'; // Orange
+                } else if (h.status === 'Offline') {
+                    badgeColor = '#f44336'; // Red
+                } else if (h.status === 'Starting') {
+                    badgeColor = '#0088cc'; // Blue
+                }
+                
+                const lastSuccessTime = h.last_success > 0 
+                    ? new Date(h.last_success * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : 'Never';
+                    
+                const platName = plat.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                
+                healthHtml += `
+                    <div class="health-item" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border-left: 4px solid ${badgeColor}; transition: all 0.2s ease;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 700; font-size: 0.85rem; letter-spacing: 0.2px;">${platName}</span>
+                            <span style="font-size: 0.72rem; color: var(--md-sys-color-on-background-variant); margin-top: 2px;">Last success: ${lastSuccessTime}</span>
+                        </div>
+                        <span style="font-size: 0.68rem; font-weight: 700; background: ${badgeColor}15; color: ${badgeColor}; padding: 3px 10px; border-radius: 100px; text-transform: uppercase; border: 1px solid ${badgeColor}33; letter-spacing: 0.5px;">
+                            ${statusLabel}
+                        </span>
+                    </div>
+                `;
+            });
+        }
+        healthHtml += '</div>';
+        healthBody.innerHTML = healthHtml;
+    }
 }
 
 function updateDealsUI(deals) {
