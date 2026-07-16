@@ -523,7 +523,8 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                             discount=latest_price.discount,
                             is_verified_low=latest_price.is_verified_low,
                             is_lightning=("lightning" in product.platform.lower() if product else False),
-                            product_id=deal_id
+                            product_id=deal_id,
+                            title=product.title if product else None
                         )
                         latest_price.deal_score = new_score
                         db.commit()
@@ -1046,7 +1047,7 @@ def scrape_platform(platform: str, config: dict, history: set):
             is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
             
             # Calculate final AI Deal score
-            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning, product_id=unique_id)
+            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning, product_id=unique_id, title=title)
             
             # Persist inside Knowledge Base database
             save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
@@ -1238,6 +1239,14 @@ def main():
                 
                 # Export SQLite state to JSON for static host environment (like GitHub Pages)
                 sync_database_to_json()
+                
+                if single_run:
+                    try:
+                        from deal_engine.channel_mirror import run_mirror_single_run
+                        logging.info("Initiating single-run competitor channel mirror scan...")
+                        run_mirror_single_run()
+                    except Exception as mirror_err:
+                        logging.error(f"Failed to execute single-run channel mirror scan: {mirror_err}")
                 
                 scraper_state["scans_completed"] += 1
                 scraper_state["last_scan_time"] = time.time()
