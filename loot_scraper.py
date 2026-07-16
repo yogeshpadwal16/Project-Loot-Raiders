@@ -290,7 +290,7 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         finally:
             db.close()
             
-    return False
+    return True
 
 
 
