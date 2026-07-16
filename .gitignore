@@ -57,6 +57,8 @@ scratch/
 
 # Telegram session files
 *.session
+*.session-journal
+*-journal
 
 # Root level test files
 /deals_history.json
