@@ -154,16 +154,16 @@ def initialize_database_selectors():
                 "image_selector": "img"
             },
             "tatacliq_deals": {
-                "url": "https://www.tatacliq.com/deals",
-                "card_selector": "div[class*='ProductCard']",
-                "title_selector": "h3[class*='ProductCard']",
+                "url": "https://www.tatacliq.com/search/?text=deals",
+                "card_selector": "a.ProductModule__base, [class*='ProductModule__base']",
+                "title_selector": "h2.ProductDescription__description, [class*='ProductDescription__description']",
                 "link_selector": "a",
                 "image_selector": "img"
             },
             "jiomart_deals": {
-                "url": "https://www.jiomart.com/c/deals",
-                "card_selector": "div.plp-card-container",
-                "title_selector": "div.plp-card-name",
+                "url": "https://www.jiomart.com/collection/basic-electricals1",
+                "card_selector": "div.productContainer, div.productCard__productCard",
+                "title_selector": "h3.productCard__productTitle",
                 "link_selector": "a",
                 "image_selector": "img"
             }

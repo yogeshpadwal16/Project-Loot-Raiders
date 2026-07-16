@@ -20,6 +20,12 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             if not self.load_page_with_retries(driver, config['url'], delay=5.0):
                 logging.error(f"[Generic Plugin - {self._platform_id}] Failed to load target URL: {config['url']}")
                 return []
+                
+            # Detect anti-bot protection/Access Denied pages
+            title_text = driver.title or ""
+            if "access denied" in title_text.lower() or "just a moment" in title_text.lower() or "attention required" in title_text.lower():
+                logging.error(f"[Generic Plugin - {self._platform_id}] Blocked by anti-bot protection (Title: '{title_text}') for URL: {config['url']}. Recovery Action: Enable proxies or rotate user-agents.")
+                return []
             
             # Simulated human scrolling
             for scroll in range(1, 4):
@@ -59,7 +65,48 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             pass
                             
                     if not raw_url:
+                        # Fallback: check data-product-slug attribute (JioMart / Meesho and other modern SPAs)
+                        slug = card.get_attribute("data-product-slug")
+                        if not slug:
+                            try:
+                                parent_container = card.find_element(By.XPATH, "./parent::div[@data-product-slug]")
+                                slug = parent_container.get_attribute("data-product-slug")
+                            except:
+                                pass
+                        
+                        if slug:
+                            prod_id = card.get_attribute("data-id")
+                            if not prod_id:
+                                try:
+                                    gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
+                                    prod_id = gtm_el.get_attribute("data-id")
+                                except:
+                                    pass
+                            
+                            if not prod_id:
+                                match_num = re.findall(r'\d+$', slug)
+                                if match_num:
+                                    prod_id = match_num[0]
+                                    
+                            vertical = "groceries"
+                            try:
+                                gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
+                                v = gtm_el.get_attribute("data-vertical")
+                                if v: vertical = v.lower()
+                            except:
+                                pass
+                                
+                            # Clean slug of merchant suffix (e.g. -mmdlqy-74442527)
+                            clean_slug = re.sub(r'-[a-z0-9]{6}-\d+$', '', slug)
+                            raw_url = f"/p/{vertical}/{clean_slug}/{prod_id}"
+                            
+                    if not raw_url:
                         continue
+                        
+                    # Convert to absolute URL if relative
+                    if not raw_url.startswith("http"):
+                        from urllib.parse import urljoin
+                        raw_url = urljoin(config['url'], raw_url)
                         
                     # Extract unique ID from URL path or fallback
                     prod_id = None
@@ -106,7 +153,9 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             val = img_element.get_attribute(attr)
                             if val:
                                 val = val.strip()
-                                if val.startswith("http") or val.startswith("data:image"):
+                                if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
+                                    if val.startswith("//"):
+                                        val = "https:" + val
                                     if attr == "srcset":
                                         val = val.split()[0]
                                     img_url = val
@@ -144,6 +193,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             "is_lightning": False
                         })
                 except Exception as card_err:
+                    logging.warning(f"[Generic Plugin - {self._platform_id}] Skipped card parsing on URL: {config['url']}. Error: {card_err}")
                     continue
         except Exception as e:
             logging.error(f"Error in Generic Scraper for {self._platform_id}: {e}")
