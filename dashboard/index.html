@@ -190,6 +190,57 @@
                     </div>
                 </div>
 
+                <!-- MANUAL DEAL PUBLISHER -->
+                <div class="selector-card manual-post-card" style="margin-top: 0px; margin-bottom: 20px;">
+                    <div class="selector-header">
+                        <h3><i class="fa-solid fa-circle-plus text-gold"></i> Manual Deal Publisher</h3>
+                        <button class="btn btn-sm btn-primary" id="btn-crawl-manual">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill Details
+                        </button>
+                    </div>
+                    <div class="selector-body">
+                        <form id="manual-deal-form" class="selector-form" onsubmit="return false;">
+                            <div class="input-group">
+                                <label for="manual-url">Product E-Commerce URL</label>
+                                <input type="url" id="manual-url" required placeholder="Paste Amazon or Flipkart product link...">
+                            </div>
+                            <div class="input-group">
+                                <label for="manual-title">Product Title</label>
+                                <input type="text" id="manual-title" required placeholder="Enter product title...">
+                            </div>
+                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="manual-price">Loot Price (₹)</label>
+                                    <input type="number" id="manual-price" required placeholder="e.g. 299">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label for="manual-mrp">Original MRP (₹)</label>
+                                    <input type="number" id="manual-mrp" required placeholder="e.g. 999">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="manual-image">Product Image URL</label>
+                                <input type="url" id="manual-image" placeholder="Image link (auto-extracted if clicked Auto-Fill)">
+                            </div>
+                            <div class="input-group" id="manual-affiliate-group" style="display:none; margin-bottom:15px;">
+                                <label for="manual-affiliate-url">Generated Affiliate URL</label>
+                                <input type="text" id="manual-affiliate-url" readonly style="background: rgba(0,0,0,0.3); color: var(--accent-blue);">
+                            </div>
+                            <input type="hidden" id="manual-unique-id">
+                            <input type="hidden" id="manual-platform">
+                            
+                            <div class="manual-actions-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                <button class="btn btn-secondary" id="btn-post-telegram" disabled style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fa-brands fa-telegram"></i> Post Telegram
+                                </button>
+                                <button class="btn btn-primary" id="btn-post-whatsapp" disabled style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fa-brands fa-whatsapp"></i> Share WhatsApp
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- SELECTOR MANAGER -->
                 <div class="selector-card">
                     <div class="selector-header">

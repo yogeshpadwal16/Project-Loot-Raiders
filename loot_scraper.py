@@ -759,6 +759,129 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                
+        elif parsed_path == '/api/manual/crawl':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                url = data.get('url', '').strip()
+                if not url:
+                    self.send_response(400)
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Missing URL"}).encode('utf-8'))
+                    return
+                
+                result = scrape_product_details(url)
+                
+                # Convert affiliate link
+                settings = load_settings()
+                platform = result["platform"]
+                aff_url = url
+                unique_id = str(int(time.time()))
+                
+                if platform == "amazon":
+                    from utils.parser import extract_amazon_asin
+                    asin = extract_amazon_asin(url)
+                    if asin:
+                        aff_url = f"https://www.amazon.in/dp/{asin}?tag={settings.get('amazon_tag', 'lootraiders-21')}"
+                        unique_id = asin
+                elif platform == "flipkart":
+                    from utils.parser import extract_flipkart_pid
+                    pid = extract_flipkart_pid(url)
+                    if pid:
+                        aff_url = f"https://www.flipkart.com/product/p/itm?pid={pid}&affid={settings.get('flipkart_affid', 'YOUR_FLIPKART_AFFILIATE_ID')}"
+                        unique_id = pid
+                        
+                result["affiliate_url"] = aff_url
+                result["unique_id"] = unique_id
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(result).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                
+        elif parsed_path == '/api/manual/post':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                platform = data.get('platform', 'generic')
+                title = data.get('title', '').strip()
+                price = int(data.get('price', 0))
+                mrp = int(data.get('mrp', 0))
+                image_url = data.get('image_url', '').strip()
+                affiliate_url = data.get('affiliate_url', '').strip()
+                unique_id = data.get('unique_id', str(int(time.time())))
+                
+                settings = load_settings()
+                bot_token = settings.get("telegram_bot_token")
+                chat_id = settings.get("telegram_chat_id")
+                
+                if not bot_token or "YOUR_TELEGRAM" in bot_token or bot_token.strip() == "":
+                    raise Exception("Telegram Bot not configured in settings!")
+                
+                discount = 0.0
+                if mrp > 0 and price > 0:
+                    discount = ((mrp - price) / mrp) * 100.0
+                    
+                # Save product in DB to make sure sparkline history is generated/updated
+                db = SessionLocal()
+                try:
+                    product = db.query(Product).filter_by(id=unique_id).first()
+                    if not product:
+                        product = Product(
+                            id=unique_id,
+                            platform=platform,
+                            title=title,
+                            image_url=image_url,
+                            url=affiliate_url
+                        )
+                        db.add(product)
+                        db.commit()
+                        
+                    # Save a price history point
+                    ph = PriceHistory(
+                        product_id=unique_id,
+                        price=price,
+                        mrp=mrp,
+                        discount=discount,
+                        is_verified_low=True,
+                        deal_score=95.0,
+                        timestamp=time.time()
+                    )
+                    db.add(ph)
+                    db.commit()
+                except Exception as db_err:
+                    db.rollback()
+                    logging.error(f"Error logging manual deal to DB: {db_err}")
+                finally:
+                    db.close()
+                
+                from deal_engine.notifier import send_telegram_alert
+                posted = send_telegram_alert(
+                    bot_token=bot_token,
+                    chat_id=chat_id,
+                    platform=platform,
+                    title=title,
+                    price=price,
+                    mrp=mrp,
+                    discount=discount,
+                    img_url=image_url,
+                    final_url=affiliate_url,
+                    is_verified_low=True,
+                    deal_score=95.0,
+                    unique_id=unique_id
+                )
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "posted": posted}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()
@@ -1004,6 +1127,102 @@ def main():
                 
     except KeyboardInterrupt:
         logging.warning("SIGINT operational interrupt recognized. Turning pipeline off safely.")
+
+def scrape_product_details(url: str) -> dict:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    import time
+    import re
+    
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    driver = webdriver.Chrome(options=chrome_options)
+    try:
+        driver.get(url)
+        time.sleep(4)
+        
+        title = ""
+        price = 0
+        mrp = 0
+        image_url = ""
+        platform = "generic"
+        
+        if "amazon" in url.lower():
+            platform = "amazon"
+            try:
+                title = driver.find_element(By.ID, "productTitle").text.strip()
+            except:
+                pass
+            
+            for selector in [".a-price-whole", "#priceBlockBuyingPriceString", "#priceBlockDealPriceString"]:
+                try:
+                    p_text = driver.find_element(By.CSS_SELECTOR, selector).text
+                    price = int(re.sub(r'\D', '', p_text))
+                    break
+                except:
+                    pass
+                
+            for selector in [".basisPrice .a-offscreen", ".a-price.a-text-price .a-offscreen"]:
+                try:
+                    m_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    mrp = int(re.sub(r'\D', '', m_text))
+                    break
+                except:
+                    pass
+                
+            try:
+                image_url = driver.find_element(By.ID, "landingImage").get_attribute("src")
+            except:
+                pass
+            
+        elif "flipkart" in url.lower():
+            platform = "flipkart"
+            try:
+                title = driver.find_element(By.CLASS_NAME, "VU-ZEg").text.strip()
+            except:
+                try:
+                    title = driver.find_element(By.CSS_SELECTOR, "h1 span").text.strip()
+                except:
+                    pass
+                
+            try:
+                p_text = driver.find_element(By.CLASS_NAME, "Nx9w7A").text
+                price = int(re.sub(r'\D', '', p_text))
+            except:
+                pass
+            
+            try:
+                m_text = driver.find_element(By.CLASS_NAME, "y3NYbL").text
+                mrp = int(re.sub(r'\D', '', m_text))
+            except:
+                pass
+            
+            try:
+                image_url = driver.find_element(By.CLASS_NAME, "DByoR4").get_attribute("src")
+            except:
+                pass
+                
+        # Guess missing values if needed
+        if price > 0 and mrp == 0:
+            mrp = int(price * 1.3)
+        if price == 0 and mrp > 0:
+            price = int(mrp * 0.7)
+            
+        return {
+            "platform": platform,
+            "title": title if title else "Manual Deal Product",
+            "price": price,
+            "mrp": mrp,
+            "image_url": image_url
+        }
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     main()

@@ -954,4 +954,145 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('feed-search').addEventListener('input', applyFiltersAndRender);
     document.getElementById('feed-filter-platform').addEventListener('change', applyFiltersAndRender);
     document.getElementById('feed-sort').addEventListener('change', applyFiltersAndRender);
+
+    // MANUAL DEAL PUBLISHER EVENT LISTENERS
+    const btnCrawlManual = document.getElementById('btn-crawl-manual');
+    const btnPostTelegram = document.getElementById('btn-post-telegram');
+    const btnPostWhatsapp = document.getElementById('btn-post-whatsapp');
+    
+    if (btnCrawlManual) {
+        btnCrawlManual.addEventListener('click', async () => {
+            const urlInput = document.getElementById('manual-url');
+            const url = urlInput.value.trim();
+            if (!url) {
+                showToast('Please enter a product URL first!', 'error');
+                return;
+            }
+            
+            btnCrawlManual.disabled = true;
+            btnCrawlManual.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Crawling...';
+            showToast('Starting background crawler. This may take 5-10s...');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/manual/crawl`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Failed to crawl product details.');
+                }
+                
+                const data = await response.json();
+                
+                document.getElementById('manual-title').value = data.title || '';
+                document.getElementById('manual-price').value = data.price || '';
+                document.getElementById('manual-mrp').value = data.mrp || '';
+                document.getElementById('manual-image').value = data.image_url || '';
+                document.getElementById('manual-affiliate-url').value = data.affiliate_url || '';
+                document.getElementById('manual-unique-id').value = data.unique_id || '';
+                document.getElementById('manual-platform').value = data.platform || 'generic';
+                
+                document.getElementById('manual-affiliate-group').style.display = 'block';
+                
+                // Enable publish buttons
+                btnPostTelegram.disabled = false;
+                btnPostTelegram.style.opacity = '1';
+                btnPostTelegram.style.cursor = 'pointer';
+                
+                btnPostWhatsapp.disabled = false;
+                btnPostWhatsapp.style.opacity = '1';
+                btnPostWhatsapp.style.cursor = 'pointer';
+                
+                showToast('Product details extracted & affiliate URL generated!');
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Error occurred while crawling link.', 'error');
+            } finally {
+                btnCrawlManual.disabled = false;
+                btnCrawlManual.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill Details';
+            }
+        });
+    }
+    
+    if (btnPostTelegram) {
+        btnPostTelegram.addEventListener('click', async () => {
+            const title = document.getElementById('manual-title').value.trim();
+            const price = parseInt(document.getElementById('manual-price').value) || 0;
+            const mrp = parseInt(document.getElementById('manual-mrp').value) || 0;
+            const image_url = document.getElementById('manual-image').value.trim();
+            const affiliate_url = document.getElementById('manual-affiliate-url').value.trim();
+            const unique_id = document.getElementById('manual-unique-id').value.trim();
+            const platform = document.getElementById('manual-platform').value.trim();
+            
+            if (!title || !price || !mrp || !affiliate_url) {
+                showToast('Please fill all required fields first!', 'error');
+                return;
+            }
+            
+            btnPostTelegram.disabled = true;
+            btnPostTelegram.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Posting...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/manual/post`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        platform,
+                        title,
+                        price,
+                        mrp,
+                        image_url,
+                        affiliate_url,
+                        unique_id
+                    })
+                });
+                
+                if (response.ok) {
+                    showToast('Manual deal posted to Telegram channel successfully!');
+                } else {
+                    const errData = await response.json();
+                    throw new Error(errData.error || 'Failed to post deal.');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Failed to broadcast deal to Telegram.', 'error');
+            } finally {
+                btnPostTelegram.disabled = false;
+                btnPostTelegram.innerHTML = '<i class="fa-brands fa-telegram"></i> Post Telegram';
+            }
+        });
+    }
+    
+    if (btnPostWhatsapp) {
+        btnPostWhatsapp.addEventListener('click', () => {
+            const title = document.getElementById('manual-title').value.trim();
+            const price = parseInt(document.getElementById('manual-price').value) || 0;
+            const mrp = parseInt(document.getElementById('manual-mrp').value) || 0;
+            const affiliate_url = document.getElementById('manual-affiliate-url').value.trim();
+            
+            if (!title || !price || !affiliate_url) {
+                showToast('Please fill required details first!', 'error');
+                return;
+            }
+            
+            const discount = mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
+            const savings = mrp - price;
+            
+            const message = 
+                `🔥 *HOT LOOT DEAL!* 🔥\n\n` +
+                `🛍️ *${title}*\n\n` +
+                `💰 *Loot Price:* ₹${price.toLocaleString('en-IN')}\n` +
+                `❌ *Original MRP:* ₹${mrp.toLocaleString('en-IN')}\n` +
+                `💸 *Savings:* ₹${savings.toLocaleString('en-IN')} (${discount}% OFF)\n\n` +
+                `👉 *Buy Link:* ${affiliate_url}\n\n` +
+                `📢 _Join @LootRaidersDeals for more verified loot!_`;
+                
+            const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+            window.open(shareUrl, '_blank');
+            showToast('Opened WhatsApp Share dialog!');
+        });
+    }
 });
