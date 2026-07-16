@@ -1,5 +1,29 @@
 [
   {
+    "id": "B0FC2YFSN4",
+    "platform": "amazon",
+    "title": "boAt Airdopes 219, 4Mics ENx, 40H Battery, Best in Segment for Calling, Stream Ad Free Music via App Support, Bluetooth Earbuds, TWS Ear Buds Wireless Earphones with mic (Forest Sage)",
+    "price": 999,
+    "mrp": 3990,
+    "discount": 74.9624060150376,
+    "image_url": "https://m.media-amazon.com/images/I/61oPWuyuT2L._SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0FC2YFSN4?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 89.41368421052633,
+    "timestamp": 1784222823.7157185,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 999,
+        "timestamp": 1784222823.5225348
+      },
+      {
+        "price": 999,
+        "timestamp": 1784222823.7157185
+      }
+    ]
+  },
+  {
     "id": "HBLHHN2SSHVJJSPE",
     "platform": "flipkart_appliances_deals",
     "title": "Bestlife 50 W Black Hand Blender",
@@ -6188,26 +6212,6 @@
       {
         "price": 264,
         "timestamp": 1784194203.5902534
-      }
-    ]
-  },
-  {
-    "id": "myntra_29657056",
-    "platform": "myntra_deals",
-    "title": "Dressitude",
-    "price": 476,
-    "mrp": 1599,
-    "discount": 70.23139462163851,
-    "image_url": null,
-    "url": "https://www.myntra.com/shrug/dressitude/dressitude-women-crop-button-shrug/29657056/buy",
-    "is_verified_low": true,
-    "deal_score": 73.64864290181363,
-    "timestamp": 1784194160.7029822,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 476,
-        "timestamp": 1784194160.7029822
       }
     ]
   }
