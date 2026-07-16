@@ -201,18 +201,27 @@ function updateSpotlightDeal(deals) {
         ? dealUrl
         : `${API_BASE}/api/redirect?id=${topDeal.id}&user=${operatorName}&url=${encodeURIComponent(dealUrl)}`;
         
+    const platformStr = topDeal.platform || '';
+    const isAmazon = platformStr.toLowerCase().includes('amazon');
+    const badgeClass = isAmazon ? 'platform-badge amazon' : 'platform-badge flipkart';
+    const badgeLabel = isAmazon ? 'AMAZON' : 'FLIPKART';
+        
     body.innerHTML = `
-        <div style="margin-bottom: 12px; position: relative; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.03); border-radius: 8px;">
-            <img src="${displayImage}" alt="Spotlight Deal" style="max-height: 110px; max-width: 90%; object-fit: contain;" onerror="this.onerror=null; this.src='${noImageFallback}';">
-            <span style="position: absolute; top: 5px; right: 5px; background: #ff4e50; color: white; padding: 4px 8px; border-radius: 20px; font-weight: 800; font-size: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.25);">${discountVal}% OFF</span>
+        <div class="deal-img-wrapper" style="margin-bottom: 16px; position: relative; height: 130px; display: flex; align-items: center; justify-content: center; border-radius: 16px; background: rgba(255,255,255,0.015); border: 1px solid var(--md-sys-color-outline-variant); overflow: hidden; width: 100%;">
+            <span class="${badgeClass}" style="position: absolute; top: 10px; left: 10px; margin: 0; font-size: 0.65rem; padding: 2px 8px;">${badgeLabel}</span>
+            <img src="${displayImage}" alt="Spotlight Deal" style="max-height: 110px; max-width: 85%; object-fit: contain; border-radius: 8px;" onerror="this.onerror=null; this.src='${noImageFallback}';">
         </div>
-        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; color: var(--md-sys-color-on-background); line-height: 1.3; text-align: left;" title="${titleStr}">${displayTitle}</h4>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; justify-content: center;">
-            <span style="font-size: 1.3rem; font-weight: 800; color: var(--accent-orange);">₹${priceVal}</span>
-            <span style="text-decoration: line-through; color: var(--md-sys-color-outline); font-size: 0.85rem;">₹${mrpVal}</span>
+        
+        <h4 class="deal-title" style="font-size: 1rem; margin-bottom: 10px; text-align: left; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; height: 2.8em;" title="${titleStr}">${displayTitle}</h4>
+        
+        <div class="deal-price-block" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; justify-content: flex-start;">
+            <span class="current-price" style="font-size: 1.35rem; color: var(--md-sys-color-primary);">₹${priceVal}</span>
+            <span class="mrp-price" style="font-size: 0.9rem;">₹${mrpVal}</span>
+            <span class="discount-tag" style="font-size: 0.75rem;">${discountVal}% OFF</span>
         </div>
-        <a href="${redirectUrl}" target="_blank" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; text-decoration: none; padding: 12px; border-radius: 8px; width: 100%; box-sizing: border-box; background: linear-gradient(135deg, #ff4e50, #f9d423); border: none; color: white; box-shadow: 0 4px 15px rgba(255, 78, 80, 0.4); text-transform: uppercase;">
-            GRAB NOW <i class="fa-solid fa-up-right-from-square"></i>
+        
+        <a href="${redirectUrl}" target="_blank" class="btn-grab" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-size: 0.85rem; padding: 12px; border-radius: 100px; background: var(--md-sys-color-primary); border: 1px solid var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); width: 100%; box-sizing: border-box; text-decoration: none; text-align: center; text-transform: uppercase; transition: opacity 0.2s;">
+            GRAB DEAL <i class="fa-solid fa-up-right-from-square"></i>
         </a>
     `;
 }

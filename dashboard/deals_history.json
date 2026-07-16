@@ -1,5 +1,65 @@
 [
   {
+    "id": "B0H4RDVY6R",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Kurlon Dual Mattress | Single Size 84x35x6 Inches | Medium Soft & Firm Dual Side Comfort | Reversible Two-Sided Comfort | Strong High Resilience Core Support | 10 Years Warranty",
+    "price": 7199,
+    "mrp": 10987,
+    "discount": 34.477109311003915,
+    "image_url": "https://m.media-amazon.com/images/I/817xn8TOCJL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H4RDVY6R?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 67.63397651770273,
+    "timestamp": 1784223583.7582889,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 7199,
+        "timestamp": 1784223583.7582889
+      }
+    ]
+  },
+  {
+    "id": "B0B77NBY7Y",
+    "platform": "amazon",
+    "title": "Levi's Men's 511 Slim Fit Mid Rise Jeans",
+    "price": 900,
+    "mrp": 3199,
+    "discount": 71.86620819005938,
+    "image_url": "https://m.media-amazon.com/images/I/61dQF5hK0DL._SL1200_.jpg",
+    "url": "https://www.amazon.in/dp/B0B77NBY7Y?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 82.63301239970824,
+    "timestamp": 1784223440.1898255,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 900,
+        "timestamp": 1784223440.1898255
+      }
+    ]
+  },
+  {
+    "id": "B0FN4QHNSS",
+    "platform": "amazon",
+    "title": "Arrow Tailored Fit 2 piece Suit for Men - Single Breasted Blazer with Trouser, Coat Pant for Men",
+    "price": 5399,
+    "mrp": 9999,
+    "discount": 46.004600460046,
+    "image_url": "https://m.media-amazon.com/images/I/517VvkWQbXL._SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0FN4QHNSS?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 69.2032203220322,
+    "timestamp": 1784223334.87641,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 5399,
+        "timestamp": 1784223334.87641
+      }
+    ]
+  },
+  {
     "id": "SHOG49GUQZJEKHBM",
     "platform": "flipkart_clearance_master_feed",
     "title": "Mesh |Lightweight|Comfort|Summer|Trendy|Walking|Outdoor...",
@@ -6156,66 +6216,6 @@
       {
         "price": 178,
         "timestamp": 1784194330.7335443
-      }
-    ]
-  },
-  {
-    "id": "SHOFK56HKPCADFPP",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Mesh| Lightweight| Premiun| Comfort| Summer Tendy| Outd...",
-    "price": 295,
-    "mrp": 999,
-    "discount": 70.47047047047047,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/shoe/s/5/z/7-aadi1315-7-aadi-black-original-imah8nxerbk75cme.jpeg?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=SHOFK56HKPCADFPP&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 71.52266266266267,
-    "timestamp": 1784194309.0466385,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 295,
-        "timestamp": 1784194309.0466385
-      }
-    ]
-  },
-  {
-    "id": "-586181837030577077",
-    "platform": "flipkart_sitewide_offers",
-    "title": "Mobiles & Accessories",
-    "price": 250,
-    "mrp": 10000,
-    "discount": 97.5,
-    "image_url": "https://static-assets-web.flixcart.com/fk-p-linchpin-web/fk-cp-zion/img/fa_9e47c1.png",
-    "url": "https://www.flipkart.com/product/p/itm?pid=-586181837030577077&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 93.0,
-    "timestamp": 1784194282.2065148,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 250,
-        "timestamp": 1784194282.2065148
-      }
-    ]
-  },
-  {
-    "id": "SOIHBH7TQZTBWAY4",
-    "platform": "flipkart_electronics_deals",
-    "title": "FADMAN Electronic 2in1 Mobile Soldering Iron Equipment ...",
-    "price": 215,
-    "mrp": 599,
-    "discount": 64.10684474123539,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/soldering-iron/i/o/8/2-electronic-2in1-mobile-soldering-iron-equipment-combo-kit-with-original-imahbh7t54jg8wen.jpeg?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=SOIHBH7TQZTBWAY4&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 64.43479131886477,
-    "timestamp": 1784194214.3047388,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 215,
-        "timestamp": 1784194214.3047388
       }
     ]
   }
