@@ -1145,7 +1145,7 @@ def scrape_product_details(url: str) -> dict:
     driver = webdriver.Chrome(options=chrome_options)
     try:
         driver.get(url)
-        time.sleep(4)
+        time.sleep(5)  # Wait for dynamic JS content to fully load
         
         title = ""
         price = 0
@@ -1155,68 +1155,121 @@ def scrape_product_details(url: str) -> dict:
         
         if "amazon" in url.lower():
             platform = "amazon"
-            try:
-                title = driver.find_element(By.ID, "productTitle").text.strip()
-            except:
-                pass
-            
-            for selector in [".a-price-whole", "#priceBlockBuyingPriceString", "#priceBlockDealPriceString"]:
-                try:
-                    p_text = driver.find_element(By.CSS_SELECTOR, selector).text
-                    price = int(re.sub(r'\D', '', p_text))
-                    break
-                except:
-                    pass
-                
-            for selector in [".basisPrice .a-offscreen", ".a-price.a-text-price .a-offscreen"]:
-                try:
-                    m_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
-                    mrp = int(re.sub(r'\D', '', m_text))
-                    break
-                except:
-                    pass
-                
-            try:
-                image_url = driver.find_element(By.ID, "landingImage").get_attribute("src")
-            except:
-                pass
-            
         elif "flipkart" in url.lower():
             platform = "flipkart"
-            try:
-                title = driver.find_element(By.CLASS_NAME, "VU-ZEg").text.strip()
-            except:
+            
+        # 1. Scrape Title
+        if platform == "amazon":
+            for selector in ["#productTitle", "span#productTitle", ".qa-title-text"]:
                 try:
-                    title = driver.find_element(By.CSS_SELECTOR, "h1 span").text.strip()
-                except:
-                    pass
+                    title = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                    if title: break
+                except: pass
+        elif platform == "flipkart":
+            for selector in [".VU-ZEg", "span.B_NuCI", "h1.yrwE28", "h1 span"]:
+                try:
+                    title = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                    if title: break
+                except: pass
                 
+        # Generic Title extraction fallback
+        if not title:
+            try: title = driver.find_element(By.TAG_NAME, "h1").text.strip()
+            except: pass
+        if not title:
             try:
-                p_text = driver.find_element(By.CLASS_NAME, "Nx9w7A").text
-                price = int(re.sub(r'\D', '', p_text))
-            except:
-                pass
-            
-            try:
-                m_text = driver.find_element(By.CLASS_NAME, "y3NYbL").text
-                mrp = int(re.sub(r'\D', '', m_text))
-            except:
-                pass
-            
-            try:
-                image_url = driver.find_element(By.CLASS_NAME, "DByoR4").get_attribute("src")
+                raw_title = driver.title
+                if "Buy" in raw_title:
+                    raw_title = raw_title.split("Buy")[1].strip()
+                if "Online at Low Prices" in raw_title:
+                    raw_title = raw_title.split("Online")[0].strip()
+                if "amazon.in" in raw_title.lower() or "amazon.com" in raw_title.lower():
+                    raw_title = raw_title.split(":")[0].strip()
+                if "flipkart.com" in raw_title.lower():
+                    raw_title = raw_title.split("-")[0].strip()
+                title = raw_title
             except:
                 pass
                 
-        # Guess missing values if needed
+        # 2. Scrape Price
+        if platform == "amazon":
+            for selector in [".a-price-whole", "span.a-price .a-offscreen", "#priceblock_ourprice", "#priceblock_dealprice", ".apexPriceToPay span.a-offscreen", ".a-color-price"]:
+                try:
+                    p_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    p_text = p_text.split(".")[0]
+                    price = int(re.sub(r'\D', '', p_text))
+                    if price > 0: break
+                except: pass
+        elif platform == "flipkart":
+            for selector in [".Nx9w7A", "._30jeq3", "div._30jeq3._16JkK1", "div.hlbKVd"]:
+                try:
+                    p_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    p_text = p_text.split(".")[0]
+                    price = int(re.sub(r'\D', '', p_text))
+                    if price > 0: break
+                except: pass
+                
+        # 3. Scrape MRP
+        if platform == "amazon":
+            for selector in ["span.a-price.a-text-price span.a-offscreen", "#listPrice", "#priceblock_listprice", "span.a-list-price"]:
+                try:
+                    m_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    m_text = m_text.split(".")[0]
+                    mrp = int(re.sub(r'\D', '', m_text))
+                    if mrp > 0: break
+                except: pass
+        elif platform == "flipkart":
+            for selector in [".y3NYbL", "._3I9_ww", "div._3I9_ww"]:
+                try:
+                    m_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    m_text = m_text.split(".")[0]
+                    mrp = int(re.sub(r'\D', '', m_text))
+                    if mrp > 0: break
+                except: pass
+                
+        # 4. Scrape Image
+        if platform == "amazon":
+            for selector in ["#landingImage", "#imgBlkFront", ".imgTagWrapper img", "#main-image"]:
+                try:
+                    image_url = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("src")
+                    if image_url: break
+                except: pass
+        elif platform == "flipkart":
+            for selector in ["img.DByoR4", "img._396cs4", "img.jfZQxf", "div.CXW8mj img"]:
+                try:
+                    image_url = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("src")
+                    if image_url: break
+                except: pass
+                
+        # Fallback image extraction: scan for any large product image on page
+        if not image_url:
+            try:
+                images = driver.find_elements(By.TAG_NAME, "img")
+                for img in images:
+                    src = img.get_attribute("src")
+                    w = int(img.get_attribute("width") or 0)
+                    h = int(img.get_attribute("height") or 0)
+                    if src and ("product" in src.lower() or "media" in src.lower() or "dp" in src.lower() or w > 200 or h > 200):
+                        image_url = src
+                        break
+            except: pass
+            
+        # 5. Clean up & validate data values
+        if not title:
+            title = "Manual Deal Product"
+        else:
+            title = re.sub(r'\s+', ' ', title).strip()
+            
         if price > 0 and mrp == 0:
-            mrp = int(price * 1.3)
-        if price == 0 and mrp > 0:
+            mrp = int(price * 1.35)
+        elif mrp > 0 and price == 0:
             price = int(mrp * 0.7)
+        elif price > mrp:
+            price, mrp = mrp, price
             
         return {
             "platform": platform,
-            "title": title if title else "Manual Deal Product",
+            "title": title,
             "price": price,
             "mrp": mrp,
             "image_url": image_url
