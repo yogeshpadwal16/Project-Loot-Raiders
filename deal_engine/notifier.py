@@ -158,17 +158,18 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text)
     
     if not caption:
+        verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
         caption = (
-            f"🔥 <b>[ {platform.upper()} PRICE DROP ALERT ]</b> 🔥\n"
-            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"{header}\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
+            f"{badge}"
             f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>\n"
             f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
             f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
             f"💰 <b>Total Savings:</b> <code>₹{savings:,}</code>\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-            f"🛡️ <b>Verification:</b> <code>Verified All-Time Low</code>"
+            f"🛡️ <b>Verification:</b> <code>{verification_text}</code>"
             f"{comparison_text}\n\n"
             f"🚀 <i>Price drops don't last! Grab it before stock ends!</i>\n"
             f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n"
@@ -179,11 +180,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # Guardrail: If caption exceeds 1000 chars, Telegram photo API fails.
     # Trim caption to a clean, high-impact format if it's too long.
     if len(caption) > 1000:
+        verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
         caption = (
             f"⚡ <b>[ HOT {platform.upper()} DEAL ]</b> ⚡\n\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
             f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
-            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n\n"
+            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n"
+            f"🛡️ <b>Verification:</b> <code>{verification_text}</code>\n\n"
             f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n\n"
             f"📢 <b>Join @LootRaidersDeals for more!</b>"
         )
