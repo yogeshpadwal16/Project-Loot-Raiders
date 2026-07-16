@@ -108,6 +108,22 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     except:
                         pass
                         
+                    if not img_url:
+                        # Fallback for picture/source responsive image configurations
+                        try:
+                            sources = card.find_elements(By.TAG_NAME, "source")
+                            for s in sources:
+                                val = s.get_attribute("srcset") or s.get_attribute("data-srcset")
+                                if val:
+                                    url_candidate = val.split(",")[0].split()[0].strip()
+                                    if url_candidate.startswith("http") or url_candidate.startswith("//"):
+                                        if url_candidate.startswith("//"):
+                                            url_candidate = "https:" + url_candidate
+                                        img_url = url_candidate
+                                        break
+                        except:
+                            pass
+                        
                     # 4. Extract pricing and discount
                     price, mrp, true_discount = calculate_true_discount(card.text)
                     if price and mrp:

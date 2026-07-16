@@ -112,8 +112,18 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         )
         badge = "⚠️ <b>HURRY! Prices will rise or sell out in seconds!</b>\n⚠️ <i>Forward to friends immediately!</i>\n"
     else:
-        badge_title = "AMAZON LOOT" if is_amazon else "FLIPKART LOOT"
-        icon = "🍊" if is_amazon else "💣"
+        badge_title = f"{platform.upper()} LOOT"
+        if "amazon" in platform.lower():
+            icon = "🍊"
+        elif "flipkart" in platform.lower():
+            icon = "💣"
+        elif "myntra" in platform.lower():
+            icon = "👗"
+        elif "meesho" in platform.lower():
+            icon = "🛍️"
+        else:
+            icon = "✨"
+            
         header = (
             f"<b>{icon} [ {badge_title} DEAL ] {icon}</b>\n"
             "━━━━━━━━━━━━━━━━━━━━━━"
@@ -182,7 +192,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if len(caption) > 1000:
         verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
         caption = (
-            f"⚡ <b>[ HOT {platform.upper()} DEAL ]</b> ⚡\n\n"
+            f"{header}\n\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
             f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
             f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n"
