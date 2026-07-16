@@ -7,7 +7,7 @@
 - [x] Automatic Chrome update detection
 
 ## Medium Priority
-- [ ] Telegram notifications
+- [x] Telegram notifications
 - [ ] Email alerts
 - [ ] Discord notifications
 - [x] Price history
