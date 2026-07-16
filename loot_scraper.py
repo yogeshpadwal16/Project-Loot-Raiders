@@ -1081,6 +1081,11 @@ def sync_database_to_json():
             
             click_count = db.query(ClickLog).filter_by(product_id=p.id).count()
             
+            # Fetch recent price history points for client-side Chart rendering
+            history_query = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).limit(15).all()
+            history_query.reverse()
+            price_history = [{"price": h.price, "timestamp": h.timestamp} for h in history_query]
+            
             deals.append({
                 "id": p.id,
                 "platform": p.platform,
@@ -1093,7 +1098,8 @@ def sync_database_to_json():
                 "is_verified_low": latest_price.is_verified_low,
                 "deal_score": latest_price.deal_score,
                 "timestamp": latest_price.timestamp,
-                "clicks": click_count
+                "clicks": click_count,
+                "price_history": price_history
             })
         deals.sort(key=lambda x: x["timestamp"], reverse=True)
         deals = deals[:300]

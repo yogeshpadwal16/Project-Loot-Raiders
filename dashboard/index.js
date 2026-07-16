@@ -75,6 +75,13 @@ async function fetchStatus() {
         statScans.textContent = 'AUTO CRON';
         statUptime.textContent = '24/7 ONLINE';
         
+        // Make the website title and subtitle consumer-friendly
+        document.title = "Loot Raiders — Premium Shopping Deals Hub";
+        const mainTitle = document.querySelector('.title-meta h1');
+        if (mainTitle) mainTitle.textContent = "Loot Raiders";
+        const subTitle = document.querySelector('.sub-title');
+        if (subTitle) subTitle.textContent = "Premium Handpicked Shopping Deals";
+        
         // Hide control elements and logs
         const toggleB = document.getElementById('toggle-btn');
         if (toggleB) toggleB.style.display = 'none';
@@ -1125,9 +1132,22 @@ async function showPriceHistory(dealId) {
     document.getElementById('modal-stat-current').textContent = `₹${parseInt(deal.price).toLocaleString()}`;
     
     try {
-        const response = await fetch(`${API_BASE}/api/deals/history?id=${dealId}`);
-        if (!response.ok) throw new Error('Failed to fetch history');
-        const historyData = await response.json();
+        let historyData = [];
+        if (IS_STATIC_MODE) {
+            historyData = deal.price_history || [];
+            if (historyData.length === 0) {
+                // Fallback: create mock trend data from MRP and current price
+                const baseTime = deal.timestamp || (Date.now() / 1000);
+                historyData = [
+                    { price: parseInt(deal.mrp), discount: 0, timestamp: baseTime - 86400 },
+                    { price: parseInt(deal.price), discount: parseFloat(deal.discount), timestamp: baseTime }
+                ];
+            }
+        } else {
+            const response = await fetch(`${API_BASE}/api/deals/history?id=${dealId}`);
+            if (!response.ok) throw new Error('Failed to fetch history');
+            historyData = await response.json();
+        }
         
         if (historyData.length === 0) {
             showToast('No history records found for this deal.', 'error');
