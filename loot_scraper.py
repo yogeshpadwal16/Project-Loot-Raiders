@@ -1198,6 +1198,21 @@ def main():
     
     if not single_run:
         start_api_server(5555)
+        
+        # 4. Start Asynchronous Competitor Mirroring Listener
+        try:
+            from deal_engine.channel_mirror import start_channel_mirror
+            start_channel_mirror()
+        except Exception as mirror_err:
+            logging.error(f"Failed to start Channel Mirroring bot: {mirror_err}")
+            
+        # 5. Start Asynchronous Catalog Priority Monitor
+        try:
+            from deal_engine.catalog_monitor import start_catalog_monitor
+            start_catalog_monitor()
+        except Exception as catalog_err:
+            logging.error(f"Failed to start Catalog Monitor: {catalog_err}")
+            
         logging.info("Master Engine Activated. Scanners operating.")
     else:
         logging.info("Single-run execution mode activated (Cloud/CI environment).")
