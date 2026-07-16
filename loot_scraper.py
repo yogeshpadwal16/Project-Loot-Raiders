@@ -981,7 +981,7 @@ def scrape_platform(platform: str, config: dict, history: set):
             is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
             
             # Calculate final AI Deal score
-            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning)
+            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning, product_id=unique_id)
             
             # Persist inside Knowledge Base database
             save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)

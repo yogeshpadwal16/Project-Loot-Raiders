@@ -159,19 +159,20 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     
     if not caption:
         caption = (
-            f"⚡ <b>[ HOT {platform.upper()} DEAL ALERT ]</b> ⚡\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🔥 <b>[ {platform.upper()} PRICE DROP ALERT ]</b> 🔥\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
-            f"💎 <b>Loot Price:</b> <code>₹{price:,}</code>\n"
+            f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>\n"
             f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
-            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b> (Save <b>₹{savings:,}</b>!)\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"📊 <b>Deal Score:</b> <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-            f"📉 <b>Price Trend:</b> <code>Verified 90-Day Low</code>"
+            f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
+            f"💰 <b>Total Savings:</b> <code>₹{savings:,}</code>\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
+            f"🛡️ <b>Verification:</b> <code>Verified All-Time Low</code>"
             f"{comparison_text}\n\n"
-            f"🚀 <i>Hurry! Stock is limited and price can rise anytime!</i>\n"
-            f"👉 <b><a href='{final_url}'>CLICK HERE TO BUY NOW</a></b>\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🚀 <i>Price drops don't last! Grab it before stock ends!</i>\n"
+            f"👉 <b><a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a></b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"📢 <b>Join @LootRaidersDeals for more verified loot!</b>"
         )
         
@@ -204,26 +205,50 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     except Exception as img_gen_err:
         logging.error(f"Image generation failed inside notifier: {img_gen_err}")
 
-    # 3. Upload dynamic image card to Telegram
-    if local_card_path and os.path.exists(local_card_path):
+    # 3. Upload raw product image or dynamic image card to Telegram
+    photo_sent = False
+    
+    # Try sending raw image first if it's a valid remote URL
+    if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
+        try:
+            endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+            payload = {
+                "chat_id": chat_id,
+                "photo": img_url,
+                "caption": caption,
+                "parse_mode": "HTML"
+            }
+            res = requests.post(endpoint, json=payload, timeout=25)
+            if res.status_code == 200:
+                logging.info(f"Telegram raw product image uploaded successfully -> {truncated_title[:20]}...")
+                photo_sent = True
+            else:
+                logging.warning(f"Telegram photo send for raw URL returned {res.status_code}: {res.text}. Falling back to local card.")
+        except Exception as raw_send_err:
+            logging.error(f"Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
+
+    # Fallback to local PIL card if raw image send was not successful
+    if not photo_sent and local_card_path and os.path.exists(local_card_path):
         try:
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
                 payload = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
                 res = requests.post(endpoint, data=payload, files=files, timeout=25)
-                
-                # Cleanup local scratch file
-                try: os.remove(local_card_path)
-                except: pass
-                
                 if res.status_code == 200:
                     logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
-                    return True
+                    photo_sent = True
                 else:
                     logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
         except Exception as upload_err:
             logging.error(f"Failed to upload photo card: {upload_err}")
+        finally:
+            try: os.remove(local_card_path)
+            except: pass
+    elif local_card_path:
+        # Cleanup local card path if we already successfully sent raw image URL
+        try: os.remove(local_card_path)
+        except: pass
             
     # Fallback to Text Alert if photo card failed
     try:
