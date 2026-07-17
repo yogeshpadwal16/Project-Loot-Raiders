@@ -5,6 +5,7 @@ import threading
 import asyncio
 import time
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from deal_engine.deal_processor import process_deal_url
 from config.settings import load_settings
 
@@ -50,7 +51,13 @@ async def mirror_main():
     logging.info("   You will be prompted to enter your phone number and login code.")
     logging.info("==========================================================================")
     
-    client = TelegramClient(session_path, api_id, api_hash)
+    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
+    if session_str:
+        logging.info("[Channel Mirror] Initializing Telethon Client using StringSession...")
+        client = TelegramClient(StringSession(session_str), api_id, api_hash)
+    else:
+        logging.info(f"[Channel Mirror] Initializing Telethon Client using file session: {session_path}")
+        client = TelegramClient(session_path, api_id, api_hash)
     
     try:
         # Start and authenticate client first
@@ -176,7 +183,13 @@ async def mirror_single_run_async():
     session_path = os.path.join(base_dir, "channel_mirror.session")
     
     logging.info("[Channel Mirror Single-Run] Authenticating Telethon Client...")
-    client = TelegramClient(session_path, api_id, api_hash)
+    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
+    if session_str:
+        logging.info("[Channel Mirror Single-Run] Initializing Telethon Client using StringSession...")
+        client = TelegramClient(StringSession(session_str), api_id, api_hash)
+    else:
+        logging.info(f"[Channel Mirror Single-Run] Initializing Telethon Client using file session: {session_path}")
+        client = TelegramClient(session_path, api_id, api_hash)
     
     try:
         await client.start()
