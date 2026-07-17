@@ -198,6 +198,40 @@
                     </div>
                 </div>
 
+                <!-- EPC & REFERRAL ANALYTICS (PREMIUM ADMIN WIDGET) -->
+                <div class="console-card epc-analytics-card" style="margin-top: 20px; border-left: 4px solid var(--md-sys-color-primary);">
+                    <div class="console-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px;">
+                        <h3><i class="fa-solid fa-indian-rupee-sign text-gold" style="font-size: 1.2rem; vertical-align: middle;"></i> EPC & Referral Analytics</h3>
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-weight: bold; font-size: 0.7rem;">Active</span>
+                    </div>
+                    <div class="console-body" style="padding: 10px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 0.85rem;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="display:block; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">Est. EPC (Clicks)</span>
+                                <strong id="admin-analytics-epc" style="font-size:1.05rem; color:#f1c40f;">₹0.00</strong>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="display:block; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">Reconciled Payouts</span>
+                                <strong id="admin-analytics-reconciled" style="font-size:1.05rem; color:#2ecc71;">₹0.00</strong>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="display:block; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">Total Referrals</span>
+                                <strong id="admin-analytics-referrals" style="font-size:1.05rem; color:#3498db;">0</strong>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
+                                <span style="display:block; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">Reconciliation Rate</span>
+                                <strong id="admin-analytics-reconciliation-rate" style="font-size:1.05rem; color:#e67e22;">0.0%</strong>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8rem; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 8px;">
+                            <span style="display:block; font-weight:bold; margin-bottom:6px; color:#fff;"><i class="fa-solid fa-map"></i> Click Geo-Distribution (India)</span>
+                            <div id="admin-analytics-geo" style="display:flex; flex-direction:column; gap:4px;">
+                                <!-- Populate dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- MANUAL DEAL PUBLISHER -->
                 <div class="selector-card manual-post-card" style="margin-top: 0px; margin-bottom: 20px;">
                     <div class="selector-header">

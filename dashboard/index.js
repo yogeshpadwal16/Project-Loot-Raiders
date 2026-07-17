@@ -507,6 +507,16 @@ function updateDealsUI(deals) {
         const shareText = `🍊💣 *LOOT RAIDERS DEAL ALERT!* 💣🍊\n\n*${titleStr.replace(/\*/g, '')}*\n\n💰 *Price:* ₹${priceVal} (MRP: ~₹${mrpVal}~)\n📉 *Discount:* ${discountVal}% OFF\n\n👉 *CLICK HERE TO BUY NOW:* ${window.location.origin}/api/redirect?id=${deal.id}&user=WhatsAppShare&url=${encodeURIComponent(dealUrl)}\n\n📢 *Join our Telegram for more loot:* ${inviteLink}`;
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
+        // Premium calculations formatting (Feature 7, 8, 26)
+        const effectivePrice = deal.effective_price ? parseInt(deal.effective_price).toLocaleString() : priceVal;
+        const offlinePrice = deal.offline_price ? parseInt(deal.offline_price).toLocaleString() : mrpVal;
+        const offlineSavings = (deal.offline_price && deal.price) ? Math.max(0, parseInt(deal.offline_price) - parseInt(deal.price)).toLocaleString() : '0';
+        
+        const forecastRec = deal.forecasting ? deal.forecasting.recommendation : 'BUY';
+        const forecastProb = deal.forecasting ? deal.forecasting.probability : 75;
+        const forecastColor = forecastRec === 'BUY' ? '#2ecc71' : '#e67e22';
+        const cancelRisk = deal.cancel_risk ? deal.cancel_risk : 5;
+
         html += `
             <div class="deal-item">
                 <div class="deal-img-wrapper">
@@ -527,13 +537,31 @@ function updateDealsUI(deals) {
                             <canvas class="deal-sparkline-canvas" id="sparkline-${deal.id}" style="width: 80px; height: 24px; pointer-events: none;"></canvas>
                         </div>
                     </div>
+                    
+                    <!-- Premium calculations row (Features 7, 8, 26, and Admin 5) -->
+                    <div class="premium-details-row" style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; font-size: 0.8rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 8px; margin-bottom: 8px;">
+                        <span class="badge-forecasting" style="padding: 2px 6px; border-radius: 4px; font-weight: bold; background: ${forecastColor}20; color: ${forecastColor};">
+                            🤖 AI Suggests: ${forecastRec} (${forecastProb}%)
+                        </span>
+                        <span style="color: #f1c40f;" title="Flipkart SuperCoins or Amazon Pay Credit Card">
+                            🪙 Effective: <strong>₹${effectivePrice}</strong>
+                        </span>
+                        <span style="color: #9b59b6;" title="Average Retail Store Match">
+                            🏬 Offline Match: ₹${offlinePrice} (Save ₹${offlineSavings})
+                        </span>
+                        <span style="color: #e74c3c;" title="Order Cancellation Probability on Pricing Error">
+                            ⚠️ Cancel Risk: ${cancelRisk}%
+                        </span>
+                    </div>
+
                     <div class="deal-footer">
                         <span class="deal-time"><i class="fa-solid fa-clock"></i> Broadcasted at ${dealTime} ${clicksLabel}</span>
-                        <div class="deal-actions-row" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <div class="deal-actions-row" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
                             ${isAuthorized() ? `<button class="btn-delete-deal" data-id="${deal.id}" title="Remove this deal from feed"><i class="fa-solid fa-trash"></i></button>` : ''}
                             <button class="btn-price-history" data-id="${deal.id}" title="View Price History"><i class="fa-solid fa-chart-line"></i> History</button>
                             <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;" title="Share this deal on WhatsApp"><i class="fa-brands fa-whatsapp"></i> Share</a>
                             <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn-telegram-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #0088cc; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;"><i class="fa-brands fa-telegram"></i> Telegram</a>
+                            <a href="${deal.auto_cart_url || '#'}" target="_blank" class="btn-grab" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);" title="Direct Cart Injection Checkout"><i class="fa-solid fa-cart-shopping"></i> AUTO-CART</a>
                             <a href="${redirectUrl}" target="_blank" class="btn-grab">GRAB DEAL <i class="fa-solid fa-up-right-from-square"></i></a>
                         </div>
                     </div>
@@ -1035,10 +1063,139 @@ async function saveSettings(e) {
     }
 }
 
+async function fetchScraperHealth() {
+    const healthBody = document.getElementById('crawler-health-body');
+    if (!healthBody) return;
+    try {
+        const response = await fetch(`${API_BASE}/api/scraper/health`);
+        if (!response.ok) return;
+        const data = await response.json();
+        let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        data.active_scrapers.forEach(s => {
+            const isScraping = s.status === 'scraping';
+            const badgeColor = isScraping ? '#0088cc' : '#25d366';
+            html += `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; border-left: 3px solid ${badgeColor};">
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: 700; font-size: 0.8rem;">${s.name}</span>
+                        <span style="font-size: 0.7rem; color: var(--md-sys-color-on-background-variant);">Latency: ${s.latency}</span>
+                    </div>
+                    <span style="font-size: 0.65rem; font-weight: 700; color: ${badgeColor}; background: ${badgeColor}15; padding: 2px 8px; border-radius: 100px; text-transform: uppercase;">
+                        ${s.status}
+                    </span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        healthBody.innerHTML = html;
+    } catch (e) {
+        console.error("Health fetch error:", e);
+    }
+}
+
+async function fetchAnalytics() {
+    const epcEl = document.getElementById('admin-analytics-epc');
+    const reconciledEl = document.getElementById('admin-analytics-reconciled');
+    const referralsEl = document.getElementById('admin-analytics-referrals');
+    const rateEl = document.getElementById('admin-analytics-reconciliation-rate');
+    const geoEl = document.getElementById('admin-analytics-geo');
+    
+    if (!epcEl) return; // not on admin panel
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/analytics`);
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        epcEl.textContent = `₹${parseFloat(data.epc_metrics.average_epc_rupees).toFixed(2)}`;
+        reconciledEl.textContent = `₹${parseInt(data.epc_metrics.reconciled_earnings).toLocaleString()}`;
+        referralsEl.textContent = data.community.total_referrals;
+        rateEl.textContent = `${data.epc_metrics.reconciliation_rate_percent}%`;
+        
+        let geoHtml = '';
+        if (data.geo_density) {
+            Object.entries(data.geo_density).forEach(([region, count]) => {
+                geoHtml += `
+                    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">
+                        <span>${region}</span>
+                        <strong>${count} clicks</strong>
+                    </div>
+                `;
+            });
+        }
+        geoEl.innerHTML = geoHtml;
+    } catch (e) {
+        console.error("Analytics fetch error:", e);
+    }
+}
+
+async function fetchLootMapEvents() {
+    const mapBody = document.getElementById('loot-map-body');
+    if (!mapBody) return;
+    try {
+        const response = await fetch(`${API_BASE}/api/lootmap/events`);
+        if (!response.ok) return;
+        const data = await response.json();
+        let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+        data.forEach(e => {
+            const timeAgo = Math.round(e.timestamp ? (Date.now() / 1000 - e.timestamp) : 30);
+            html += `
+                <div style="padding: 8px; background: rgba(255,255,255,0.02); border-radius: 6px; font-size: 0.75rem; border-left: 3px solid var(--md-sys-color-tertiary);">
+                    📍 <strong>${e.city}</strong>: ${e.action} <span style="float: right; color: var(--md-sys-color-on-background-variant); font-size:0.7rem;">${timeAgo}s ago</span>
+                </div>
+            `;
+        });
+        html += '</div>';
+        mapBody.innerHTML = html;
+    } catch (err) {
+        console.error("Loot map fetch error:", err);
+    }
+}
+
+function initScratchCard() {
+    const area = document.getElementById('scratch-area');
+    const result = document.getElementById('scratch-result');
+    if (!area || !result) return;
+    
+    area.addEventListener('click', async () => {
+        if (area.style.background === 'none') return; // already scratched
+        
+        area.style.background = 'none';
+        area.style.border = '2px dashed var(--md-sys-color-primary)';
+        area.style.height = 'auto';
+        area.style.padding = '20px 0';
+        area.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scratching Card...';
+        
+        try {
+            let userId = localStorage.getItem('user_points_id');
+            if (!userId) {
+                userId = 'web_' + Math.random().toString(36).substring(2, 9);
+                localStorage.setItem('user_points_id', userId);
+            }
+            
+            const response = await fetch(`${API_BASE}/api/rewards/scratch?user_id=${userId}`);
+            if (!response.ok) throw new Error('Scratch reward request failed');
+            const data = await response.json();
+            
+            area.innerHTML = '🎁 CARD SCRATCHED!';
+            result.style.display = 'block';
+            result.textContent = data.message;
+            showToast(data.message);
+        } catch (e) {
+            console.error(e);
+            area.innerHTML = '⚠️ ERROR SCRATCHING';
+            showToast('Connection error during scratch draw', 'error');
+        }
+    });
+}
+
 function init() {
     fetchPublicConfig();
     fetchStatus();
     fetchDeals();
+    fetchScraperHealth();
+    fetchLootMapEvents();
+    initScratchCard();
     
     if (IS_STATIC_MODE) {
         // Statically poll deals file every minute
@@ -1049,11 +1206,15 @@ function init() {
     connectLogsStream();
     fetchSelectors();
     fetchClicks();
+    fetchAnalytics();
     
     // Set periodic polling
     setInterval(fetchStatus, 3000);
     setInterval(fetchDeals, 5000);
     setInterval(fetchClicks, 4000);
+    setInterval(fetchScraperHealth, 5000);
+    setInterval(fetchAnalytics, 6000);
+    setInterval(fetchLootMapEvents, 8000);
 
     // Event delegation for delete and history buttons
     if (dealsContainer) {

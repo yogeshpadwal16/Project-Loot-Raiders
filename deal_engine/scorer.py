@@ -313,3 +313,17 @@ def should_publish_deal(platform: str, score: float) -> bool:
     rules = settings.get("scoring_rules", {})
     min_score = rules.get("min_publish_score", 45.0)
     return score >= min_score
+
+def calculate_cancellation_risk(platform: str, price: int, mrp: int, discount: float, title: str) -> float:
+    """
+    Computes pricing error/glitch cancel probability based on item category and discount rate (Feature 5 on Admin).
+    """
+    if discount >= 85.0:
+        # High value electronics have extremely high cancellation rates
+        title_lower = title.lower() if title else ""
+        if any(x in title_lower for x in ["laptop", "smartphone", "phone", "monitor", "tv", "processor", "gpu", "console", "camera"]):
+            return 95.0
+        return 80.0
+    elif discount >= 70.0:
+        return 45.0
+    return 5.0
