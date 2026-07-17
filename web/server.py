@@ -267,6 +267,10 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     recommendation = "BUY" if (latest_price.is_verified_low or latest_price.deal_score >= 70) else "WAIT"
                     probability = 92 if latest_price.is_verified_low else 65
                     
+                    # AI Glitch Severity / Cancel Risk (Admin Feature 5)
+                    from deal_engine.scorer import calculate_cancellation_risk
+                    cancel_risk = calculate_cancellation_risk(p.platform, latest_price.price, latest_price.mrp, latest_price.discount, p.title)
+                    
                     deals.append({
                         "id": p.id,
                         "platform": p.platform,
@@ -283,6 +287,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "effective_price": effective_price,
                         "auto_cart_url": auto_cart_url,
                         "offline_price": offline_price,
+                        "cancel_risk": cancel_risk,
                         "forecasting": {
                             "recommendation": recommendation,
                             "probability": probability
@@ -361,6 +366,111 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 db.close()
             return
                 
+        elif self.path == '/api/scraper/health':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            # Simulated telemetry metrics matching Feature 1 (scraper health)
+            data = {
+                "active_threads": 4,
+                "latency_seconds": 2.15,
+                "proxy_pool_size": 25,
+                "request_success_rate": 98.4,
+                "active_scrapers": [
+                    {"name": "Amazon Lightning Worker", "status": "idle", "latency": "1.8s", "checks_count": 1420},
+                    {"name": "Amazon Sitewide Scraper", "status": "scraping", "latency": "2.4s", "checks_count": 890},
+                    {"name": "Flipkart Clearance Scanner", "status": "idle", "latency": "2.0s", "checks_count": 1150},
+                    {"name": "JioMart Grocery Monitor", "status": "scraping", "latency": "2.2s", "checks_count": 640}
+                ]
+            }
+            self.wfile.write(json.dumps(data).encode('utf-8'))
+            return
+
+        elif self.path == '/api/lootmap/events':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            # Live map coordinate simulator for major cities in India (Feature 1 on User website)
+            import random
+            cities = [
+                {"name": "Mumbai", "lat": 19.0760, "lng": 72.8777},
+                {"name": "Delhi NCR", "lat": 28.7041, "lng": 77.1025},
+                {"name": "Bengaluru", "lat": 12.9716, "lng": 77.5946},
+                {"name": "Hyderabad", "lat": 17.3850, "lng": 78.4867},
+                {"name": "Pune", "lat": 18.5204, "lng": 73.8567},
+                {"name": "Chennai", "lat": 13.0827, "lng": 80.2707},
+                {"name": "Kolkata", "lat": 22.5726, "lng": 88.3639},
+                {"name": "Ahmedabad", "lat": 23.0225, "lng": 72.5714}
+            ]
+            
+            events = []
+            random.seed(int(time.time() / 100)) # stable for 100s windows
+            actions = ["clicked deal link", "set price alert", "won scratch raffle", "verified price drop"]
+            for _ in range(5):
+                city = random.choice(cities)
+                action = random.choice(actions)
+                events.append({
+                    "city": city["name"],
+                    "lat": city["lat"] + random.uniform(-0.15, 0.15),
+                    "lng": city["lng"] + random.uniform(-0.15, 0.15),
+                    "action": action,
+                    "timestamp": time.time() - random.randint(10, 300)
+                })
+            self.wfile.write(json.dumps(events).encode('utf-8'))
+            return
+
+        elif self.path.startswith('/api/extension/match'):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            # Chrome Extension ASIN/PID detail matcher (Feature 3 on User website)
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(self.path)
+            params = parse_qs(parsed_url.query)
+            prod_id = params.get('id', [None])[0]
+            
+            if not prod_id:
+                self.wfile.write(json.dumps({"error": "Missing product id parameter"}).encode('utf-8'))
+                return
+                
+            db = SessionLocal()
+            try:
+                prod = db.query(Product).filter_by(id=prod_id).first()
+                if prod:
+                    latest = db.query(PriceHistory).filter_by(product_id=prod.id).order_by(PriceHistory.timestamp.desc()).first()
+                    history = db.query(PriceHistory).filter_by(product_id=prod.id).order_by(PriceHistory.timestamp.asc()).all()
+                    
+                    wallet_recommendations = []
+                    user_id = params.get('user_id', [None])[0]
+                    if user_id:
+                        from deal_engine.bot_listener import get_matching_wallet_offers
+                        rec = get_matching_wallet_offers(user_id, ["SBI Card 10% Off", "HDFC Card discount"])
+                        wallet_recommendations.append(rec)
+                        
+                    res_data = {
+                        "found": True,
+                        "title": prod.title,
+                        "platform": prod.platform,
+                        "current_price": latest.price if latest else 0,
+                        "mrp": latest.mrp if latest else 0,
+                        "deal_score": latest.deal_score if latest else 0,
+                        "is_verified_low": latest.is_verified_low if latest else False,
+                        "history": [{"price": h.price, "timestamp": h.timestamp} for h in history],
+                        "wallet_suggestions": wallet_recommendations
+                    }
+                    self.wfile.write(json.dumps(res_data).encode('utf-8'))
+                else:
+                    self.wfile.write(json.dumps({"found": False, "message": "Product not yet in database"}).encode('utf-8'))
+            except Exception as e:
+                logging.error(f"Extension match query error: {e}")
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            finally:
+                db.close()
+            return
+
         elif self.path.startswith('/api/deals/history'):
             from urllib.parse import urlparse, parse_qs
             parsed_url = urlparse(self.path)
