@@ -1,10 +1,89 @@
 import re
 import time
 import logging
+import json
+import os
+import requests
 from typing import List, Dict, Any
 from selenium.webdriver.common.by import By
 from plugins.base_plugin import BaseRetailerPlugin
 from utils.parser import calculate_true_discount
+
+def clean_and_truncate_html(html_content: str, max_chars: int = 10000) -> str:
+    # Remove script and style blocks
+    html_content = re.sub(r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>', '', html_content, flags=re.IGNORECASE)
+    html_content = re.sub(r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>', '', html_content, flags=re.IGNORECASE)
+    # Remove svg blocks
+    html_content = re.sub(r'<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>', '', html_content, flags=re.IGNORECASE)
+    # Remove comments
+    html_content = re.sub(r'<!--.*?-->', '', html_content, flags=re.DOTALL)
+    # Compress whitespaces
+    html_content = re.sub(r'\s+', ' ', html_content)
+    return html_content[:max_chars]
+
+def auto_heal_with_gemini(driver, platform_id: str, config: dict, settings: dict) -> bool:
+    api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
+    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
+        return False
+        
+    logging.info(f"[Generic Plugin - {platform_id}] Attempting AI self-healing selector recovery using Gemini...")
+    try:
+        html = driver.page_source
+        clean_html = clean_and_truncate_html(html)
+        
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        
+        prompt = (
+            f"You are a web scraping expert. Analyze the clean HTML structure of the {platform_id.upper()} e-commerce product feed page below "
+            f"and determine the correct, specific CSS selectors to scrape product deals. \n\n"
+            f"Current broken/outdated config (which returned 0 elements):\n"
+            f"- Card selector: {config.get('card_selector')}\n"
+            f"- Title selector: {config.get('title_selector')}\n"
+            f"- Link selector: {config.get('link_selector')}\n"
+            f"- Image selector: {config.get('image_selector')}\n\n"
+            f"HTML Snippet:\n{clean_html}\n\n"
+            f"Please output a valid, clean JSON object (no markdown, no backticks, no other explanation) matching this schema:\n"
+            f"{{\n"
+            f"  \"card_selector\": \"(CSS selector for the product container/card element)\",\n"
+            f"  \"title_selector\": \"(CSS selector for the title within the card, or empty if it matches card/link text)\",\n"
+            f"  \"link_selector\": \"(CSS selector for the anchor tag with link, or empty/'a' if default)\",\n"
+            f"  \"image_selector\": \"(CSS selector for the product image, or 'img' if default)\"\n"
+            f"}}\n"
+        )
+        
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }]
+        }
+        res = requests.post(url, json=payload, timeout=25)
+        if res.status_code == 200:
+            data = res.json()
+            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            # Clean JSON markdown if model wrapped it
+            if text.startswith("```"):
+                lines = text.split("\n")
+                if lines[0].startswith("```json") or lines[0].startswith("```"):
+                    text = "\n".join(lines[1:-1]).strip()
+            
+            parsed = json.loads(text)
+            card = parsed.get("card_selector")
+            title = parsed.get("title_selector")
+            link = parsed.get("link_selector")
+            image = parsed.get("image_selector")
+            
+            if card:
+                logging.info(f"[Generic Plugin - {platform_id}] Gemini auto-heal suggested selectors: {parsed}")
+                from database.operations import update_selector_in_db_and_json
+                update_selector_in_db_and_json(platform_id, card_selector=card, title_selector=title, link_selector=link, image_selector=image)
+                config['card_selector'] = card
+                if title: config['title_selector'] = title
+                if link: config['link_selector'] = link
+                if image: config['image_selector'] = image
+                return True
+    except Exception as e:
+        logging.error(f"[Generic Plugin - {platform_id}] Gemini auto-heal selector recovery failed: {e}")
+    return False
 
 class GenericRetailerPlugin(BaseRetailerPlugin):
     def __init__(self, platform_id: str):
@@ -37,6 +116,76 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                 
             cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
             logging.info(f"[Generic Plugin - {self._platform_id}] Found {len(cards)} elements using card selector: {config['card_selector']}")
+            
+            if len(cards) == 0:
+                FALLBACKS = {
+                    "amazon": [
+                        "div[data-component-type='s-search-result']",
+                        "div[data-testid='product-card']",
+                        "div.s-result-item",
+                        "li.a-carousel-card"
+                    ],
+                    "flipkart": [
+                        "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+                        "div._1AtVbE",
+                        "div[data-id]"
+                    ],
+                    "myntra": [
+                        "li.product-base",
+                        "div.product-base",
+                        "div[class*='product-tuple']"
+                    ],
+                    "ajio": [
+                        "div.item",
+                        "div.ganjo-product-grid",
+                        "div.preview"
+                    ],
+                    "meesho": [
+                        "a[href*='/p/']",
+                        "div[class*='ProductList']"
+                    ],
+                    "tatacliq": [
+                        "a.ProductModule__base",
+                        "[class*='ProductModule__base']",
+                        "div.ProductModule__base"
+                    ],
+                    "jiomart": [
+                        "div.productContainer",
+                        "div.productCard__productCard",
+                        "li.j-grid-item"
+                    ]
+                }
+                
+                # Check platform match
+                matching_platform = None
+                for key in FALLBACKS.keys():
+                    if key in self._platform_id.lower():
+                        matching_platform = key
+                        break
+                        
+                if matching_platform:
+                    logging.info(f"[Generic Plugin - {self._platform_id}] Main card selector failed. Activating self-healing fallbacks...")
+                    for fallback in FALLBACKS[matching_platform]:
+                        if fallback == config['card_selector']:
+                            continue
+                        try:
+                            fallback_cards = driver.find_elements(By.CSS_SELECTOR, fallback)
+                            if len(fallback_cards) > 0:
+                                logging.info(f"[Generic Plugin - {self._platform_id}] Auto-healed! Found {len(fallback_cards)} elements using fallback card selector: {fallback}")
+                                from database.operations import update_selector_in_db_and_json
+                                update_selector_in_db_and_json(self._platform_id, card_selector=fallback)
+                                config['card_selector'] = fallback
+                                cards = fallback_cards
+                                break
+                        except Exception as fb_err:
+                            pass
+                            
+                # AI Selector Recovery fallback using Gemini
+                if len(cards) == 0:
+                    healed = auto_heal_with_gemini(driver, self._platform_id, config, settings)
+                    if healed:
+                        logging.info(f"[Generic Plugin - {self._platform_id}] AI repair successful. Rescanning with corrected selectors...")
+                        cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
             
             for card in cards:
                 try:

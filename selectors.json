@@ -13,17 +13,80 @@
         "link_selector": "a.a-link-normal",
         "image_selector": "img.s-image"
     },
+    "amazon_electronics_deals": {
+        "url": "https://www.amazon.in/s?k=electronics&pct-off=30-",
+        "card_selector": "div[data-component-type='s-search-result']",
+        "title_selector": "h2 span",
+        "link_selector": "a.a-link-normal",
+        "image_selector": "img.s-image"
+    },
+    "amazon_appliances_deals": {
+        "url": "https://www.amazon.in/s?k=home+appliances&pct-off=30-",
+        "card_selector": "div[data-component-type='s-search-result']",
+        "title_selector": "h2 span",
+        "link_selector": "a.a-link-normal",
+        "image_selector": "img.s-image"
+    },
     "flipkart_sitewide_offers": {
         "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
         "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "div.KzDlHZ, a.IRpwTa, a.wjcEwN, a",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
         "link_selector": "a",
         "image_selector": "img"
     },
     "flipkart_clearance_master_feed": {
-        "url": "https://www.flipkart.com/search?q=clearance+sale",
+        "url": "https://www.flipkart.com/search?q=clearance sale",
         "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "div.KzDlHZ, a.IRpwTa, a.wjcEwN, a",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "flipkart_electronics_deals": {
+        "url": "https://www.flipkart.com/search?q=electronics&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
+        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "flipkart_appliances_deals": {
+        "url": "https://www.flipkart.com/search?q=appliances&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
+        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "myntra_deals": {
+        "url": "https://www.myntra.com/deals?f=discount%3A50.0",
+        "card_selector": "li.product-base",
+        "title_selector": "h4.product-product, h3.product-brand",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "ajio_deals": {
+        "url": "https://www.ajio.com/s/discount-50-percent-and-above",
+        "card_selector": "div.item",
+        "title_selector": "div.name",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "meesho_deals": {
+        "url": "https://www.meesho.com/search?q=offers",
+        "card_selector": "a[href*='/p/']",
+        "title_selector": "p[class*='ProductTitle']",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "tatacliq_deals": {
+        "url": "https://www.tatacliq.com/search/?text=deals",
+        "card_selector": "a.ProductModule__base, [class*='ProductModule__base']",
+        "title_selector": "h2.ProductDescription__description, [class*='ProductDescription__description']",
+        "link_selector": "a",
+        "image_selector": "img"
+    },
+    "jiomart_deals": {
+        "url": "https://www.jiomart.com/collection/basic-electricals1",
+        "card_selector": "div.productContainer, div.productCard__productCard",
+        "title_selector": "h3.productCard__productTitle",
         "link_selector": "a",
         "image_selector": "img"
     }

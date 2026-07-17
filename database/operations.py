@@ -11,6 +11,19 @@ from config.settings import load_settings
 def initialize_database_selectors():
     db = SessionLocal()
     try:
+        import json
+        import os
+        from config.settings import BASE_DIR
+        selectors_path = os.path.join(BASE_DIR, "selectors.json")
+        loaded_selectors = {}
+        if os.path.exists(selectors_path):
+            try:
+                with open(selectors_path, "r", encoding="utf-8") as f:
+                    loaded_selectors = json.load(f)
+                logging.info("Successfully loaded custom selectors from selectors.json")
+            except Exception as load_err:
+                logging.warning(f"Failed to load selectors.json: {load_err}")
+
         default_matrix = {
             "amazon_master_lightning_deals": {
                 "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
@@ -104,6 +117,13 @@ def initialize_database_selectors():
                 "image_selector": "img"
             }
         }
+        # Override with loaded selectors from selectors.json
+        for plat_key, custom_config in loaded_selectors.items():
+            if plat_key in default_matrix:
+                default_matrix[plat_key].update(custom_config)
+            else:
+                default_matrix[plat_key] = custom_config
+
         for plat_key, config in default_matrix.items():
             existing = db.query(SelectorMatrix).filter_by(platform=plat_key).first()
             if not existing:
@@ -251,3 +271,49 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
             db.close()
             
     return True
+
+def update_selector_in_db_and_json(platform: str, card_selector=None, title_selector=None, link_selector=None, image_selector=None):
+    import json
+    import os
+    db = SessionLocal()
+    try:
+        matrix = db.query(SelectorMatrix).filter_by(platform=platform).first()
+        if not matrix:
+            matrix = SelectorMatrix(platform=platform)
+            db.add(matrix)
+            
+        if card_selector: matrix.card_selector = card_selector
+        if title_selector: matrix.title_selector = title_selector
+        if link_selector: matrix.link_selector = link_selector
+        if image_selector: matrix.image_selector = image_selector
+        db.commit()
+        logging.info(f"Updated selector in database for {platform}")
+        
+        # Now update selectors.json
+        from config.settings import BASE_DIR
+        selectors_path = os.path.join(BASE_DIR, "selectors.json")
+        data = {}
+        if os.path.exists(selectors_path):
+            try:
+                with open(selectors_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except:
+                pass
+                
+        if platform not in data:
+            data[platform] = {}
+        if matrix.url: data[platform]["url"] = matrix.url
+        data[platform]["card_selector"] = matrix.card_selector
+        data[platform]["title_selector"] = matrix.title_selector
+        data[platform]["link_selector"] = matrix.link_selector
+        data[platform]["image_selector"] = matrix.image_selector
+        
+        with open(selectors_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        logging.info(f"Updated selectors.json for {platform}")
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Failed to update selectors: {e}")
+    finally:
+        db.close()
+
