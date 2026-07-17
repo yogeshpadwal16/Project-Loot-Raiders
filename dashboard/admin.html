@@ -176,10 +176,18 @@
                         <h3><i class="fa-solid fa-chart-line text-pink"></i> Link Click Analytics</h3>
                         <span class="badge" id="clicks-total-badge">0 Clicks</span>
                     </div>
-                    <div class="clicks-summary">
-                        <div class="clicks-summary-item">
+                    <div class="clicks-summary" style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 12px;">
+                        <div class="clicks-summary-item" style="flex: 1.5; min-width: 150px;">
                             <span class="summary-label">Top Clicked Deal:</span>
                             <span class="summary-val" id="top-clicked-deal" title="None">None</span>
+                        </div>
+                        <div class="clicks-summary-item" style="flex: 1; min-width: 100px;">
+                            <span class="summary-label">WhatsApp Clicks:</span>
+                            <span class="summary-val text-green" id="whatsapp-clicks-count">0 Clicks</span>
+                        </div>
+                        <div class="clicks-summary-item" style="flex: 1; min-width: 100px;">
+                            <span class="summary-label">WhatsApp Loop CTR:</span>
+                            <span class="summary-val text-gold" id="whatsapp-clicks-ratio">0%</span>
                         </div>
                     </div>
                     <div class="analytics-chart-container" style="padding: 10px 15px; height: 160px; position: relative; margin-bottom: 10px;">
@@ -326,6 +334,10 @@
                                     <input type="number" id="set-min-discount" min="30" max="98" step="1" required>
                                 </div>
                             </div>
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label for="set-telegram-invite">Telegram Channel Invite Link (For referral loop inclusion)</label>
+                                <input type="url" id="set-telegram-invite" placeholder="https://t.me/LootRaidersDeals">
+                            </div>
                              <div class="input-group" style="margin-bottom: 15px;">
                                  <label for="set-discord-webhook">Discord Webhook URL</label>
                                  <input type="url" id="set-discord-webhook" placeholder="https://discord.com/api/webhooks/...">
@@ -333,6 +345,41 @@
                              <div class="input-group" style="margin-bottom: 15px;">
                                  <label for="set-gemini-key">Gemini API Key (Optional AI Copywriter)</label>
                                  <input type="password" id="set-gemini-key" placeholder="AI-generated copywriting for Telegram deals">
+                             </div>
+                             
+                             <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
+                             
+                             <h4 style="margin: 0 0 10px 0; color: var(--accent-orange); font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-envelope"></i> SMTP Email Alerts Configuration (Optional)</h4>
+                             
+                             <div class="input-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-server">SMTP Server</label>
+                                     <input type="text" id="set-smtp-server" placeholder="smtp.gmail.com or smtp.sendgrid.net">
+                                 </div>
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-port">Port</label>
+                                     <input type="number" id="set-smtp-port" placeholder="587" value="587">
+                                 </div>
+                             </div>
+                             <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-username">SMTP Username</label>
+                                     <input type="text" id="set-smtp-username" placeholder="e.g. your_email@gmail.com">
+                                 </div>
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-password">SMTP Password / API Key</label>
+                                     <input type="password" id="set-smtp-password" placeholder="Password or SendGrid API token">
+                                 </div>
+                             </div>
+                             <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-from">Sender Email (From)</label>
+                                     <input type="email" id="set-smtp-from" placeholder="alerts@lootraiders.com">
+                                 </div>
+                                 <div class="input-group" style="margin-bottom: 0;">
+                                     <label for="set-smtp-to">Recipient Email(s) (Comma-separated)</label>
+                                     <input type="text" id="set-smtp-to" placeholder="user1@gmail.com, user2@gmail.com">
+                                 </div>
                              </div>
                              
                              <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>

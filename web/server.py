@@ -45,22 +45,35 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def is_authorized(self):
-        # Exclude static files, redirects, and login from auth checks
+        # Exclude static files, redirects, status, deals, and login from auth checks
         clean_path = self.path.split('?')[0]
-        if clean_path in ['/', '/api/login'] or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
+        public_endpoints = [
+            '/', 
+            '/api/login', 
+            '/api/status', 
+            '/api/deals', 
+            '/api/config'
+        ]
+        if clean_path in public_endpoints or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
             return True
             
-        # Get Authorization header
+        # Get token from header or fallback to query parameter
+        token = None
         auth_header = self.headers.get('Authorization')
-        if not auth_header:
+        if auth_header:
+            parts = auth_header.split(' ')
+            if len(parts) == 2 and parts[0].lower() == 'bearer':
+                token = parts[1]
+                
+        if not token:
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            if 'token' in queries and queries['token']:
+                token = queries['token'][0].strip()
+                
+        if not token:
             return False
             
-        # Check token
-        parts = auth_header.split(' ')
-        if len(parts) != 2 or parts[0].lower() != 'bearer':
-            return False
-            
-        token = parts[1]
         env_token = os.environ.get("DASHBOARD_SESSION_TOKEN", "admin_session_key_default").strip()
         return token == env_token
 
@@ -140,6 +153,71 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             finally:
                 db.close()
                 
+        elif self.path == '/api/analytics':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            db = SessionLocal()
+            try:
+                # 1. Total Clicks
+                total_clicks = db.query(ClickLog).count()
+                
+                # 2. Clicks by Platform
+                from sqlalchemy import func
+                platform_clicks = {}
+                # Group by platform (via join Product)
+                clicks_by_prod = db.query(ClickLog.product_id, func.count(ClickLog.id)).group_by(ClickLog.product_id).all()
+                for prod_id, count in clicks_by_prod:
+                    prod = db.query(Product).filter_by(id=prod_id).first()
+                    plat = prod.platform if prod else "unknown"
+                    platform_clicks[plat] = platform_clicks.get(plat, 0) + count
+                    
+                # 3. Top Clicked Deals
+                top_deals = []
+                sorted_clicks = sorted(clicks_by_prod, key=lambda x: x[1], reverse=True)[:5]
+                for prod_id, count in sorted_clicks:
+                    prod = db.query(Product).filter_by(id=prod_id).first()
+                    top_deals.append({
+                        "id": prod_id,
+                        "title": prod.title[:60] + "..." if prod and prod.title else "Unknown",
+                        "clicks": count,
+                        "platform": prod.platform if prod else "unknown"
+                    })
+                    
+                # 4. Community Gamification Stats
+                from knowledge_base.models import UserScore, ReferralLog
+                total_users = db.query(UserScore).count()
+                total_points = db.query(func.sum(UserScore.points)).scalar() or 0
+                total_referrals = db.query(ReferralLog).count()
+                total_votes = db.query(func.sum(UserScore.voted_count)).scalar() or 0
+                
+                # 5. Conversion rate approximation
+                total_deals_posted = db.query(Product).count()
+                avg_ctr = (total_clicks / max(1, total_deals_posted)) * 100
+                
+                analytics = {
+                    "total_clicks": total_clicks,
+                    "platform_clicks": platform_clicks,
+                    "top_deals": top_deals,
+                    "community": {
+                        "total_users": total_users,
+                        "total_points": int(total_points),
+                        "total_referrals": total_referrals,
+                        "total_votes": int(total_votes)
+                    },
+                    "conversion": {
+                        "total_deals_posted": total_deals_posted,
+                        "average_clicks_per_deal": round(avg_ctr, 1)
+                    }
+                }
+                self.wfile.write(json.dumps(analytics).encode('utf-8'))
+            except Exception as e:
+                logging.error(f"Analytics query error: {e}")
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            finally:
+                db.close()
+                
         elif self.path == '/api/deals':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -210,6 +288,68 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"[]")
             finally:
                 db.close()
+        elif self.path.startswith('/go/'):
+            # Cloaker URL redirect (Feature 13)
+            parts = self.path.split('/')
+            if len(parts) >= 3:
+                deal_id = parts[2].split('?')[0].strip()
+                db = SessionLocal()
+                try:
+                    product = db.query(Product).filter_by(id=deal_id).first()
+                    if product:
+                        target_url = product.url
+                        
+                        # Increment clicks and log click
+                        client_ip = self.client_address[0]
+                        user_agent = self.headers.get('User-Agent', 'Unknown')
+                        click = ClickLog(
+                            product_id=deal_id,
+                            title=product.title,
+                            ip=client_ip,
+                            user='CloakedUser',
+                            user_agent=user_agent,
+                            timestamp=time.time()
+                        )
+                        db.add(click)
+                        db.commit()
+                        
+                        # Recalculate score and sync JSON
+                        latest_price = db.query(PriceHistory).filter_by(product_id=deal_id).order_by(PriceHistory.timestamp.desc()).first()
+                        if latest_price:
+                            new_score = calculate_deal_score(
+                                platform=product.platform,
+                                price=latest_price.price,
+                                mrp=latest_price.mrp,
+                                discount=latest_price.discount,
+                                is_verified_low=latest_price.is_verified_low,
+                                is_lightning=False,
+                                product_id=deal_id,
+                                title=product.title
+                            )
+                            latest_price.deal_score = new_score
+                            db.commit()
+                            
+                            from core.engine import sync_database_to_json
+                            sync_database_to_json()
+                            
+                            # Trigger background message update
+                            import threading
+                            from deal_engine.notifier import update_telegram_message
+                            threading.Thread(target=update_telegram_message, args=(deal_id,), daemon=True).start()
+                            
+                        self.send_response(302)
+                        self.send_header('Location', target_url)
+                        self.end_headers()
+                        return
+                except Exception as e:
+                    logging.error(f"Cloaker redirection error: {e}")
+                finally:
+                    db.close()
+                    
+            self.send_response(404)
+            self.end_headers()
+            self.wfile.write(b"Deal Not Found")
+            return
             
         elif self.path.startswith('/api/redirect'):
             from urllib.parse import urlparse, parse_qs
@@ -261,6 +401,11 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         # Sync static JSONs to keep dashboard UI elements in sync
                         from core.engine import sync_database_to_json
                         sync_database_to_json()
+                        
+                        # Trigger Telegram message caption update with hotness gauge in background thread
+                        import threading
+                        from deal_engine.notifier import update_telegram_message
+                        threading.Thread(target=update_telegram_message, args=(deal_id,), daemon=True).start()
                 except Exception as e:
                     db.rollback()
                     logging.error(f"Redirect logging error: {e}")
@@ -283,8 +428,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             
             db = SessionLocal()
             try:
-                clicks = db.query(ClickLog).order_by(ClickLog.timestamp.desc()).limit(50).all()
-                data = [{
+                clicks = db.query(ClickLog).order_by(ClickLog.timestamp.desc()).limit(100).all()
+                total_clicks = db.query(ClickLog).count()
+                whatsapp_clicks = db.query(ClickLog).filter(ClickLog.user == 'WhatsAppShare').count()
+                whatsapp_ratio = round((whatsapp_clicks / total_clicks * 100), 1) if total_clicks > 0 else 0.0
+                
+                clicks_data = [{
                     "deal_id": c.product_id,
                     "title": c.title,
                     "ip": c.ip,
@@ -292,9 +441,18 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     "user_agent": c.user_agent,
                     "timestamp": c.timestamp
                 } for c in clicks]
-                self.wfile.write(json.dumps(data).encode('utf-8'))
+                
+                response_data = {
+                    "clicks": clicks_data,
+                    "stats": {
+                        "total_clicks": total_clicks,
+                        "whatsapp_clicks": whatsapp_clicks,
+                        "whatsapp_ratio": whatsapp_ratio
+                    }
+                }
+                self.wfile.write(json.dumps(response_data).encode('utf-8'))
             except Exception as e:
-                self.wfile.write(b"[]")
+                self.wfile.write(json.dumps({"clicks": [], "stats": {"total_clicks": 0, "whatsapp_clicks": 0, "whatsapp_ratio": 0.0}}).encode('utf-8'))
             finally:
                 db.close()
                 
@@ -356,6 +514,16 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     lines = [f"Failed to read logs: {e}"]
             self.wfile.write(json.dumps(lines).encode('utf-8'))
+        elif self.path == '/api/config':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            settings = load_settings()
+            public_config = {
+                "telegram_chat_id": settings.get("telegram_chat_id", "@LootRaidersDeals"),
+                "telegram_invite_link": settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals")
+            }
+            self.wfile.write(json.dumps(public_config).encode('utf-8'))
         else:
             self.send_response(404)
             self.end_headers()

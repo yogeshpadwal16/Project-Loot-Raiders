@@ -9,15 +9,40 @@ from telethon.sessions import StringSession
 from deal_engine.deal_processor import process_deal_url
 from config.settings import load_settings
 
+active_client = None
+should_terminate = False
+
 def start_channel_mirror():
     """Spawns the Telegram Client mirror listener in a separate daemon thread."""
     thread = threading.Thread(target=run_mirror_loop, daemon=True)
     thread.start()
     logging.info("[Channel Mirror] Background scraping daemon thread started.")
 
+def stop_channel_mirror():
+    """Disconnects the active Telethon client cleanly to prevent session locks."""
+    global active_client, should_terminate
+    should_terminate = True
+    if active_client:
+        logging.info("[Channel Mirror] Shutting down Telethon client cleanly...")
+        try:
+            loop = active_client.loop
+            if loop and loop.is_running():
+                # We can't disconnect directly synchronously from here since it's another thread,
+                # so schedule it.
+                asyncio.run_coroutine_threadsafe(active_client.disconnect(), loop)
+            else:
+                try:
+                    asyncio.run(active_client.disconnect())
+                except Exception:
+                    pass
+            logging.info("[Channel Mirror] Telethon client disconnect signal sent.")
+        except Exception as shutdown_err:
+            logging.error(f"[Channel Mirror] Error during clean client shutdown: {shutdown_err}")
+
 def run_mirror_loop():
     """Initializes a dedicated asyncio event loop for Telethon client with auto-restart capability."""
-    while True:
+    global should_terminate
+    while not should_terminate:
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
@@ -25,10 +50,13 @@ def run_mirror_loop():
         except Exception as loop_err:
             logging.error(f"[Channel Mirror] Loop crashed: {loop_err}")
             
+        if should_terminate:
+            break
         logging.warning("[Channel Mirror] Telethon client disconnected or loop finished. Re-initiating connection in 20 seconds...")
         time.sleep(20)
 
 async def mirror_main():
+    global active_client
     # Load API credentials from environment
     api_id_str = os.environ.get("TELEGRAM_API_ID", "39413198").strip()
     api_hash = os.environ.get("TELEGRAM_API_HASH", "d648fd457db96dffa53ae18d3d1869d8").strip()
@@ -70,9 +98,10 @@ async def mirror_main():
                 logging.error("[Channel Mirror] Telegram Client session is not authorized. Non-interactive run aborted.")
                 return
         logging.info("[Channel Mirror] Telegram Client authenticated successfully.")
+        active_client = client
         
         # Now resolve and join target channels
-        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1']
+        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1', 'countingunique']
         resolved_chats = []
         
         from telethon.tl.functions.channels import JoinChannelRequest
@@ -164,9 +193,39 @@ async def mirror_main():
         client.add_event_handler(handler, events.NewMessage(chats=resolved_chats))
         logging.info("[Channel Mirror] Dynamic listener event handler registered. Monitoring active.")
         
+        # Sweep last 10 messages from each channel to catch deals posted during downtime
+        logging.info("[Channel Mirror] Sweeping last 10 messages from channels to capture downtime deals...")
+        for entity in resolved_chats:
+            try:
+                chat_name = getattr(entity, 'username', None) or str(entity.id) if hasattr(entity, 'id') else "private_chat"
+                async for message in client.iter_messages(entity, limit=10):
+                    text = message.text or ""
+                    urls = re.findall(r'(https?://[^\s>]+)', text)
+                    if urls:
+                        logging.info(f"[Channel Mirror] History sweep found links in competitor @{chat_name}")
+                        for url in urls:
+                            clean_url = url.rstrip('.,;()[]{}*#"\'')
+                            logging.info(f"[Channel Mirror] Sweeping link: {clean_url}")
+                            t = threading.Thread(target=process_deal_url, args=(clean_url,), daemon=True)
+                            t.start()
+            except Exception as sweep_err:
+                logging.warning(f"[Channel Mirror] Failed to sweep history for channel: {sweep_err}")
+                
         await client.run_until_disconnected()
     except Exception as e:
         logging.error(f"[Channel Mirror] Telethon client encountered fatal execution error: {e}")
+    finally:
+        logging.info("[Channel Mirror] Cleaning up Telethon client connection...")
+        try:
+            # We check if client exists and is connected
+            if 'client' in locals() and client and client.is_connected():
+                await client.disconnect()
+                logging.info("[Channel Mirror] Telethon client disconnected cleanly.")
+        except Exception as disconnect_err:
+            logging.warning(f"[Channel Mirror] Error during client disconnect: {disconnect_err}")
+            
+        if active_client == client:
+            active_client = None
 
 def run_mirror_single_run():
     """Runs a one-time scan of the last 20 messages in competitor channels (suitable for CI/Actions)."""
@@ -209,7 +268,7 @@ async def mirror_single_run_async():
                 return
         logging.info("[Channel Mirror Single-Run] Telegram Client authenticated successfully.")
         
-        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1']
+        target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1', 'countingunique']
         
         from telethon.tl.functions.channels import JoinChannelRequest
         from telethon.tl.functions.messages import ImportChatInviteRequest, CheckChatInviteRequest

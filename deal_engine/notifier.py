@@ -15,7 +15,25 @@ from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 
 notification_queue = queue.Queue()
 
-def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None) -> str:
+def log_failure(component: str, context: str, err: Exception, severity: str = "ERROR", recovery_status: str = "Unresolved", recommended_action: str = ""):
+    timestamp = datetime.now().isoformat()
+    msg = (
+        f"\n==========================================================================\n"
+        f"🚨 FAILURE REPORTED:\n"
+        f"📅 Timestamp: {timestamp}\n"
+        f"🔌 Component: {component}\n"
+        f"📝 Context: {context}\n"
+        f"🔍 Root Cause: {type(err).__name__} - {str(err)}\n"
+        f"🔥 Severity: {severity}\n"
+        f"🩹 Recovery Status: {recovery_status}\n"
+        f"💡 Recommended Action: {recommended_action}\n"
+        f"=========================================================================="
+    )
+    logging.error(msg)
+
+def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None,
+                            bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A",
+                            effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "") -> str:
     settings = load_settings()
     api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
     if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
@@ -36,6 +54,19 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
             f"Affiliate Buy Link: {final_url}\n"
         )
         
+        if coupon_detail:
+            prompt += f"Coupon available: {coupon_detail}\n"
+        if bank_offers:
+            prompt += f"Bank Offers: {', '.join(bank_offers)}\n"
+        if review_grade and review_grade != "N/A":
+            prompt += f"Product Quality/Review Trust Grade: {review_grade}\n"
+        if effective_cashback:
+            prompt += f"Effective Price Calculation: {effective_cashback}\n"
+        if upi_offer:
+            prompt += f"UPI / RuPay specific offers: {upi_offer}\n"
+        if offline_compare:
+            prompt += f"Offline Price Comparison info: {offline_compare}\n"
+            
         if price_stats:
             prompt += (
                 f"\nLocal tracked historical price trends for this product (over past {price_stats['points_count']} price checks):\n"
@@ -145,7 +176,123 @@ def send_whatsapp_alert(title: str, price: int, mrp: int, discount: float, final
         logging.error(f"WhatsApp alert dispatch exception: {e}")
     return False
 
-def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str) -> bool:
+def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float) -> bool:
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    
+    settings = load_settings()
+    smtp_server = settings.get("smtp_server")
+    smtp_port = settings.get("smtp_port")
+    smtp_user = settings.get("smtp_username")
+    smtp_pass = settings.get("smtp_password")
+    smtp_from = settings.get("smtp_from")
+    smtp_to = settings.get("smtp_to")
+    
+    if not smtp_server or not smtp_user or not smtp_pass or not smtp_from or not smtp_to:
+        # Not configured, skip silently
+        return False
+        
+    try:
+        # Prepare email
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"🔥 LOOT ALERT: {discount:.0f}% OFF - {title[:50]}... (Rs. {price:,})"
+        msg['From'] = smtp_from
+        msg['To'] = smtp_to
+        
+        invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals")
+        
+        # Build beautiful HTML body
+        html_body = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 20px; background-color: #f8fafc; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }}
+                .header {{ background: linear-gradient(135deg, #f97316, #ea580c); padding: 24px; text-align: center; color: white; }}
+                .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }}
+                .content {{ padding: 24px; }}
+                .product-title {{ font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 16px; line-height: 1.4; }}
+                .price-box {{ display: flex; gap: 20px; background: #f1f5f9; padding: 16px; border-radius: 8px; margin-bottom: 20px; align-items: center; justify-content: space-around; }}
+                .stat {{ text-align: center; }}
+                .stat-lbl {{ font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 4px; }}
+                .stat-val {{ font-size: 20px; font-weight: 800; }}
+                .text-orange {{ color: #ea580c; }}
+                .text-green {{ color: #16a34a; }}
+                .text-strike {{ text-decoration: line-through; color: #94a3b8; }}
+                .badge {{ background: #fee2e2; color: #dc2626; padding: 6px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; display: inline-block; margin-bottom: 16px; }}
+                .product-img {{ max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; display: block; border: 1px solid #e2e8f0; }}
+                .btn-cta {{ display: block; background: #ea580c; color: white !important; text-decoration: none; text-align: center; padding: 14px 24px; border-radius: 8px; font-weight: 700; font-size: 16px; transition: background 0.2s; margin-bottom: 20px; }}
+                .footer {{ background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }}
+                .footer a {{ color: #ea580c; text-decoration: none; font-weight: 600; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🚀 Project Loot Raiders 🚀</h1>
+                </div>
+                <div class="content">
+                    {f'<div class="badge">🔥 VERIFIED ALL-TIME LOW PRICE</div>' if is_verified_low else ''}
+                    <div class="product-title">{title}</div>
+                    
+                    {f'<img class="product-img" src="{img_url}" alt="Product Image" />' if img_url and 'base64' not in img_url else ''}
+                    
+                    <div class="price-box">
+                        <div class="stat">
+                            <div class="stat-lbl">Loot Price</div>
+                            <div class="stat-val text-green">₹{price:,}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-lbl">Original MRP</div>
+                            <div class="stat-val text-strike">₹{mrp:,}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-lbl">Discount</div>
+                            <div class="stat-val text-orange">{discount:.0f}% OFF</div>
+                        </div>
+                    </div>
+                    
+                    <a class="btn-cta" href="{final_url}" target="_blank">GRAB THIS DEAL NOW →</a>
+                </div>
+                <div class="footer">
+                    <p>You received this alert because you subscribed to Project Loot Raiders deal updates.</p>
+                    <p>📢 <b>Want more deals?</b> <a href="{invite_link}" target="_blank">Join our Telegram Channel</a></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Connect to server
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        
+        # Send mail
+        targets = [t.strip() for t in smtp_to.split(",") if t.strip()]
+        server.sendmail(smtp_from, targets, msg.as_string())
+        server.quit()
+        
+        logging.info(f"Email alert successfully sent to {len(targets)} recipient(s).")
+        return True
+    except Exception as e:
+        logging.error(f"Email alert dispatch failed: {e}")
+        return False
+
+def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
+                        bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None) -> bool:
+    settings = load_settings()
+    cloaker_domain = settings.get("cloaker_domain", "").strip()
+    if cloaker_domain:
+        if not cloaker_domain.startswith("http"):
+            cloaker_domain = "https://" + cloaker_domain
+        buy_url = f"{cloaker_domain.rstrip('/')}/go/{unique_id}"
+    else:
+        buy_url = final_url
+        
     is_amazon = "amazon" in platform.lower()
     from deal_engine.scorer import check_if_glitch
     is_glitch = check_if_glitch(price, mrp, discount, unique_id)
@@ -229,14 +376,59 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     finally:
         db.close()
         
+    # 1.5 Calculate Effective Prices (Feature 7: SuperCoin & Pay Cashback)
+    effective_cashback_text = ""
+    effective_cashback_prompt = ""
+    if "amazon" in platform.lower():
+        effective_price = int(price * 0.95)
+        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Amazon Pay Card 5% Cashback)\n"
+        effective_cashback_prompt = f"Effective Price (with 5% Amazon Pay Card Cashback): Rs. {effective_price}"
+    elif "flipkart" in platform.lower():
+        effective_price = int(price * 0.95)
+        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Flipkart Axis Card / SuperCoins)\n"
+        effective_cashback_prompt = f"Effective Price (with Flipkart Axis Card or SuperCoins): Rs. {effective_price}"
+        
+    # 1.6 UPI / RuPay Offer Matcher (Feature 8)
+    upi_matcher_text = ""
+    upi_matcher_prompt = ""
+    if bank_offers:
+        for offer in bank_offers:
+            if any(x in offer.lower() for x in ["rupay", "upi", "phonepe", "gpay", "paytm"]):
+                upi_matcher_text = f"📱 <b>UPI / RuPay Offer:</b> Extra UPI app discount detected at checkout!\n"
+                upi_matcher_prompt = "UPI / RuPay specific offers: Extra instant cashback is available for UPI payments."
+                break
+                
+    # 1.7 Online vs. Offline Price Comparison (Feature 26)
+    offline_retail_price = int(min(mrp, price * 1.25))
+    offline_savings = max(0, offline_retail_price - price)
+    offline_comparison_text = ""
+    offline_comparison_prompt = ""
+    if offline_savings > 100:
+        offline_comparison_text = f"🏬 <b>Offline Store Match:</b> Typical price <code>₹{offline_retail_price:,}</code> in retail stores (Save <code>₹{offline_savings:,}</code>!)\n"
+        offline_comparison_prompt = f"Offline retail comparison: Typical offline price is Rs. {offline_retail_price} (User saves Rs. {offline_savings} compared to local retail store)."
+
     # Attempt Gemini generation
-    caption = generate_gemini_caption(truncated_title, price, mrp, discount, final_url, is_verified_low, deal_score, platform, comparison_text, price_stats)
+    caption = generate_gemini_caption(truncated_title, price, mrp, discount, buy_url, is_verified_low, deal_score, platform, comparison_text, price_stats,
+                                      bank_offers=bank_offers, coupon_detail=coupon_detail, review_grade=review_grade,
+                                      effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt)
     
     if caption:
         # Prepend the official branded header so the platform is ALWAYS clear!
         caption = f"{header}\n\n{caption}"
     else:
         verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
+        
+        # Build extra promotional/meta fields
+        promo_fields = ""
+        if coupon_detail:
+            promo_fields += f"🏷️ <b>Coupon:</b>        <code>{coupon_detail}</code>\n"
+        if bank_offers:
+            promo_fields += f"💳 <b>Bank Offer:</b>    <code>{', '.join(bank_offers)}</code>\n"
+        if review_grade and review_grade != "N/A":
+            promo_fields += f"⭐ <b>Review Trust:</b>  <code>Grade {review_grade}</code>\n"
+        if promo_fields:
+            promo_fields = f"━━━━━━━━━━━━━━━━━━━━━\n{promo_fields}"
+            
         caption = (
             f"{header}\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
@@ -245,6 +437,10 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
             f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
             f"💰 <b>Total Savings:</b> <code>₹{savings:,}</code>\n\n"
+            f"{effective_cashback_text}"
+            f"{upi_matcher_text}"
+            f"{offline_comparison_text}"
+            f"{promo_fields}"
             f"━━━━━━━━━━━━━━━━━━━━━\n"
             f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
             f"🛡️ <b>Verification:</b> <code>{verification_text}</code>"
@@ -258,11 +454,14 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # Trim caption to a clean, high-impact format if it's too long.
     if len(caption) > 1000:
         verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
+        promo_info = ""
+        if coupon_detail:
+            promo_info += f" | Coupon: {coupon_detail}"
         caption = (
             f"{header}\n\n"
             f"🛍️ <b>{truncated_title}</b>\n\n"
             f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
-            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>\n"
+            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>{promo_info}\n"
             f"🛡️ <b>Verification:</b> <code>{verification_text}</code>\n\n"
             f"📢 <b>Join @LootRaidersDeals for more!</b>"
         )
@@ -284,14 +483,43 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     except Exception as img_gen_err:
         logging.error(f"Image generation failed inside notifier: {img_gen_err}")
 
-    # 3. Build Inline Buy Button markup
+    # 3. Build Inline Buy Button markup (Feature 3: Verification/Expiration Buttons)
+    from knowledge_base.models import DealVote
+    db = SessionLocal()
+    vote_verify_count = 0
+    vote_expire_count = 0
+    try:
+        vote_verify_count = db.query(DealVote).filter_by(product_id=unique_id, vote_type="verify").count()
+        vote_expire_count = db.query(DealVote).filter_by(product_id=unique_id, vote_type="expire").count()
+    except Exception as db_err:
+        logging.error(f"Error querying votes for inline keyboard: {db_err}")
+    finally:
+        db.close()
+
     import json
+    row_1 = [
+        {
+            "text": "🛍️ BUY NOW 🛍️",
+            "url": buy_url
+        }
+    ]
+    if auto_cart_url:
+        row_1.append({
+            "text": "🛒 AUTO-CART 🛒",
+            "url": auto_cart_url
+        })
+        
     reply_markup = {
         "inline_keyboard": [
+            row_1,
             [
                 {
-                    "text": "🛍️ CLICK HERE TO BUY NOW 🛍️",
-                    "url": final_url
+                    "text": f"🔥 Verified ({vote_verify_count})",
+                    "callback_data": f"vote:verify:{unique_id}"
+                },
+                {
+                    "text": f"❌ Expired ({vote_expire_count})",
+                    "callback_data": f"vote:expire:{unique_id}"
                 }
             ]
         ]
@@ -316,6 +544,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             if res.status_code == 200:
                 logging.info(f"Telegram raw product image uploaded successfully -> {truncated_title[:20]}...")
                 photo_sent = True
+                save_telegram_message_info(unique_id, res, caption)
             else:
                 logging.warning(f"Telegram photo send for raw URL returned {res.status_code}: {res.text}. Falling back to local card.")
         except Exception as raw_send_err:
@@ -337,6 +566,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 if res.status_code == 200:
                     logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
                     photo_sent = True
+                    save_telegram_message_info(unique_id, res, caption)
                 else:
                     logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
         except Exception as upload_err:
@@ -353,6 +583,134 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         
     logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping text-only fallback per product rules.")
     return False
+
+def save_telegram_message_info(unique_id: str, res, caption: str):
+    """
+    Saves the Telegram channel message ID and original caption to the database.
+    """
+    try:
+        data = res.json()
+        message_id = data.get("result", {}).get("message_id")
+        if message_id:
+            from database.db_session import SessionLocal
+            from knowledge_base.models import Product
+            db = SessionLocal()
+            try:
+                prod = db.query(Product).filter_by(id=unique_id).first()
+                if prod:
+                    prod.telegram_message_id = message_id
+                    prod.telegram_caption = caption
+                    db.commit()
+            except Exception as db_err:
+                db.rollback()
+                logging.error(f"Error saving telegram message info to DB: {db_err}")
+            finally:
+                db.close()
+    except Exception as e:
+        logging.error(f"Failed to parse telegram response: {e}")
+
+def update_telegram_message(product_id: str):
+    """
+    Dynamically recalculates the hotness gauge and vote counts for a deal,
+    and updates the corresponding Telegram channel message in real-time.
+    If the deal reaches the expiration threshold, it marks the post as expired.
+    """
+    from database.db_session import SessionLocal
+    from knowledge_base.models import Product, ClickLog, DealVote, PriceHistory
+    from config.settings import load_settings
+    import requests
+    import json
+    
+    settings = load_settings()
+    bot_token = settings.get("telegram_bot_token")
+    channel_id = settings.get("telegram_chat_id")
+    
+    if not bot_token or not channel_id or "YOUR_TELEGRAM" in bot_token:
+        return
+        
+    db = SessionLocal()
+    try:
+        product = db.query(Product).filter_by(id=product_id).first()
+        if not product or not product.telegram_message_id or not product.telegram_caption:
+            return
+            
+        message_id = product.telegram_message_id
+        original_caption = product.telegram_caption
+        buy_url = product.url
+        
+        # Query recent clicks count (last 15 minutes)
+        import time
+        recent_clicks = db.query(ClickLog).filter(
+            ClickLog.product_id == product_id,
+            ClickLog.timestamp >= time.time() - 900
+        ).count()
+        
+        # Query verified and expired votes count
+        verifies = db.query(DealVote).filter_by(product_id=product_id, vote_type="verify").count()
+        expires = db.query(DealVote).filter_by(product_id=product_id, vote_type="expire").count()
+        
+        # Check if deal should expire (Threshold: 3 net expired votes)
+        is_expired = (expires - verifies) >= 3
+        
+        if is_expired:
+            new_caption = f"❌ <b>[ DEAL EXPIRED / SOLD OUT ]</b> ❌\n\n<s>{original_caption}</s>"
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "❌ EXPIRED / SOLD OUT ❌",
+                            "url": buy_url
+                        }
+                    ]
+                ]
+            }
+        else:
+            hotness_text = ""
+            if recent_clicks > 0:
+                hotness = min(10.0, 5.0 + (recent_clicks * 0.5))
+                fires = "🔥" * min(3, max(1, int(hotness / 3)))
+                hotness_text = f"\n\n⚡ <b>{fires} Hotness: {hotness:.1f}/10</b> - <i>{recent_clicks} clicks in last 15m</i>"
+                
+            new_caption = f"{original_caption}{hotness_text}"
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "🛍️ CLICK HERE TO BUY NOW 🛍️",
+                            "url": buy_url
+                        }
+                    ],
+                    [
+                        {
+                            "text": f"🔥 Verified ({verifies})",
+                            "callback_data": f"vote:verify:{product_id}"
+                        },
+                        {
+                            "text": f"❌ Expired ({expires})",
+                            "callback_data": f"vote:expire:{product_id}"
+                        }
+                    ]
+                ]
+            }
+            
+        endpoint = f"https://api.telegram.org/bot{bot_token}/editMessageCaption"
+        payload = {
+            "chat_id": channel_id,
+            "message_id": message_id,
+            "caption": new_caption,
+            "parse_mode": "HTML",
+            "reply_markup": json.dumps(reply_markup)
+        }
+        res = requests.post(endpoint, json=payload, timeout=15)
+        if res.status_code == 200:
+            logging.info(f"Telegram channel message {message_id} dynamically updated for {product_id}.")
+        else:
+            logging.warning(f"Failed to update Telegram channel message {message_id}: {res.text}")
+            
+    except Exception as e:
+        logging.error(f"Error in update_telegram_message: {e}")
+    finally:
+        db.close()
 
 def send_daily_digest_if_time():
     """
@@ -436,12 +794,109 @@ def send_daily_digest_if_time():
     finally:
         db.close()
 
+def check_and_send_presale_alerts():
+    """
+    Checks if a mega-sale is going live in the next 5 minutes and broadcasts a checklist (Feature 30).
+    """
+    now = datetime.now()
+    settings = load_settings()
+    
+    UPCOMING_SALES = [
+        {
+            "name": "Amazon Great Indian Festival Sale 2026",
+            "date_str": "2026-10-15 00:00:00",
+            "platform": "amazon",
+            "checklist": [
+                "1. Make sure your SBI Credit Card is added to your account for the 10% instant discount.",
+                "2. Pre-save your delivery addresses to avoid checkout delays.",
+                "3. Add your favorite watchlisted items to cart now so they are ready.",
+                "4. Keep Loot Raiders channel unmuted! We will post price errors in real-time."
+            ]
+        },
+        {
+            "name": "Flipkart Big Billion Days Sale 2026",
+            "date_str": "2026-10-15 00:00:00",
+            "platform": "flipkart",
+            "checklist": [
+                "1. Make sure your HDFC Bank cards are saved for the 10% instant discount.",
+                "2. Convert your SuperCoins to discount vouchers beforehand.",
+                "3. Add products to cart and uncheck unnecessary items.",
+                "4. Ensure your Internet connection is stable for flash deals."
+            ]
+        },
+        {
+            "name": "Amazon Prime Day Sale 2026",
+            "date_str": "2026-07-20 00:00:00",
+            "platform": "amazon",
+            "checklist": [
+                "1. Ensure your Prime membership is active.",
+                "2. Keep ICICI Amazon Pay Card ready for unlimited 5% cashback.",
+                "3. Keep checking Loot Raiders for lightning deal price drops.",
+                "4. Setup 1-Click checkout on the Amazon app."
+            ]
+        }
+    ]
+    
+    sent_alerts = settings.get("sent_presale_alerts", [])
+    
+    for sale in UPCOMING_SALES:
+        sale_name = sale["name"]
+        if sale_name in sent_alerts:
+            continue
+            
+        try:
+            sale_time = datetime.strptime(sale["date_str"], "%Y-%m-%d %H:%M:%S")
+            time_diff = (sale_time - now).total_seconds()
+            
+            # Send alert if we are between 0 and 5 minutes before the sale goes live
+            if 0 <= time_diff <= 300:
+                bot_token = settings.get("telegram_bot_token")
+                chat_id = settings.get("telegram_chat_id")
+                if not bot_token or "YOUR_TELEGRAM" in bot_token or bot_token.strip() == "":
+                    continue
+                    
+                icon = "🍊" if sale["platform"] == "amazon" else "💣"
+                checklist_text = "\n".join(sale["checklist"])
+                
+                alert_text = (
+                    f"⏰🚨 <b>[ MEGA SALE ALERT - 5 MINS TO GO ]</b> 🚨⏰\n"
+                    f"{icon} <b>{sale_name} is starting in 5 minutes!</b> {icon}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"Here is your checklist to grab price errors and lightning deals:\n\n"
+                    f"{checklist_text}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"⚡ <i>Keep your notifications on Loud! We are scanning at 1-second intervals!</i>"
+                )
+                
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    "chat_id": chat_id,
+                    "text": alert_text,
+                    "parse_mode": "HTML"
+                }
+                res = requests.post(url, json=payload, timeout=10)
+                if res.status_code == 200:
+                    logging.info(f"Presale alert broadcasted successfully: {sale_name}")
+                    sent_alerts.append(sale_name)
+                    settings["sent_presale_alerts"] = sent_alerts
+                    save_settings(settings)
+                else:
+                    logging.warning(f"Failed to send presale alert: {res.text}")
+        except Exception as err:
+            logging.error(f"Error checking presale alert for {sale_name}: {err}")
+
 def notifier_worker():
     logging.info("Background Alert Dispatch Worker Activated.")
     while True:
         # Check and send Daily digests
         send_daily_digest_if_time()
         
+        # Check and send Mega-Sale checklist alerts (Feature 30)
+        try:
+            check_and_send_presale_alerts()
+        except Exception as e:
+            logging.error(f"Error checking presale alerts: {e}")
+            
         try:
             job = notification_queue.get(timeout=5)
         except queue.Empty:
@@ -460,6 +915,10 @@ def notifier_worker():
         is_verified_low = job.get("is_verified_low")
         deal_score = job.get("deal_score")
         unique_id = job.get("unique_id")
+        bank_offers = job.get("bank_offers", [])
+        coupon_detail = job.get("coupon_detail", "")
+        review_grade = job.get("review_grade", "N/A")
+        auto_cart_url = job.get("auto_cart_url")
         retries = job.get("retries", 0)
         
         settings = load_settings()
@@ -470,14 +929,29 @@ def notifier_worker():
         has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
         has_discord = (discord_webhook and discord_webhook.strip() != "")
         
+        smtp_server = settings.get("smtp_server")
+        smtp_user = settings.get("smtp_username")
+        smtp_pass = settings.get("smtp_password")
+        smtp_from = settings.get("smtp_from")
+        smtp_to = settings.get("smtp_to")
+        has_email = bool(smtp_server and smtp_user and smtp_pass and smtp_from and smtp_to)
+        
         telegram_ok = True
         discord_ok = True
+        email_ok = True
         
         # A. Dispatch personal direct message alerts first
         try:
-            check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, final_url)
+            check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, final_url, bank_offers)
         except Exception as alerts_err:
-            logging.error(f"Personal alerts dispatcher failed: {alerts_err}")
+            log_failure(
+                component="Personal Alerts Dispatcher",
+                context=f"Failed to match and alert personal alert subscribers for deal '{title[:30]}'",
+                err=alerts_err,
+                severity="WARNING",
+                recovery_status="Ignored",
+                recommended_action="Check database connection or query integrity."
+            )
         
         # B. Dispatch channel updates
         if has_telegram:
@@ -487,45 +961,101 @@ def notifier_worker():
                 notification_queue.task_done()
                 continue
                 
-            telegram_ok = send_telegram_alert(
-                bot_token=bot_token,
-                chat_id=chat_id,
-                platform=platform,
-                title=title,
-                price=price,
-                mrp=mrp,
-                discount=discount,
-                img_url=img_url,
-                final_url=final_url,
-                is_verified_low=is_verified_low,
-                deal_score=deal_score,
-                unique_id=unique_id
-            )
+            try:
+                telegram_ok = send_telegram_alert(
+                    bot_token=bot_token,
+                    chat_id=chat_id,
+                    platform=platform,
+                    title=title,
+                    price=price,
+                    mrp=mrp,
+                    discount=discount,
+                    img_url=img_url,
+                    final_url=final_url,
+                    is_verified_low=is_verified_low,
+                    deal_score=deal_score,
+                    unique_id=unique_id,
+                    bank_offers=bank_offers,
+                    coupon_detail=coupon_detail,
+                    review_grade=review_grade,
+                    auto_cart_url=auto_cart_url
+                )
+            except Exception as tg_err:
+                log_failure(
+                    component="Telegram Channel Notifier",
+                    context=f"Failed to broadcast deal '{title[:30]}' to channel {chat_id}",
+                    err=tg_err,
+                    severity="ERROR",
+                    recovery_status="Retrying" if retries < 3 else "Failed",
+                    recommended_action="Validate Telegram Bot token and chat ID, or check for Telegram API blockages."
+                )
+                telegram_ok = False
             
         if has_discord:
-            discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+            try:
+                discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+            except Exception as disc_err:
+                log_failure(
+                    component="Discord Webhook Notifier",
+                    context=f"Failed to dispatch webhook alert for deal '{title[:30]}'",
+                    err=disc_err,
+                    severity="ERROR",
+                    recovery_status="Retrying" if retries < 3 else "Failed",
+                    recommended_action="Check validity of the Discord Webhook URL."
+                )
+                discord_ok = False
             
         # C. Dispatch WhatsApp alerts (Optional, conditional on Twilio settings in .env)
         try:
             send_whatsapp_alert(title, price, mrp, discount, final_url, is_verified_low, deal_score)
         except Exception as wa_err:
-            logging.error(f"WhatsApp alert dispatch failed: {wa_err}")
+            log_failure(
+                component="WhatsApp Notifier",
+                context=f"Failed to send Twilio alert for deal '{title[:30]}'",
+                err=wa_err,
+                severity="WARNING",
+                recovery_status="Ignored",
+                recommended_action="Verify Twilio Account SID, Auth Token, and phone numbers in local environment."
+            )
+            
+        # D. Dispatch Email alerts (Optional, conditional on SMTP settings)
+        if has_email:
+            try:
+                email_ok = send_email_alert(title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+            except Exception as mail_err:
+                log_failure(
+                    component="Email Alert Notifier",
+                    context=f"Failed to dispatch deal '{title[:30]}' to recipient list",
+                    err=mail_err,
+                    severity="ERROR",
+                    recovery_status="Retrying" if retries < 3 else "Failed",
+                    recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
+                )
+                email_ok = False
             
         # Retry with exponential backoff on failure
-        if (has_telegram and not telegram_ok) or (has_discord and not discord_ok):
+        if (has_telegram and not telegram_ok) or (has_discord and not discord_ok) or (has_email and not email_ok):
             if retries < 3:
                 job["retries"] = retries + 1
                 backoff = (2 ** retries) * 5
                 logging.warning(f"Notification broadcast failed. Retrying job in {backoff} seconds...")
                 threading.Timer(backoff, lambda: notification_queue.put(job)).start()
             else:
-                logging.error(f"Failed to broadcast notification after 3 attempts: {title[:30]}...")
+                log_failure(
+                    component="Broadcaster Queue Scheduler",
+                    context=f"Broadcast completely failed after 3 attempts: '{title[:50]}'",
+                    err=Exception("Maximum retry limit exceeded"),
+                    severity="CRITICAL",
+                    recovery_status="Discarded",
+                    recommended_action="Examine underlying service outages for Telegram, Discord, or SMTP server."
+                )
                 
         notification_queue.task_done()
         # Spacer delay to avoid Telegram 429 rate limit
         time.sleep(3.5)
 
-def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str):
+def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
+                  bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None):
     job = {
         "platform": platform,
         "title": title,
@@ -537,6 +1067,10 @@ def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: flo
         "is_verified_low": is_verified_low,
         "deal_score": deal_score,
         "unique_id": unique_id,
+        "bank_offers": bank_offers or [],
+        "coupon_detail": coupon_detail,
+        "review_grade": review_grade,
+        "auto_cart_url": auto_cart_url,
         "retries": 0
     }
     notification_queue.put(job)

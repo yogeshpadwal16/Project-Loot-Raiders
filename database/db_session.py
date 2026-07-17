@@ -35,5 +35,29 @@ def get_db():
 
 def init_db():
     # Import inside function to prevent circular imports
-    from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
+    from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix, DealVote, UserWalletCard, UserScore, ReferralLog
     Base.metadata.create_all(bind=engine)
+    
+    # Run migration queries to add new columns to products table if they do not exist
+    import sqlite3
+    import logging
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Add telegram_message_id to products
+        try:
+            cursor.execute("ALTER TABLE products ADD COLUMN telegram_message_id INTEGER")
+        except sqlite3.OperationalError:
+            pass # column already exists
+            
+        # Add telegram_caption to products
+        try:
+            cursor.execute("ALTER TABLE products ADD COLUMN telegram_caption TEXT")
+        except sqlite3.OperationalError:
+            pass # column already exists
+            
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logging.warning(f"Database products table migration failed: {e}")

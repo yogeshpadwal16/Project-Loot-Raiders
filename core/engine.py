@@ -153,21 +153,27 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Fetch latest price from DB to see if it's a duplicate or if the price changed
             price_changed = True
-            is_price_drop = True
+            is_price_drop = False
             db = SessionLocal()
             try:
                 latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
                 if latest:
                     if latest.price == price:
                         price_changed = False
+                        is_price_drop = False
                     else:
+                        price_changed = True
                         is_price_drop = price < latest.price
+                else:
+                    # New product is treated as a price drop
+                    price_changed = True
+                    is_price_drop = True
             except Exception as db_err:
                 logging.error(f"Error querying latest price for duplicate check: {db_err}")
             finally:
                 db.close()
                 
-            if not price_changed and unique_id in history:
+            if not price_changed:
                 continue
                 
             # Filter out low-value cheap products or minor savings spams
@@ -210,7 +216,44 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Dispatch notifications if score is above the configured threshold and it's a price drop (or new product)
             if should_publish_deal(platform, deal_score) and is_price_drop:
-                enqueue_alert(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score, unique_id)
+                bank_offers = []
+                coupon_detail = ""
+                review_grade = "N/A"
+                
+                try:
+                    enriched = scrape_product_details(final_url)
+                    if enriched:
+                        img_url = enriched.get("image_url") or img_url
+                        bank_offers = enriched.get("bank_offers", [])
+                        coupon_detail = enriched.get("coupon_detail", "")
+                        review_grade = enriched.get("review_grade", "N/A")
+                except Exception as enrich_err:
+                    logging.warning(f"Failed to enrich scraped deal {unique_id} before dispatch: {enrich_err}")
+                    
+                auto_cart_url = None
+                try:
+                    from utils.affiliate import generate_auto_cart_url
+                    settings = load_settings()
+                    auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
+                except:
+                    pass
+                    
+                enqueue_alert(
+                    platform=platform,
+                    title=title,
+                    price=price,
+                    mrp=mrp,
+                    discount=discount,
+                    img_url=img_url,
+                    final_url=final_url,
+                    is_verified_low=is_verified_low,
+                    deal_score=deal_score,
+                    unique_id=unique_id,
+                    bank_offers=bank_offers,
+                    coupon_detail=coupon_detail,
+                    review_grade=review_grade,
+                    auto_cart_url=auto_cart_url
+                )
                 time.sleep(0.5)
             else:
                 if not is_price_drop:
@@ -540,6 +583,64 @@ def scrape_product_details(url: str) -> dict:
         from utils.parser import extract_rating_and_reviews, detect_bank_offers
         rating, reviews = extract_rating_and_reviews(body_text)
         has_bank_offer = detect_bank_offers(body_text)
+        
+        # Scrape specific bank offers and coupons
+        bank_offers = []
+        coupon_detail = ""
+        try:
+            if platform == "amazon":
+                offer_elems = driver.find_elements(By.CSS_SELECTOR, "#sopp-offers-list-content, .sopp-offers-list, [id*='bankOffer']")
+                for elem in offer_elems:
+                    txt = elem.text.strip()
+                    if txt and "bank" in txt.lower():
+                        lines = [l.strip() for l in txt.split('\n') if l.strip()]
+                        for l in lines:
+                            if any(x in l.lower() for x in ["sbi", "hdfc", "icici", "axis", "onecard", "discount", "cashback"]):
+                                if l not in bank_offers:
+                                    bank_offers.append(l)
+                coupon_elems = driver.find_elements(By.CSS_SELECTOR, "#couponBadge, .coupon-badge, #clip-coupon")
+                for elem in coupon_elems:
+                    txt = elem.text.strip()
+                    if txt:
+                        coupon_detail = txt
+                        break
+            elif platform == "flipkart":
+                offer_elems = driver.find_elements(By.CSS_SELECTOR, ".wtv7sz, .x3G5F3, ._2-gKeT, .promo-desc-text")
+                for elem in offer_elems:
+                    txt = elem.text.strip()
+                    if txt:
+                        lines = [l.strip() for l in txt.split('\n') if l.strip()]
+                        for l in lines:
+                            if "bank offer" in l.lower() or any(x in l.lower() for x in ["sbi", "hdfc", "icici", "axis", "onecard"]):
+                                if l not in bank_offers:
+                                    bank_offers.append(l)
+                coupon_elems = driver.find_elements(By.CSS_SELECTOR, ".coupon-badge, .W44C-B, [class*='coupon']")
+                for elem in coupon_elems:
+                    txt = elem.text.strip()
+                    if txt and "coupon" in txt.lower():
+                        coupon_detail = txt
+                        break
+        except Exception as promo_err:
+            logging.warning(f"Promo scraping failed for {unique_id}: {promo_err}")
+
+        # Compute Review Trust Grade (Feature 16)
+        review_grade = "N/A"
+        if rating:
+            if rating >= 4.3:
+                review_grade = "A"
+            elif rating >= 4.0:
+                review_grade = "B"
+            elif rating >= 3.7:
+                review_grade = "C"
+            elif rating >= 3.3:
+                review_grade = "D"
+            else:
+                review_grade = "F"
+                
+            if reviews and reviews > 1000 and review_grade in ["A", "B", "C"]:
+                review_grade += "+"
+            elif reviews and reviews < 15:
+                review_grade += " (Low Sample)"
             
         return {
             "platform": platform,
@@ -549,12 +650,29 @@ def scrape_product_details(url: str) -> dict:
             "image_url": image_url,
             "rating": rating,
             "reviews": reviews,
-            "has_bank_offer": has_bank_offer
+            "has_bank_offer": has_bank_offer or bool(bank_offers),
+            "bank_offers": bank_offers[:3],
+            "coupon_detail": coupon_detail,
+            "review_grade": review_grade
         }
     finally:
         driver.quit()
 
 def main():
+    import signal
+    def handle_termination(signum, frame):
+        logging.warning(f"Termination signal {signum} received. Turning pipeline off safely...")
+        try:
+            from deal_engine.channel_mirror import stop_channel_mirror
+            stop_channel_mirror()
+        except Exception as e:
+            logging.error(f"Error stopping channel mirror on signal: {e}")
+        # Terminate process
+        sys.exit(0)
+        
+    signal.signal(signal.SIGINT, handle_termination)
+    signal.signal(signal.SIGTERM, handle_termination)
+
     # 0. Clean up zombie chrome and python processes
     run_zombie_cleanup()
     
@@ -586,6 +704,13 @@ def main():
             start_catalog_monitor()
         except Exception as catalog_err:
             logging.error(f"Failed to start Catalog Monitor: {catalog_err}")
+            
+        # 5.5 Start Asynchronous Supermarket Loot Drop Monitor (Feature 28)
+        try:
+            from deal_engine.supermarket_monitor import start_supermarket_monitor
+            start_supermarket_monitor()
+        except Exception as supermarket_err:
+            logging.error(f"Failed to start Supermarket Monitor: {supermarket_err}")
             
         logging.info("Master Engine Activated. Scanners operating.")
     else:
@@ -672,3 +797,8 @@ def main():
                 
     except KeyboardInterrupt:
         logging.warning("SIGINT operational interrupt recognized. Turning pipeline off safely.")
+        try:
+            from deal_engine.channel_mirror import stop_channel_mirror
+            stop_channel_mirror()
+        except Exception:
+            pass
