@@ -912,6 +912,8 @@ async function fetchSettings() {
         
         document.getElementById('set-amazon-tag').value = settings.amazon_tag || '';
         document.getElementById('set-flipkart-affid').value = settings.flipkart_affid || '';
+        document.getElementById('set-cuelinks-id').value = settings.cuelinks_pub_id || '';
+        document.getElementById('set-earnkaro-id').value = settings.earnkaro_pub_id || '';
         document.getElementById('set-telegram-token').value = settings.telegram_bot_token || '';
         document.getElementById('set-telegram-chat').value = settings.telegram_chat_id || '';
         document.getElementById('set-min-discount').value = settings.min_discount || 30;
@@ -931,6 +933,8 @@ async function saveSettings(e) {
     
     const amazon_tag = document.getElementById('set-amazon-tag').value.trim();
     const flipkart_affid = document.getElementById('set-flipkart-affid').value.trim();
+    const cuelinks_pub_id = document.getElementById('set-cuelinks-id').value.trim();
+    const earnkaro_pub_id = document.getElementById('set-earnkaro-id').value.trim();
     const telegram_bot_token = document.getElementById('set-telegram-token').value.trim();
     const telegram_chat_id = document.getElementById('set-telegram-chat').value.trim();
     const min_discount = parseFloat(document.getElementById('set-min-discount').value) || 30;
@@ -946,6 +950,8 @@ async function saveSettings(e) {
     const settings = {
         amazon_tag,
         flipkart_affid,
+        cuelinks_pub_id,
+        earnkaro_pub_id,
         telegram_bot_token,
         telegram_chat_id,
         min_discount,
