@@ -1,4 +1,21 @@
 // Dashboard API Controller for Loot Raiders
+
+// Automatically attach Authorization Header to all API requests if logged in
+(function() {
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options = {}) {
+        const urlStr = String(url);
+        if (urlStr.includes('/api/') && !urlStr.includes('/api/login') && !urlStr.includes('/api/redirect')) {
+            const token = localStorage.getItem('admin_token');
+            if (token) {
+                options.headers = options.headers || {};
+                options.headers['Authorization'] = 'Bearer ' + token;
+            }
+        }
+        return originalFetch(url, options);
+    };
+})();
+
 const API_BASE = window.location.protocol === 'file:' 
     ? 'http://127.0.0.1:5555' 
     : window.location.origin;
