@@ -188,6 +188,14 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
     """
     Spins up a Playwright browser instance and wraps it in a Selenium-compatible adapter.
     """
+    import asyncio
+    import threading
+    try:
+        running_loop = asyncio.get_running_loop()
+        logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, Running Loop: {running_loop}")
+    except RuntimeError:
+        logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
+        
     playwright = sync_playwright().start()
     
     # Launch Chromium with stealth arguments including undetected new headless flag
@@ -202,7 +210,6 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
     
     proxy_config = None
     if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
-        import random
         valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
         if valid_proxies:
             proxy_url = random.choice(valid_proxies)

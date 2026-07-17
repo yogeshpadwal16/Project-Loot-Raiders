@@ -236,6 +236,21 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
         return deals
 
     def _extract_ajio_deals(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
+        import threading
+        deals = []
+        def worker():
+            nonlocal deals
+            try:
+                deals = self._extract_ajio_deals_sync(config, settings)
+            except Exception as e:
+                logging.error(f"[Ajio Scraper] Inner thread error: {e}", exc_info=True)
+                
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+        return deals
+
+    def _extract_ajio_deals_sync(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         deals = []
         try:
             from curl_cffi import requests
