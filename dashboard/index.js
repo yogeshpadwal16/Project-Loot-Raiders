@@ -467,6 +467,9 @@ function updateDealsUI(deals) {
             ? `<span class="score-tag" title="AI Deal Score"><i class="fa-solid fa-bolt text-yellow"></i> Score: ${scoreVal}</span>` 
             : '';
         
+        const shareText = `🍊💣 *LOOT RAIDERS DEAL ALERT!* 💣🍊\n\n*${titleStr.replace(/\*/g, '')}*\n\n💰 *Price:* ₹${priceVal} (MRP: ~₹${mrpVal}~)\n📉 *Discount:* ${discountVal}% OFF\n\n👉 *CLICK HERE TO BUY NOW:* ${window.location.origin}/api/redirect?id=${deal.id}&user=WhatsAppShare&url=${encodeURIComponent(dealUrl)}`;
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+
         html += `
             <div class="deal-item">
                 <div class="deal-img-wrapper">
@@ -492,6 +495,7 @@ function updateDealsUI(deals) {
                         <div class="deal-actions-row" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                             ${isAuthorized() ? `<button class="btn-delete-deal" data-id="${deal.id}" title="Remove this deal from feed"><i class="fa-solid fa-trash"></i></button>` : ''}
                             <button class="btn-price-history" data-id="${deal.id}" title="View Price History"><i class="fa-solid fa-chart-line"></i> History</button>
+                            <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;" title="Share this deal on WhatsApp"><i class="fa-brands fa-whatsapp"></i> Share</a>
                             <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn-telegram-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #0088cc; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;"><i class="fa-brands fa-telegram"></i> Telegram</a>
                             <a href="${redirectUrl}" target="_blank" class="btn-grab">GRAB DEAL <i class="fa-solid fa-up-right-from-square"></i></a>
                         </div>
