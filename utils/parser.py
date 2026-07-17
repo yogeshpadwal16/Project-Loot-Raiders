@@ -83,3 +83,58 @@ def get_high_res_image_url(url: str) -> str:
         return url
         
     return url
+
+def extract_rating_and_reviews(text_content: str):
+    if not text_content:
+        return None, None
+        
+    rating = None
+    reviews = None
+    
+    # 1. Parse Rating (float between 1.0 and 5.0)
+    rating_match = re.search(r'\b([1-5]\.[0-9])\s*(?:out of 5|star|stars|★)?\b', text_content, flags=re.IGNORECASE)
+    if rating_match:
+        try:
+            val = float(rating_match.group(1))
+            if 1.0 <= val <= 5.0:
+                rating = val
+        except:
+            pass
+            
+    # 2. Parse Reviews / Ratings count
+    paren_match = re.search(r'\(\s*([0-9,]+(?:\.[0-9]+)?\s*[kK]?)\s*\)', text_content)
+    review_match = re.search(r'([0-9,]+(?:\.[0-9]+)?\s*[kK]?)\s*(?:reviews|ratings|review|rating|bought)?\s*(?:\b|\))', text_content, flags=re.IGNORECASE)
+    
+    count_str = None
+    if paren_match:
+        count_str = paren_match.group(1)
+    elif review_match:
+        match_val = review_match.group(1).replace(",", "")
+        if rating and str(rating) in match_val:
+            sec_match = re.search(r'(?:reviews|ratings|review|rating|bought)?\s*\(\s*([0-9,]+(?:\.[0-9]+)?\s*[kK]?)\s*\)', text_content, flags=re.IGNORECASE)
+            if sec_match:
+                count_str = sec_match.group(1)
+        else:
+            count_str = review_match.group(1)
+            
+    if count_str:
+        count_str = count_str.replace(",", "").upper()
+        try:
+            if "K" in count_str:
+                multiplier = 1000
+                count_str = count_str.replace("K", "").strip()
+                reviews = int(float(count_str) * multiplier)
+            else:
+                reviews = int(float(count_str))
+        except:
+            pass
+            
+    return rating, reviews
+
+def detect_bank_offers(text_content: str) -> bool:
+    if not text_content:
+        return False
+    lower_text = text_content.lower()
+    keywords = ["sbi", "hdfc", "icici", "axis", "onecard", "federal", "hsbc", "citi", "bank offer", "coupon", "instant discount", "cashback"]
+    return any(k in lower_text for k in keywords)
+

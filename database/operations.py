@@ -22,21 +22,21 @@ def initialize_database_selectors():
             "amazon_sitewide_search_deals": {
                 "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
                 "card_selector": "div[data-component-type='s-search-result']",
-                "title_selector": "h2 a span",
+                "title_selector": "h2 span",
                 "link_selector": "a.a-link-normal",
                 "image_selector": "img.s-image"
             },
             "amazon_electronics_deals": {
                 "url": "https://www.amazon.in/s?k=electronics&pct-off=30-",
                 "card_selector": "div[data-component-type='s-search-result']",
-                "title_selector": "h2 a span",
+                "title_selector": "h2 span",
                 "link_selector": "a.a-link-normal",
                 "image_selector": "img.s-image"
             },
             "amazon_appliances_deals": {
                 "url": "https://www.amazon.in/s?k=home+appliances&pct-off=30-",
                 "card_selector": "div[data-component-type='s-search-result']",
-                "title_selector": "h2 a span",
+                "title_selector": "h2 span",
                 "link_selector": "a.a-link-normal",
                 "image_selector": "img.s-image"
             },
@@ -84,7 +84,7 @@ def initialize_database_selectors():
             },
             "meesho_deals": {
                 "url": "https://www.meesho.com/search?q=offers",
-                "card_selector": "div[class*='ProductCard']",
+                "card_selector": "a[href*='/p/']",
                 "title_selector": "p[class*='ProductTitle']",
                 "link_selector": "a",
                 "image_selector": "img"

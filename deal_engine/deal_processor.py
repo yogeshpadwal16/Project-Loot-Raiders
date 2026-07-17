@@ -105,6 +105,9 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     price = scraped.get("price", 0)
     mrp = scraped.get("mrp", 0)
     img_url = scraped.get("image_url", "")
+    rating = scraped.get("rating")
+    reviews = scraped.get("reviews")
+    has_bank_offer = scraped.get("has_bank_offer", False)
     
     if price == 0:
         logging.warning(f"[Deal Processor] Scraped price is 0. Skipping deal.")
@@ -172,7 +175,11 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
         is_verified_low = True
         
     # 8. Calculate score and save
-    deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, False, product_id=unique_id, title=title)
+    deal_score = calculate_deal_score(
+        platform, price, mrp, discount, is_verified_low, False, 
+        product_id=unique_id, title=title, rating=rating, reviews=reviews, 
+        has_bank_offer=has_bank_offer
+    )
     save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
     
     # 9. Dispatch alerts

@@ -132,6 +132,9 @@ def scrape_platform(platform: str, config: dict, history: set):
             from utils.affiliate import generate_affiliate_url
             final_url = generate_affiliate_url(deal["url"], platform, settings)
             is_lightning = deal["is_lightning"]
+            rating = deal.get("rating")
+            reviews = deal.get("reviews")
+            has_bank_offer = deal.get("has_bank_offer", False)
             
             # Fetch latest price from DB to see if it's a duplicate or if the price changed
             price_changed = True
@@ -180,7 +183,11 @@ def scrape_platform(platform: str, config: dict, history: set):
             is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
             
             # Calculate final AI Deal score
-            deal_score = calculate_deal_score(platform, price, mrp, discount, is_verified_low, is_lightning, product_id=unique_id, title=title)
+            deal_score = calculate_deal_score(
+                platform, price, mrp, discount, is_verified_low, is_lightning, 
+                product_id=unique_id, title=title, rating=rating, reviews=reviews, 
+                has_bank_offer=has_bank_offer
+            )
             
             # Persist inside Knowledge Base database
             save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
@@ -509,12 +516,25 @@ def scrape_product_details(url: str) -> dict:
         elif price > mrp:
             price, mrp = mrp, price
             
+        body_text = ""
+        try:
+            body_text = driver.find_element(By.TAG_NAME, "body").text
+        except:
+            pass
+            
+        from utils.parser import extract_rating_and_reviews, detect_bank_offers
+        rating, reviews = extract_rating_and_reviews(body_text)
+        has_bank_offer = detect_bank_offers(body_text)
+            
         return {
             "platform": platform,
             "title": title,
             "price": price,
             "mrp": mrp,
-            "image_url": image_url
+            "image_url": image_url,
+            "rating": rating,
+            "reviews": reviews,
+            "has_bank_offer": has_bank_offer
         }
     finally:
         driver.quit()

@@ -94,7 +94,10 @@ def calculate_deal_score(
     is_verified_low: bool,
     is_lightning: bool = False,
     product_id: str = None,
-    title: str = None
+    title: str = None,
+    rating: float = None,
+    reviews: int = None,
+    has_bank_offer: bool = False
 ) -> float:
     """
     Calculates a normalized score (0 to 100) for a deal based on settings.json weights,
@@ -204,6 +207,27 @@ def calculate_deal_score(
             db.close()
             
     final_score += feedback_bonus
+    
+    # 6.5 Deal Intelligence Engine (DIE) Adjustments
+    die_adjustment = 0.0
+    if rating is not None:
+        if rating >= 4.5:
+            die_adjustment += 10.0
+        elif rating >= 4.2:
+            die_adjustment += 5.0
+        elif rating < 3.8:
+            die_adjustment -= 15.0
+            
+    if reviews is not None:
+        if reviews >= 10000:
+            die_adjustment += 5.0
+        elif reviews >= 1000:
+            die_adjustment += 3.0
+            
+    if has_bank_offer:
+        die_adjustment += 5.0
+        
+    final_score += die_adjustment
     
     # Check if this is a price glitch / extreme price error
     is_glitch = check_if_glitch(price, mrp, discount, product_id)

@@ -16,7 +16,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
 
     def extract_deals(self, driver, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         if "ajio" in self._platform_id.lower():
-            return self._extract_ajio_deals(config)
+            return self._extract_ajio_deals(config, settings)
             
         deals = []
         try:
@@ -58,14 +58,17 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 raw_url = first_href
                             
                     if not raw_url:
-                        # Check if the card itself or its ancestor is wrapped in an a tag
-                        try:
-                            parent_a = card.find_element(By.XPATH, "./ancestor::a")
-                            parent_href = parent_a.get_attribute("href")
-                            if parent_href and "/search" not in parent_href and "/s/" not in parent_href and "/c/" not in parent_href and "/pr?" not in parent_href and "/all-" not in parent_href:
-                                raw_url = parent_href
-                        except:
-                            pass
+                        # Check if the card itself is an a tag or wrapped in/ancestor of one
+                        if card.tag_name == "a":
+                            raw_url = card.get_attribute("href")
+                        else:
+                            try:
+                                parent_a = card.find_element(By.XPATH, "./ancestor::a")
+                                parent_href = parent_a.get_attribute("href")
+                                if parent_href and "/search" not in parent_href and "/s/" not in parent_href and "/c/" not in parent_href and "/pr?" not in parent_href and "/all-" not in parent_href:
+                                    raw_url = parent_href
+                            except:
+                                pass
                             
                     if not raw_url:
                         # Fallback: check data-product-slug attribute (JioMart / Meesho and other modern SPAs)
@@ -148,23 +151,41 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         
                     title = re.sub(r'\s+', ' ', title).strip()
                     
-                    # 3. Extract Image
+                    # 3. Extract Image (with rating star and icon filtering)
                     img_url = None
                     try:
-                        img_element = card.find_element(By.CSS_SELECTOR, config['image_selector'])
-                        for attr in ["data-src", "data-original", "data-img-src", "data-lazy-src", "src", "srcset"]:
-                            val = img_element.get_attribute(attr)
-                            if val:
-                                val = val.strip()
-                                if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
-                                    if val.startswith("//"):
-                                        val = "https:" + val
-                                    if attr == "srcset":
-                                        val = val.split()[0]
-                                    img_url = val
-                                    break
-                    except:
-                        pass
+                        img_elements = card.find_elements(By.TAG_NAME, "img")
+                        for img_element in img_elements:
+                            candidate_url = None
+                            for attr in ["src", "data-src", "srcset", "data-lazy-src", "data-original"]:
+                                val = img_element.get_attribute(attr)
+                                if val:
+                                    val = val.strip()
+                                    if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
+                                        if val.startswith("//"):
+                                            val = "https:" + val
+                                        if attr == "srcset":
+                                            val = val.split()[0]
+                                        candidate_url = val
+                                        break
+                            
+                            if candidate_url:
+                                lower_url = candidate_url.lower()
+                                alt_text = (img_element.get_attribute("alt") or "").lower()
+                                class_text = (img_element.get_attribute("class") or "").lower()
+                                
+                                # Filter out common UI assets, star ratings, and placeholders
+                                if any(x in lower_url for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
+                                    continue
+                                if any(x in alt_text for x in ["star", "rating", "icon", "logo", "arrow"]):
+                                    continue
+                                if any(x in class_text for x in ["star", "rating", "icon", "logo", "arrow"]):
+                                    continue
+                                    
+                                img_url = candidate_url
+                                break
+                    except Exception as img_err:
+                        logging.debug(f"Image extraction error: {img_err}")
                         
                     if not img_url:
                         # Fallback for picture/source responsive image configurations
@@ -177,6 +198,10 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                     if url_candidate.startswith("http") or url_candidate.startswith("//"):
                                         if url_candidate.startswith("//"):
                                             url_candidate = "https:" + url_candidate
+                                        
+                                        lower_cand = url_candidate.lower()
+                                        if any(x in lower_cand for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
+                                            continue
                                         img_url = url_candidate
                                         break
                         except:
@@ -184,7 +209,11 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         
                     # 4. Extract pricing and discount
                     price, mrp, true_discount = calculate_true_discount(card.text)
-                    if price and mrp:
+                    min_discount = settings.get("min_discount", 30.0)
+                    if price and mrp and (min_discount <= true_discount <= 98.0):
+                        from utils.parser import extract_rating_and_reviews, detect_bank_offers
+                        rating, reviews = extract_rating_and_reviews(card.text)
+                        has_bank_offer = detect_bank_offers(card.text)
                         deals.append({
                             "id": f"{self._platform_id}_{prod_id}",
                             "title": title,
@@ -193,7 +222,10 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             "discount": true_discount,
                             "image_url": img_url,
                             "url": raw_url,
-                            "is_lightning": False
+                            "is_lightning": False,
+                            "rating": rating,
+                            "reviews": reviews,
+                            "has_bank_offer": has_bank_offer
                         })
                 except Exception as card_err:
                     logging.warning(f"[Generic Plugin - {self._platform_id}] Skipped card parsing on URL: {config['url']}. Error: {card_err}")
@@ -203,7 +235,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             
         return deals
 
-    def _extract_ajio_deals(self, config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _extract_ajio_deals(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         deals = []
         try:
             from curl_cffi import requests
@@ -277,16 +309,18 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     if prod_url and not prod_url.startswith("http"):
                         prod_url = "https://www.ajio.com" + prod_url
                         
-                    deals.append({
-                        "id": f"{self._platform_id}_{code}",
-                        "title": title,
-                        "price": price,
-                        "mrp": mrp,
-                        "discount": discount,
-                        "image_url": img_url,
-                        "url": prod_url,
-                        "is_lightning": False
-                    })
+                    min_discount = settings.get("min_discount", 30.0)
+                    if min_discount <= discount <= 98.0:
+                        deals.append({
+                            "id": f"{self._platform_id}_{code}",
+                            "title": title,
+                            "price": price,
+                            "mrp": mrp,
+                            "discount": discount,
+                            "image_url": img_url,
+                            "url": prod_url,
+                            "is_lightning": False
+                        })
                 except Exception as card_err:
                     logging.warning(f"[Ajio Scraper] Error parsing API product: {card_err}")
                     continue
