@@ -31,6 +31,8 @@ def load_settings() -> dict:
         "gemini_api_key": "YOUR_GEMINI_API_KEY",
         "amazon_tag": "YOUR_AMAZON_TAG",
         "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
+        "cuelinks_pub_id": "",
+        "earnkaro_pub_id": "",
         "discord_webhook_url": "",
         "min_discount": 30.0,
         "min_deal_price": 299,
@@ -92,6 +94,12 @@ def load_settings() -> dict:
     env_discord = os.environ.get("DISCORD_WEBHOOK_URL")
     if env_discord:
         saved["discord_webhook_url"] = env_discord
+    env_cuelinks = os.environ.get("CUELINKS_PUB_ID")
+    if env_cuelinks:
+        saved["cuelinks_pub_id"] = env_cuelinks
+    env_earnkaro = os.environ.get("EARNKARO_PUB_ID")
+    if env_earnkaro:
+        saved["earnkaro_pub_id"] = env_earnkaro
         
     return saved
 
@@ -105,6 +113,8 @@ def save_settings(settings: dict):
             ("GEMINI_API_KEY", "gemini_api_key"),
             ("FLIPKART_AFFID", "flipkart_affid"),
             ("AMAZON_TAG", "amazon_tag"),
+            ("CUELINKS_PUB_ID", "cuelinks_pub_id"),
+            ("EARNKARO_PUB_ID", "earnkaro_pub_id"),
             ("DISCORD_WEBHOOK_URL", "discord_webhook_url"),
         ]:
             if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):

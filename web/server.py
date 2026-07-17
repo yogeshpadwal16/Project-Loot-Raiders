@@ -37,14 +37,41 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         super().end_headers()
         
     def do_OPTIONS(self):
         self.send_response(200)
         self.end_headers()
 
+    def is_authorized(self):
+        # Exclude static files, redirects, and login from auth checks
+        clean_path = self.path.split('?')[0]
+        if clean_path in ['/', '/api/login'] or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
+            return True
+            
+        # Get Authorization header
+        auth_header = self.headers.get('Authorization')
+        if not auth_header:
+            return False
+            
+        # Check token
+        parts = auth_header.split(' ')
+        if len(parts) != 2 or parts[0].lower() != 'bearer':
+            return False
+            
+        token = parts[1]
+        env_token = os.environ.get("DASHBOARD_SESSION_TOKEN", "admin_session_key_default").strip()
+        return token == env_token
+
     def do_GET(self):
+        if not self.is_authorized():
+            self.send_response(401)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Unauthorized access. Invalid or missing token."}).encode('utf-8'))
+            return
+
         # Serve static dashboard files dynamically
         clean_path = self.path.split('?')[0]
         if clean_path == '/':
@@ -334,6 +361,13 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
+        if not self.is_authorized():
+            self.send_response(401)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Unauthorized access. Invalid or missing token."}).encode('utf-8'))
+            return
+
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
         

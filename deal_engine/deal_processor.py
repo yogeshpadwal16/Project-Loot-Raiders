@@ -129,21 +129,32 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
     finally:
         db.close()
         
-    # 5. Format/Clean affiliate URL
+    # 5. Format/Clean affiliate URL using custom routing rules
     settings = load_settings()
     final_url = expanded_url
     
-    if platform == "amazon":
-        final_url = f"https://www.amazon.in/dp/{unique_id}?tag={settings.get('amazon_tag', 'lootraiders-21')}"
-    elif platform == "flipkart":
-        final_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}&affid={settings.get('flipkart_affid', 'YOUR_FLIPKART_AFFILIATE_ID')}"
-    elif platform == "myntra":
-        myntra_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID") # Myntra is under FK group
-        sep = "&" if "?" in expanded_url else "?"
-        final_url = f"{expanded_url}{sep}affid={myntra_affid}"
+    cuelinks_id = settings.get("cuelinks_pub_id", "").strip()
+    earnkaro_id = settings.get("earnkaro_pub_id", "").strip()
+    
+    # Check if we should route this platform via third-party affiliate networks
+    # Cuelinks/EarnKaro are great for general retailers (Ajio, Myntra, JioMart, Meesho, TataCliq, etc.)
+    is_general_retailer = platform not in ["amazon", "flipkart"]
+    
+    if is_general_retailer and cuelinks_id:
+        final_url = f"https://cuelinks.com/link?pub_id={cuelinks_id}&url={urllib.parse.quote(expanded_url)}"
+    elif is_general_retailer and earnkaro_id:
+        final_url = f"https://earnkaro.com/sharedeal?dl={urllib.parse.quote(expanded_url)}&pub_id={earnkaro_id}"
     else:
-        # For other platforms, append affiliate tags if we have them configured
-        pass
+        # Direct affiliate channels fallback
+        if platform == "amazon":
+            final_url = f"https://www.amazon.in/dp/{unique_id}?tag={settings.get('amazon_tag', 'lootraiders-21')}"
+        elif platform == "flipkart":
+            final_url = f"https://www.flipkart.com/product/p/itm?pid={unique_id}&affid={settings.get('flipkart_affid', 'YOUR_FLIPKART_AFFILIATE_ID')}"
+        elif platform == "myntra":
+            # If Myntra is not routed via Cuelinks/EarnKaro, fall back to direct FK affiliate tag wrapper
+            myntra_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID")
+            sep = "&" if "?" in expanded_url else "?"
+            final_url = f"{expanded_url}{sep}affid={myntra_affid}"
         
     # 6. Apply filter thresholds (min_price, min_savings, blocklist)
     blocklist = settings.get("blocklist_keywords", [])
