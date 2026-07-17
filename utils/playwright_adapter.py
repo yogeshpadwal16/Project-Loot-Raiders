@@ -1,5 +1,6 @@
 import time
 import logging
+import random
 from playwright.sync_api import sync_playwright
 
 class PlaywrightElementAdapter:
@@ -157,9 +158,15 @@ class PlaywrightSeleniumAdapter:
 
     def quit(self):
         try:
-            self.context.close()
-            self.browser.close()
-            self.playwright.stop()
+            if hasattr(self, 'context') and self.context:
+                try: self.context.close()
+                except Exception as ce: logging.debug(f"Error closing context: {ce}")
+            if hasattr(self, 'browser') and self.browser:
+                try: self.browser.close()
+                except Exception as be: logging.debug(f"Error closing browser: {be}")
+            if hasattr(self, 'playwright') and self.playwright:
+                try: self.playwright.stop()
+                except Exception as pe: logging.debug(f"Error stopping playwright: {pe}")
         except Exception as e:
             logging.debug(f"Error closing Playwright elements: {e}")
 
@@ -212,8 +219,18 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
     
     # Configure context with custom User-Agent and viewport
     # NOTE: Omit context-level extra_http_headers to avoid corrupting sub-resource fetches (like CSS/JS/APIs)
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+    ]
+    selected_ua = random.choice(user_agents)
+    
     context = browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        user_agent=selected_ua,
         viewport={"width": 1920, "height": 1080},
         proxy=proxy_config,
         ignore_https_errors=True

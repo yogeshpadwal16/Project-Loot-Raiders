@@ -3,6 +3,7 @@ import re
 import logging
 import threading
 import asyncio
+import time
 from telethon import TelegramClient, events
 from deal_engine.deal_processor import process_deal_url
 from config.settings import load_settings
@@ -14,10 +15,17 @@ def start_channel_mirror():
     logging.info("[Channel Mirror] Background scraping daemon thread started.")
 
 def run_mirror_loop():
-    """Initializes a dedicated asyncio event loop for Telethon client."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(mirror_main())
+    """Initializes a dedicated asyncio event loop for Telethon client with auto-restart capability."""
+    while True:
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(mirror_main())
+        except Exception as loop_err:
+            logging.error(f"[Channel Mirror] Loop crashed: {loop_err}")
+            
+        logging.warning("[Channel Mirror] Telethon client disconnected or loop finished. Re-initiating connection in 20 seconds...")
+        time.sleep(20)
 
 async def mirror_main():
     # Load API credentials from environment
