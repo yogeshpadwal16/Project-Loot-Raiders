@@ -1,6 +1,7 @@
 import os
 import sys
 from telethon import TelegramClient
+from telethon.sessions import StringSession
 
 # Load credentials
 api_id_str = os.environ.get("TELEGRAM_API_ID", "39413198").strip()
@@ -29,10 +30,18 @@ async def main():
         print("Error: Your local session is not authorized. Please re-login locally.")
         return
     
-    # Save session to string
-    session_str = client.session.save()
+    # Extract string session details from the active SQLite session
+    string_session = StringSession()
+    string_session.set_dc(
+        client.session.dc_id,
+        client.session.server_address,
+        client.session.port
+    )
+    string_session.auth_key = client.session.auth_key
+    session_str = string_session.save()
+    
     print("\n" + "="*80)
-    print("🚀 SUCCESS! COPY YOUR TELEGRAM STRING SESSION BELOW:")
+    print("SUCCESS! COPY YOUR TELEGRAM STRING SESSION BELOW:")
     print("="*80)
     print(session_str)
     print("="*80)

@@ -60,8 +60,15 @@ async def mirror_main():
         client = TelegramClient(session_path, api_id, api_hash)
     
     try:
-        # Start and authenticate client first
-        await client.start()
+        # Prevent interactive login prompts in non-interactive cloud environments
+        is_interactive = not (os.environ.get("GITHUB_ACTIONS") == "true" or session_str)
+        if is_interactive:
+            await client.start()
+        else:
+            await client.connect()
+            if not await client.is_user_authorized():
+                logging.error("[Channel Mirror] Telegram Client session is not authorized. Non-interactive run aborted.")
+                return
         logging.info("[Channel Mirror] Telegram Client authenticated successfully.")
         
         # Now resolve and join target channels
@@ -192,7 +199,14 @@ async def mirror_single_run_async():
         client = TelegramClient(session_path, api_id, api_hash)
     
     try:
-        await client.start()
+        is_interactive = not (os.environ.get("GITHUB_ACTIONS") == "true" or session_str)
+        if is_interactive:
+            await client.start()
+        else:
+            await client.connect()
+            if not await client.is_user_authorized():
+                logging.error("[Channel Mirror Single-Run] Telegram Client session is not authorized. Non-interactive run aborted.")
+                return
         logging.info("[Channel Mirror Single-Run] Telegram Client authenticated successfully.")
         
         target_channels = ['Loot_shoppingdeals123', 'EPM_Deals', 'idoffers', 'indiafreestuffin', '+jY1FAgS1Wx80Mjk1']
