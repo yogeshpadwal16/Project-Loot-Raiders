@@ -13,6 +13,13 @@ class PlaywrightElementAdapter:
         except Exception as e:
             return ""
 
+    @property
+    def tag_name(self):
+        try:
+            return self.locator.evaluate("el => el.tagName.toLowerCase()")
+        except Exception:
+            return ""
+
     def get_attribute(self, attr):
         try:
             if attr == "textContent":

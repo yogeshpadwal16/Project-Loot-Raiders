@@ -85,6 +85,9 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
                     # 4. Extract pricing
                     price, mrp, true_discount = calculate_true_discount(card.text)
                     if price and mrp and (30.0 <= true_discount <= 98.0):
+                        from utils.parser import extract_rating_and_reviews, detect_bank_offers
+                        rating, reviews = extract_rating_and_reviews(card.text)
+                        has_bank_offer = detect_bank_offers(card.text)
                         deals.append({
                             "id": asin,
                             "title": title,
@@ -93,7 +96,10 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
                             "discount": true_discount,
                             "image_url": img_url,
                             "url": final_url,
-                            "is_lightning": "lightning" in config['url'].lower()
+                            "is_lightning": "lightning" in config['url'].lower(),
+                            "rating": rating,
+                            "reviews": reviews,
+                            "has_bank_offer": has_bank_offer
                         })
                 except Exception as card_err:
                     continue
