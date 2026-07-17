@@ -281,9 +281,10 @@ def award_points(db, user_id, username, points_to_add, action_type):
     from knowledge_base.models import UserScore
     user_score = db.query(UserScore).filter_by(user_id=str(user_id)).first()
     if not user_score:
+        display_name = username or f"User_{str(user_id)[:5]}"
         user_score = UserScore(
             user_id=str(user_id),
-            username=username,
+            username=display_name,
             points=0,
             voted_count=0,
             referrals_count=0
