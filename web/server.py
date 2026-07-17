@@ -52,7 +52,11 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             '/api/login', 
             '/api/status', 
             '/api/deals', 
-            '/api/config'
+            '/api/config',
+            '/api/analytics',
+            '/api/scraper/health',
+            '/api/lootmap/events',
+            '/api/rewards/scratch'
         ]
         if clean_path in public_endpoints or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
             return True
@@ -332,7 +336,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 return
                 
             import random
-            from database.db_session import SessionLocal
             from knowledge_base.models import UserScore
             
             points_won = random.randint(10, 100)

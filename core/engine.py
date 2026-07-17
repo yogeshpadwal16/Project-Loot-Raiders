@@ -144,8 +144,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             discount = deal["discount"]
             title = deal["title"]
             img_url = deal["image_url"]
-            from utils.affiliate import generate_affiliate_url
-            final_url = generate_affiliate_url(deal["url"], platform, settings)
+            from utils.affiliate import get_best_affiliate_url
+            final_url = get_best_affiliate_url(deal["url"], platform, settings)
             is_lightning = deal["is_lightning"]
             rating = deal.get("rating")
             reviews = deal.get("reviews")

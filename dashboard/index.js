@@ -12,7 +12,17 @@
                 options.headers['Authorization'] = 'Bearer ' + token;
             }
         }
-        return originalFetch(url, options);
+        const response = await originalFetch(url, options);
+        if (response.status === 401 && !urlStr.includes('/api/login')) {
+            localStorage.removeItem('admin_token');
+            const overlay = document.getElementById('login-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                const errEl = document.getElementById('login-error');
+                if (errEl) errEl.textContent = 'Session expired. Please log in again.';
+            }
+        }
+        return response;
     };
 })();
 
@@ -378,15 +388,19 @@ function updateStatusUI(status) {
         statusBadge.querySelector('.status-text').textContent = 'ACTIVE';
         statState.textContent = 'RUNNING';
         statState.style.color = 'var(--accent-green)';
-        toggleBtn.innerHTML = '<i class="fa-solid fa-pause"></i> <span>Pause Scan</span>';
-        toggleBtn.className = 'btn btn-secondary';
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fa-solid fa-pause"></i> <span>Pause Scan</span>';
+            toggleBtn.className = 'btn btn-secondary';
+        }
     } else {
         statusBadge.className = 'status-badge paused';
         statusBadge.querySelector('.status-text').textContent = 'PAUSED';
         statState.textContent = 'PAUSED';
         statState.style.color = 'var(--accent-orange)';
-        toggleBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Resume Scan</span>';
-        toggleBtn.className = 'btn btn-primary';
+        if (toggleBtn) {
+            toggleBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Resume Scan</span>';
+            toggleBtn.className = 'btn btn-primary';
+        }
     }
 
     // Render Crawler Health statuses
