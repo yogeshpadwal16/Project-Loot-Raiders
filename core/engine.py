@@ -39,6 +39,21 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
 LOG_FILE = os.path.join(BASE_DIR, "execution.log")
 
+# Configure logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+for h in logger.handlers[:]:
+    logger.removeHandler(h)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
 # ==========================================
 # SYSTEM STATE FOR WEB DASHBOARD CONTROL
 # ==========================================
