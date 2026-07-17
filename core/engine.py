@@ -655,6 +655,13 @@ def main():
                 logging.error(f"Error in main scanner loop: {loop_err}")
                 
             if single_run:
+                logging.info("Waiting for notification queue to finish dispatching...")
+                try:
+                    from deal_engine.notifier import notification_queue
+                    notification_queue.join()
+                    logging.info("All notifications successfully dispatched.")
+                except Exception as queue_err:
+                    logging.error(f"Error waiting for notification queue: {queue_err}")
                 logging.info("Single-run execution complete. Exiting scraper loop.")
                 break
                 
