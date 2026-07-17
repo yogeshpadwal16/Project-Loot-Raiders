@@ -23,11 +23,29 @@ const API_BASE = window.location.protocol === 'file:'
 // Detect if running statically on GitHub Pages or locally without server
 const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || window.location.hostname.endsWith('githubusercontent.com');
 
+// Public configurations for channel links
+let publicConfig = {
+    telegram_chat_id: "@LootRaidersDeals",
+    telegram_invite_link: "https://t.me/LootRaidersDeals"
+};
+
+async function fetchPublicConfig() {
+    if (IS_STATIC_MODE) return;
+    try {
+        const response = await fetch(`${API_BASE}/api/config`);
+        if (response.ok) {
+            publicConfig = await response.json();
+        }
+    } catch (err) {
+        console.error('Error fetching public config:', err);
+    }
+}
+
 // Helper to check if logged in as administrator
 function isAuthorized() {
     if (IS_STATIC_MODE) return false;
     const token = localStorage.getItem('admin_token');
-    return token && token.startsWith('admin_session_key');
+    return token && token.length > 5;
 }
 
 // State management
@@ -295,7 +313,8 @@ function connectLogsStream() {
         consoleLogs.innerHTML = '<div class="log-line system-line">Connecting to live logs stream...</div>';
     }
     
-    logEventSource = new EventSource(`${API_BASE}/api/logs/stream`);
+    const token = localStorage.getItem('admin_token') || '';
+    logEventSource = new EventSource(`${API_BASE}/api/logs/stream?token=${encodeURIComponent(token)}`);
     
     let isCleared = false;
     logEventSource.onmessage = function(event) {
@@ -484,7 +503,8 @@ function updateDealsUI(deals) {
             ? `<span class="score-tag" title="AI Deal Score"><i class="fa-solid fa-bolt text-yellow"></i> Score: ${scoreVal}</span>` 
             : '';
         
-        const shareText = `🍊💣 *LOOT RAIDERS DEAL ALERT!* 💣🍊\n\n*${titleStr.replace(/\*/g, '')}*\n\n💰 *Price:* ₹${priceVal} (MRP: ~₹${mrpVal}~)\n📉 *Discount:* ${discountVal}% OFF\n\n👉 *CLICK HERE TO BUY NOW:* ${window.location.origin}/api/redirect?id=${deal.id}&user=WhatsAppShare&url=${encodeURIComponent(dealUrl)}`;
+        const inviteLink = publicConfig.telegram_invite_link || `https://t.me/LootRaidersDeals`;
+        const shareText = `🍊💣 *LOOT RAIDERS DEAL ALERT!* 💣🍊\n\n*${titleStr.replace(/\*/g, '')}*\n\n💰 *Price:* ₹${priceVal} (MRP: ~₹${mrpVal}~)\n📉 *Discount:* ${discountVal}% OFF\n\n👉 *CLICK HERE TO BUY NOW:* ${window.location.origin}/api/redirect?id=${deal.id}&user=WhatsAppShare&url=${encodeURIComponent(dealUrl)}\n\n📢 *Join our Telegram for more loot:* ${inviteLink}`;
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
 
         html += `
@@ -770,14 +790,29 @@ async function fetchClicks() {
     }
 }
 
-function updateClicksUI(clicks) {
+function updateClicksUI(data) {
     const totalBadge = document.getElementById('clicks-total-badge');
     const topDealEl = document.getElementById('top-clicked-deal');
     const logContainer = document.getElementById('clicks-log-container');
+    const waCountEl = document.getElementById('whatsapp-clicks-count');
+    const waRatioEl = document.getElementById('whatsapp-clicks-ratio');
     
     if (!totalBadge || !topDealEl || !logContainer) return;
     
-    totalBadge.textContent = `${clicks.length} Clicks`;
+    const clicks = Array.isArray(data) ? data : (data.clicks || []);
+    const stats = (!Array.isArray(data) && data.stats) ? data.stats : null;
+    
+    if (stats) {
+        totalBadge.textContent = `${stats.total_clicks} Clicks`;
+        if (waCountEl) waCountEl.textContent = `${stats.whatsapp_clicks} Clicks`;
+        if (waRatioEl) waRatioEl.textContent = `${stats.whatsapp_ratio}%`;
+    } else {
+        totalBadge.textContent = `${clicks.length} Clicks`;
+        const waClicks = clicks.filter(c => c.user === 'WhatsAppShare').length;
+        const waRatio = clicks.length > 0 ? ((waClicks / clicks.length) * 100).toFixed(1) : 0;
+        if (waCountEl) waCountEl.textContent = `${waClicks} Clicks`;
+        if (waRatioEl) waRatioEl.textContent = `${waRatio}%`;
+    }
     
     // Save to global cache
     lastClicksData = clicks;
@@ -916,9 +951,16 @@ async function fetchSettings() {
         document.getElementById('set-earnkaro-id').value = settings.earnkaro_pub_id || '';
         document.getElementById('set-telegram-token').value = settings.telegram_bot_token || '';
         document.getElementById('set-telegram-chat').value = settings.telegram_chat_id || '';
+        document.getElementById('set-telegram-invite').value = settings.telegram_invite_link || '';
         document.getElementById('set-min-discount').value = settings.min_discount || 30;
         document.getElementById('set-discord-webhook').value = settings.discord_webhook_url || '';
         document.getElementById('set-gemini-key').value = settings.gemini_api_key || '';
+        document.getElementById('set-smtp-server').value = settings.smtp_server || '';
+        document.getElementById('set-smtp-port').value = settings.smtp_port || 587;
+        document.getElementById('set-smtp-username').value = settings.smtp_username || '';
+        document.getElementById('set-smtp-password').value = settings.smtp_password || '';
+        document.getElementById('set-smtp-from').value = settings.smtp_from || '';
+        document.getElementById('set-smtp-to').value = settings.smtp_to || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         
         const proxyList = settings.proxy_list || [];
@@ -937,9 +979,16 @@ async function saveSettings(e) {
     const earnkaro_pub_id = document.getElementById('set-earnkaro-id').value.trim();
     const telegram_bot_token = document.getElementById('set-telegram-token').value.trim();
     const telegram_chat_id = document.getElementById('set-telegram-chat').value.trim();
+    const telegram_invite_link = document.getElementById('set-telegram-invite').value.trim();
     const min_discount = parseFloat(document.getElementById('set-min-discount').value) || 30;
     const discord_webhook_url = document.getElementById('set-discord-webhook').value.trim();
     const gemini_api_key = document.getElementById('set-gemini-key').value.trim();
+    const smtp_server = document.getElementById('set-smtp-server').value.trim();
+    const smtp_port = parseInt(document.getElementById('set-smtp-port').value) || 587;
+    const smtp_username = document.getElementById('set-smtp-username').value.trim();
+    const smtp_password = document.getElementById('set-smtp-password').value.trim();
+    const smtp_from = document.getElementById('set-smtp-from').value.trim();
+    const smtp_to = document.getElementById('set-smtp-to').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     
     const proxyText = document.getElementById('set-proxy-list').value;
@@ -954,9 +1003,16 @@ async function saveSettings(e) {
         earnkaro_pub_id,
         telegram_bot_token,
         telegram_chat_id,
+        telegram_invite_link,
         min_discount,
         discord_webhook_url,
         gemini_api_key,
+        smtp_server,
+        smtp_port,
+        smtp_username,
+        smtp_password,
+        smtp_from,
+        smtp_to,
         proxies_enabled,
         proxy_list
     };
@@ -980,6 +1036,7 @@ async function saveSettings(e) {
 }
 
 function init() {
+    fetchPublicConfig();
     fetchStatus();
     fetchDeals();
     
@@ -1054,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth helper
     function isAuthorized() {
         const token = localStorage.getItem('admin_token');
-        return token && token.startsWith('admin_session_key');
+        return token && token.length > 5;
     }
 
     function checkAuthentication() {
@@ -1292,6 +1349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const discount = mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
             const savings = mrp - price;
             
+            const inviteLink = publicConfig.telegram_invite_link || `https://t.me/LootRaidersDeals`;
             const message = 
                 `🔥 *HOT LOOT DEAL!* 🔥\n\n` +
                 `🛍️ *${title}*\n\n` +
@@ -1299,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 `❌ *Original MRP:* ₹${mrp.toLocaleString('en-IN')}\n` +
                 `💸 *Savings:* ₹${savings.toLocaleString('en-IN')} (${discount}% OFF)\n\n` +
                 `👉 *Buy Link:* ${affiliate_url}\n\n` +
-                `📢 _Join @LootRaidersDeals for more verified loot!_`;
+                `📢 *Join our Telegram for more loot:* ${inviteLink}`;
                 
             const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
             window.open(shareUrl, '_blank');

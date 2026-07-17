@@ -1,7 +1,10 @@
 import time
 import logging
 import random
+import threading
 from playwright.sync_api import sync_playwright
+
+playwright_lock = threading.Lock()
 
 class PlaywrightElementAdapter:
     def __init__(self, locator):
@@ -169,6 +172,12 @@ class PlaywrightSeleniumAdapter:
                 except Exception as pe: logging.debug(f"Error stopping playwright: {pe}")
         except Exception as e:
             logging.debug(f"Error closing Playwright elements: {e}")
+        finally:
+            global playwright_lock
+            try:
+                playwright_lock.release()
+            except RuntimeError:
+                pass
 
     def close(self):
         try:
@@ -190,60 +199,71 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
     """
     import asyncio
     import threading
+    
+    global playwright_lock
+    playwright_lock.acquire()
+    
     try:
-        running_loop = asyncio.get_running_loop()
-        logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, Running Loop: {running_loop}")
-    except RuntimeError:
-        logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
+        try:
+            running_loop = asyncio.get_running_loop()
+            logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, Running Loop: {running_loop}")
+        except RuntimeError:
+            logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
+            
+        playwright = sync_playwright().start()
         
-    playwright = sync_playwright().start()
-    
-    # Launch Chromium with stealth arguments including undetected new headless flag
-    browser_args = [
-        "--headless=new",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu"
-    ]
-    
-    proxy_config = None
-    if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
-        valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
-        if valid_proxies:
-            proxy_url = random.choice(valid_proxies)
-            if not proxy_url.startswith("http"):
-                proxy_url = f"http://{proxy_url}"
-            proxy_config = {"server": proxy_url}
-            logging.info(f"Playwright launching using proxy: {proxy_url}")
+        # Launch Chromium with stealth arguments including undetected new headless flag
+        browser_args = [
+            "--headless=new",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--disable-gpu"
+        ]
+        
+        proxy_config = None
+        if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
+            valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
+            if valid_proxies:
+                proxy_url = random.choice(valid_proxies)
+                if not proxy_url.startswith("http"):
+                    proxy_url = f"http://{proxy_url}"
+                proxy_config = {"server": proxy_url}
+                logging.info(f"Playwright launching using proxy: {proxy_url}")
 
-    # Set headless=False and pass --headless=new argument to run undetected new headless mode
-    browser = playwright.chromium.launch(
-        headless=False,
-        args=browser_args
-    )
-    
-    # Configure context with custom User-Agent and viewport
-    # NOTE: Omit context-level extra_http_headers to avoid corrupting sub-resource fetches (like CSS/JS/APIs)
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
-    ]
-    selected_ua = random.choice(user_agents)
-    
-    context = browser.new_context(
-        user_agent=selected_ua,
-        viewport={"width": 1920, "height": 1080},
-        proxy=proxy_config,
-        ignore_https_errors=True
-    )
-    
-    page = context.new_page()
-    page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    
-    return PlaywrightSeleniumAdapter(playwright, browser, context, page)
+        # Set headless=False and pass --headless=new argument to run undetected new headless mode
+        browser = playwright.chromium.launch(
+            headless=False,
+            args=browser_args
+        )
+        
+        # Configure context with custom User-Agent and viewport
+        # NOTE: Omit context-level extra_http_headers to avoid corrupting sub-resource fetches (like CSS/JS/APIs)
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+        ]
+        selected_ua = random.choice(user_agents)
+        
+        context = browser.new_context(
+            user_agent=selected_ua,
+            viewport={"width": 1920, "height": 1080},
+            proxy=proxy_config,
+            ignore_https_errors=True
+        )
+        
+        page = context.new_page()
+        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        return PlaywrightSeleniumAdapter(playwright, browser, context, page)
+    except Exception as e:
+        try:
+            playwright_lock.release()
+        except RuntimeError:
+            pass
+        raise e

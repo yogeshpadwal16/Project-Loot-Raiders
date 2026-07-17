@@ -230,7 +230,7 @@ def calculate_deal_score(
     final_score += die_adjustment
     
     # Check if this is a price glitch / extreme price error
-    is_glitch = check_if_glitch(price, mrp, discount, product_id)
+    is_glitch = check_if_glitch(price, mrp, discount, product_id, title)
     if is_glitch:
         final_score += 15.0
         logging.info(f"[AI Scorer] Price glitch detected for product {product_id}! Score boosted.")
@@ -246,14 +246,16 @@ def calculate_deal_score(
     logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, AI Score: {ai_score}, Glitch: {is_glitch}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
     return final_score
 
-def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None) -> bool:
+def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None, title: str = None) -> bool:
     """
-    Checks if a deal is an extreme price glitch/error based on high discount thresholds
-    or sudden massive drops compared to tracked historical price averages.
+    Checks if a deal is an extreme price glitch/error based on high discount thresholds,
+    sudden massive drops compared to tracked historical price averages, and AI validation.
     """
+    # Heuristic 1: Extreme discount
     if discount >= 85.0:
         return True
         
+    # Heuristic 2: Large historical drop
     if unique_id:
         db = SessionLocal()
         try:
@@ -268,6 +270,41 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
             logging.error(f"Error checking glitch status against history: {e}")
         finally:
             db.close()
+            
+    # Heuristic 3: AI validation for high discounts (between 70% and 85%) (Feature 1)
+    if discount >= 70.0 and title:
+        settings = load_settings()
+        api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
+        if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                prompt = (
+                    "You are a price error auditor for e-commerce sites (Amazon, Flipkart). "
+                    "Analyze if this discount looks like a merchant price error/glitch (e.g., brand-new laptop for Rs. 500, "
+                    "high-end smartphone for Rs. 2,000, or a coupon stack glitch) versus a normal clearance discount. "
+                    "Respond with a JSON object matching this structure (no markdown wrappers):\n"
+                    '{"is_glitch": <true/false>, "reason": "<brief justification>"}\n\n'
+                    f"Product: {title}\n"
+                    f"Price: Rs. {price:,}\n"
+                    f"MRP: Rs. {mrp:,}\n"
+                    f"Discount: {discount:.0f}% OFF"
+                )
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt}]
+                    }]
+                }
+                res = requests.post(url, json=payload, timeout=8)
+                if res.status_code == 200:
+                    text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if text.startswith("```"):
+                        text = re.sub(r'^```(?:json)?\s*', '', text)
+                        text = re.sub(r'\s*```$', '', text)
+                        text = text.strip()
+                    result = json.loads(text)
+                    return bool(result.get("is_glitch", False))
+            except Exception as e:
+                logging.error(f"Failed to verify glitch via AI: {e}")
             
     return False
 
