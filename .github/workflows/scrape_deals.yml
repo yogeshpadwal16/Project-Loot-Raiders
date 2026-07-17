@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write # Allows the action to commit and push changes back to the repo
 
+concurrency:
+  group: deals-scraper
+  cancel-in-progress: true # Prevents concurrent runs by canceling active loops when new cron starts
+
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -31,26 +35,16 @@ jobs:
         run: |
           playwright install chromium --with-deps
 
-      - name: Run Scraper
+      - name: Run Scraper Loop
         env:
           GITHUB_ACTIONS: 'true'
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_STRING_SESSION: ${{ secrets.TELEGRAM_STRING_SESSION }}
           TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
           WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
         run: |
-          python loot_scraper.py --single-run
-
-      - name: Commit and Push Updated Deals
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # Stage the updated files
-          git add dashboard/deals_history.json omega_history.json selectors.json
-          
-          # Commit and push only if there are modifications
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update deals feed: $(date)" && git push)
+          python scripts/loop_runner.py
