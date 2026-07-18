@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings, save_settings
+load_settings()
 from deal_engine.scorer import calculate_deal_score
 from database.operations import verify_historical_low
 
@@ -682,7 +683,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             settings = load_settings()
             self.wfile.write(json.dumps(settings).encode('utf-8'))
             
-        elif self.path == '/api/logs/stream':
+        elif self.path.startswith('/api/logs/stream'):
             self.send_response(200)
             self.send_header('Content-Type', 'text/event-stream')
             self.send_header('Cache-Control', 'no-cache')
