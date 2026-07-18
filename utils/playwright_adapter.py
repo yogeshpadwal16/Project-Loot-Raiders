@@ -32,6 +32,12 @@ class PlaywrightElementAdapter:
                 return self.locator.evaluate("el => el.outerHTML")
             elif attr == "innerHTML":
                 return self.locator.evaluate("el => el.innerHTML")
+            elif attr == "href":
+                try: return self.locator.evaluate("el => el.href")
+                except: pass
+            elif attr == "src":
+                try: return self.locator.evaluate("el => el.src")
+                except: pass
             return self.locator.get_attribute(attr)
         except Exception as e:
             return None
