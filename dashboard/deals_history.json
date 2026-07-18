@@ -1,77 +1,1097 @@
 [
   {
-    "id": "jiomart_groceries",
-    "platform": "jiomart_deals",
-    "title": "Tart Electronic Finger Ring Counter for Japa & Mantra Counting",
-    "price": 149,
-    "mrp": 399,
-    "discount": 62.65664160401002,
-    "image_url": "https://cdn1.jiomartjcp.com/v2/catalog-cloud/jiomar/t.resize(w:300)/images/othe/rzuwkj/.j/pg/tally15.jpg.675682bd61.jpg",
-    "url": "https://www.jiomart.com/p/groceries/tart-electronic-finger-ring-counter-for-japa-mantra-counting/RVTPORCCNY",
+    "id": "AFRHY56JU42EH3ZT",
+    "platform": "flipkart_appliances_deals",
+    "title": "LIBRA Ceramix with Zeravion Vitrcore Coating Air Fryer",
+    "price": 718,
+    "mrp": 6999,
+    "discount": 89.74139162737535,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/e/c/h/black-6-5-1500-ceramix-with-zeravion-vitrcore-coating-libra-original-imahzyy37krg9kzy.jpeg?q=70",
+    "url": "/libra-ceramix-zeravion-vitrcore-coating-air-fryer/p/itm5aed54aafeb39?pid=AFRHY56JU42EH3ZT&lid=LSTAFRHY56JU42EH3ZTCDXXZ1&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_35&otracker=search&fm=organic&iid=3b568401-1b9e-4527-b4bb-5c4e18e374c5.AFRHY56JU42EH3ZT.SEARCH&ppt=None&ppn=None&ssid=tzzsjfvvpc0000001784381898808&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
     "is_verified_low": true,
-    "deal_score": 77.52631578947368,
-    "timestamp": 1784311316.0768502,
+    "deal_score": 100.0,
+    "timestamp": 1784381916.6673462,
     "clicks": 0,
     "price_history": [
       {
-        "price": 249,
-        "timestamp": 1784310721.0400681
+        "price": 6999,
+        "timestamp": 1784193379.0540824
       },
       {
-        "price": 180,
-        "timestamp": 1784310721.3138785
+        "price": 694,
+        "timestamp": 1784228208.3699882
+      },
+      {
+        "price": 712,
+        "timestamp": 1784270993.0742993
+      },
+      {
+        "price": 718,
+        "timestamp": 1784381916.6673462
+      }
+    ]
+  },
+  {
+    "id": "AFRHKJK2T7NMNMWA",
+    "platform": "flipkart_appliances_deals",
+    "title": "Sansui Aeon Air Fryer",
+    "price": 1513,
+    "mrp": 3349,
+    "discount": 54.82233502538071,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/9/8/u/-original-imahhhwzdrgpanmm.jpeg?q=70",
+    "url": "/sansui-aeon-air-fryer/p/itm3935d7edf1dab?pid=AFRHKJK2T7NMNMWA&lid=LSTAFRHKJK2T7NMNMWA4GOARV&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_23&otracker=search&fm=organic&iid=3b568401-1b9e-4527-b4bb-5c4e18e374c5.AFRHKJK2T7NMNMWA.SEARCH&ppt=None&ppn=None&ssid=tzzsjfvvpc0000001784381898808&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
+    "is_verified_low": true,
+    "deal_score": 75.6156345177665,
+    "timestamp": 1784381916.4348788,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3349,
+        "timestamp": 1784193169.555201
+      },
+      {
+        "price": 1466,
+        "timestamp": 1784228205.170422
+      },
+      {
+        "price": 1500,
+        "timestamp": 1784273037.6928868
+      },
+      {
+        "price": 1513,
+        "timestamp": 1784381916.4348788
+      }
+    ]
+  },
+  {
+    "id": "AFRHDYGBPHNK3GZB",
+    "platform": "flipkart_appliances_deals",
+    "title": "Thomson AEROFRY Air Fryer",
+    "price": 249,
+    "mrp": 2499,
+    "discount": 90.03601440576232,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/r/y/c/-original-imahgtdqdsawsgqg.jpeg?q=70",
+    "url": "/thomson-aerofry-air-fryer/p/itm0598436960bc9?pid=AFRHDYGBPHNK3GZB&lid=LSTAFRHDYGBPHNK3GZB7ANUKL&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_16&otracker=search&fm=organic&iid=3b568401-1b9e-4527-b4bb-5c4e18e374c5.AFRHDYGBPHNK3GZB.SEARCH&ppt=None&ppn=None&ssid=tzzsjfvvpc0000001784381898808&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
+    "is_verified_low": true,
+    "deal_score": 100.0,
+    "timestamp": 1784381916.24943,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2499,
+        "timestamp": 1784193125.3305628
+      },
+      {
+        "price": 2699,
+        "timestamp": 1784226762.539042
+      },
+      {
+        "price": 2499,
+        "timestamp": 1784226913.2575762
+      },
+      {
+        "price": 246,
+        "timestamp": 1784228204.1191845
+      },
+      {
+        "price": 249,
+        "timestamp": 1784381916.24943
+      }
+    ]
+  },
+  {
+    "id": "AFRHYFRBRRQCM6QG",
+    "platform": "flipkart_appliances_deals",
+    "title": "USHA iChef SMART AIR FRYER 4.5 L",
+    "price": 3388,
+    "mrp": 4999,
+    "discount": 32.22644528905781,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/9/r/g/black-4-5-1350-ichef-smart-air-fryer-4-5-l-usha-enriched-transparent-original-imahf582exxwfdeq.png?q=70",
+    "url": "/usha-ichef-smart-air-fryer-4-5-l/p/itmb0477693d6dd8?pid=AFRHYFRBRRQCM6QG&lid=LSTAFRHYFRBRRQCM6QGMBYKUV&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_14&otracker=search&fm=organic&iid=en_yByLOfReVIVH-VxOQLsw7smeupQymnuBnnVDAvLf4NzFHUQ74SIxNwrM96A2xwA_g6u_miTMpGhXuqpTbFSM7pm9Yxav6heRpAEMv1ukmp3l2TpBfakFUZW4iaCRBXyG&ppt=None&ppn=None&ssid=tzzsjfvvpc0000001784381898808&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
+    "is_verified_low": true,
+    "deal_score": 68.29851170234046,
+    "timestamp": 1784381916.0251796,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 4999,
+        "timestamp": 1784193188.382473
+      },
+      {
+        "price": 3384,
+        "timestamp": 1784228207.3084671
+      },
+      {
+        "price": 3387,
+        "timestamp": 1784270989.9836006
+      },
+      {
+        "price": 3388,
+        "timestamp": 1784381916.0251796
+      }
+    ]
+  },
+  {
+    "id": "B0DTHRY1QD",
+    "platform": "amazon_appliances_deals",
+    "title": "Gesto 7.4 Inch High Speed Rechargeable Table Fan for Home \u2013 USB Charging Battery Fan With Led Light | 2400mAh Battery, Upto 8 Hours Runtime | 3 Speed Modes Portable fan for Home, Office,Kitchen-Grey",
+    "price": 699,
+    "mrp": 1999,
+    "discount": 65.03251625812906,
+    "image_url": "https://m.media-amazon.com/images/I/71M8BsDZqKL._AC_UY218_.jpg",
+    "url": "https://www.amazon.in/dp/B0DTHRY1QD?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 76.18942804735701,
+    "timestamp": 1784381870.806842,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 699,
+        "timestamp": 1784381870.806842
+      }
+    ]
+  },
+  {
+    "id": "jiomart_groceries",
+    "platform": "jiomart_deals",
+    "title": "GM Trio 2-Pin Flex Box 240 V (5 m)",
+    "price": 329,
+    "mrp": 521,
+    "discount": 36.85220729366603,
+    "image_url": "https://cdn1.jiomartjcp.com/v2/catalog-cloud/jiomar/t.resize(w:300)/images/othe/egurhk/.j/pg/0000000004900583901.jpg.cc2ac94d46.jpg",
+    "url": "https://www.jiomart.com/p/groceries/gm-trio-2-pin-flex-box-240-v-5-m/490058390",
+    "is_verified_low": true,
+    "deal_score": 59.07654510556622,
+    "timestamp": 1784381833.4944932,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 299,
+        "timestamp": 1784381767.055359
       },
       {
         "price": 149,
-        "timestamp": 1784310722.069865
+        "timestamp": 1784381775.2891846
+      },
+      {
+        "price": 209,
+        "timestamp": 1784381783.5092025
+      },
+      {
+        "price": 679,
+        "timestamp": 1784381783.7503529
       },
       {
         "price": 1399,
-        "timestamp": 1784310722.7934985
+        "timestamp": 1784381784.1956031
+      },
+      {
+        "price": 399,
+        "timestamp": 1784381784.4375594
+      },
+      {
+        "price": 699,
+        "timestamp": 1784381792.432124
       },
       {
         "price": 14999,
-        "timestamp": 1784310723.003498
+        "timestamp": 1784381792.6832006
       },
       {
-        "price": 249,
-        "timestamp": 1784310723.2236776
+        "price": 999,
+        "timestamp": 1784381792.9080875
       },
       {
-        "price": 149,
-        "timestamp": 1784310724.3112278
+        "price": 430,
+        "timestamp": 1784381801.1235933
       },
       {
         "price": 199,
-        "timestamp": 1784311312.8321745
-      },
-      {
-        "price": 249,
-        "timestamp": 1784311313.0669572
-      },
-      {
-        "price": 180,
-        "timestamp": 1784311313.2928202
-      },
-      {
-        "price": 149,
-        "timestamp": 1784311314.0271783
-      },
-      {
-        "price": 1399,
-        "timestamp": 1784311314.8275926
+        "timestamp": 1784381809.2976913
       },
       {
         "price": 14999,
-        "timestamp": 1784311315.0844667
+        "timestamp": 1784381817.294927
       },
       {
         "price": 249,
-        "timestamp": 1784311315.3116195
+        "timestamp": 1784381817.5320725
       },
       {
         "price": 149,
-        "timestamp": 1784311316.0768502
+        "timestamp": 1784381825.4139602
+      },
+      {
+        "price": 329,
+        "timestamp": 1784381833.4944932
+      }
+    ]
+  },
+  {
+    "id": "meesho_ah28g9",
+    "platform": "meesho_deals",
+    "title": "BRIT ACCENT | Combo Pack Of 2|DEPTH OF OCEAN-NOIR OUD|Parfum|Long-Lasting|Specially Currated| Eau de Toilette - 100 ml (For Men & Women)",
+    "price": 177,
+    "mrp": 798,
+    "discount": 77.81954887218046,
+    "image_url": "https://images.meesho.com/images/products/633319497/ngnog_512.webp?width=360",
+    "url": "https://www.meesho.com/brit-accent-combo-pack-of-2depth-of-ocean-noir-oudparfumlong-lastingspecially-currated-eau-de-toilette-100-ml-for-men-women/p/ah28g9",
+    "is_verified_low": true,
+    "deal_score": 75.61368421052632,
+    "timestamp": 1784381177.4316666,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 178,
+        "timestamp": 1784194330.7335443
+      },
+      {
+        "price": 177,
+        "timestamp": 1784381177.4316666
+      }
+    ]
+  },
+  {
+    "id": "myntra_18914902",
+    "platform": "myntra_deals",
+    "title": "Florida",
+    "price": 995,
+    "mrp": 2999,
+    "discount": 66.82227409136378,
+    "image_url": null,
+    "url": "https://www.myntra.com/blankets-quilts-and-dohars/florida/florida-unisex-off-white-blankets-quilts-and-dohars/18914902/buy",
+    "is_verified_low": true,
+    "deal_score": 82.13559186395464,
+    "timestamp": 1784381153.2436285,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 995,
+        "timestamp": 1784381153.2436285
+      }
+    ]
+  },
+  {
+    "id": "myntra_33831998",
+    "platform": "myntra_deals",
+    "title": "FAZZA",
+    "price": 699,
+    "mrp": 1999,
+    "discount": 65.03251625812906,
+    "image_url": null,
+    "url": "https://www.myntra.com/track-pants/fazza/fazza-girls-pack-of-5-printed-pure-cotton-mid-rise-joggers-/33831998/buy",
+    "is_verified_low": true,
+    "deal_score": 76.18942804735701,
+    "timestamp": 1784381145.8485894,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 699,
+        "timestamp": 1784381145.8485894
+      }
+    ]
+  },
+  {
+    "id": "myntra_44211197",
+    "platform": "myntra_deals",
+    "title": "Libas",
+    "price": 1499,
+    "mrp": 5949,
+    "discount": 74.80248781307783,
+    "image_url": null,
+    "url": "https://www.myntra.com/kurta-sets/libas/libas-women-ethnic-motifs-printed-regular-kurta-with-trousers--with-dupatta/44211197/buy",
+    "is_verified_low": true,
+    "deal_score": 92.36174146915448,
+    "timestamp": 1784381138.4261575,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1499,
+        "timestamp": 1784381138.4261575
+      }
+    ]
+  },
+  {
+    "id": "myntra_43866629",
+    "platform": "myntra_deals",
+    "title": "Sangria",
+    "price": 988,
+    "mrp": 4299,
+    "discount": 77.01791114212607,
+    "image_url": null,
+    "url": "https://www.myntra.com/clothing-set/sangria/sangria-women-printed-palazzos/43866629/buy",
+    "is_verified_low": true,
+    "deal_score": 93.91253779948825,
+    "timestamp": 1784381130.8345873,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 988,
+        "timestamp": 1784381130.8345873
+      }
+    ]
+  },
+  {
+    "id": "myntra_36665107",
+    "platform": "myntra_deals",
+    "title": "Sangria",
+    "price": 857,
+    "mrp": 2999,
+    "discount": 71.42380793597866,
+    "image_url": null,
+    "url": "https://www.myntra.com/kurta-sets/sangria/sangria-boys-zari-kurta-pyjama-set-with-pink-patola-bandi/36665107/buy",
+    "is_verified_low": true,
+    "deal_score": 86.27666555518505,
+    "timestamp": 1784381130.3712583,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 821,
+        "timestamp": 1784298191.1241026
+      },
+      {
+        "price": 857,
+        "timestamp": 1784381130.3712583
+      }
+    ]
+  },
+  {
+    "id": "myntra_29572430",
+    "platform": "myntra_deals",
+    "title": "NEOBABY",
+    "price": 292,
+    "mrp": 1599,
+    "discount": 81.7385866166354,
+    "image_url": null,
+    "url": "https://www.myntra.com/hair-accessory/neobaby/neobaby-girls-set-of-40-embellished-ponytail-holders/29572430/buy",
+    "is_verified_low": true,
+    "deal_score": 91.71333333333334,
+    "timestamp": 1784381122.850084,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 295,
+        "timestamp": 1784199294.1789405
+      },
+      {
+        "price": 292,
+        "timestamp": 1784381122.850084
+      }
+    ]
+  },
+  {
+    "id": "myntra_43171646",
+    "platform": "myntra_deals",
+    "title": "Moda Rapido",
+    "price": 355,
+    "mrp": 1499,
+    "discount": 76.31754503002001,
+    "image_url": null,
+    "url": "https://www.myntra.com/tshirts/moda+rapido/moda-rapido-women-printed-polo-collar-t-shirt/43171646/buy",
+    "is_verified_low": true,
+    "deal_score": 81.04894818768068,
+    "timestamp": 1784381114.9770925,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 355,
+        "timestamp": 1784381114.9770925
+      }
+    ]
+  },
+  {
+    "id": "myntra_39954242",
+    "platform": "myntra_deals",
+    "title": "HRX by Hrithik Roshan",
+    "price": 237,
+    "mrp": 699,
+    "discount": 66.09442060085837,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JULY/9/3KYXOXCJ_5d5247e816f145a996c16f1d84009dfc.jpg",
+    "url": "https://www.myntra.com/tshirts/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-printed-rapid-dry-training-t-shirt/39954242/buy",
+    "is_verified_low": true,
+    "deal_score": 66.34609442060085,
+    "timestamp": 1784381107.3904405,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 237,
+        "timestamp": 1784381107.3904405
+      }
+    ]
+  },
+  {
+    "id": "myntra_537675",
+    "platform": "myntra_deals",
+    "title": "Sunsilk",
+    "price": 405,
+    "mrp": 882,
+    "discount": 54.08163265306123,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JUNE/10/qvZMpj8u_fc5e579a31b34adf82a9c3b75359c42c.jpg",
+    "url": "https://www.myntra.com/shampoo/sunsilk/sunsilk-flowy-silk-smooth-shampoo---650-ml/537675/buy",
+    "is_verified_low": true,
+    "deal_score": 68.03714285714285,
+    "timestamp": 1784381099.939028,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 484,
+        "timestamp": 1784304642.9616017
+      },
+      {
+        "price": 405,
+        "timestamp": 1784381099.939028
+      }
+    ]
+  },
+  {
+    "id": "myntra_41994551",
+    "platform": "myntra_deals",
+    "title": "ELECANT",
+    "price": 341,
+    "mrp": 1499,
+    "discount": 77.2515010006671,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/MAY/11/pKrHhrQz_19aa49b0b6ad465cb6e6e89504d5d55f.jpg",
+    "url": "https://www.myntra.com/sandals/elecant/elecant-unisex-kids-comfort-sandals/41994551/buy",
+    "is_verified_low": true,
+    "deal_score": 83.79605070046696,
+    "timestamp": 1784381092.5336082,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 341,
+        "timestamp": 1784381092.5336082
+      }
+    ]
+  },
+  {
+    "id": "myntra_36264644",
+    "platform": "myntra_deals",
+    "title": "HRX by Hrithik Roshan",
+    "price": 591,
+    "mrp": 3699,
+    "discount": 84.0227088402271,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JULY/17/DRHcHqIV_43dda16c439148f4abdcc538d9f0ee4e.jpg",
+    "url": "https://www.myntra.com/sandals/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-men-casual-sports-sandals/36264644/buy",
+    "is_verified_low": true,
+    "deal_score": 93.0,
+    "timestamp": 1784381084.887281,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 591,
+        "timestamp": 1784381084.887281
+      }
+    ]
+  },
+  {
+    "id": "myntra_36089024",
+    "platform": "myntra_deals",
+    "title": "indulekha",
+    "price": 303,
+    "mrp": 675,
+    "discount": 55.111111111111114,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/FEBRUARY/4/pYAJHVtZ_25bdd468917f4ac7a1d88a6f6576d455.jpg",
+    "url": "https://www.myntra.com/hair-oil/indulekha/indulekha-bringha-hair-oil-with-amla--almond-to-reduce-hair-fall--grow-new-hair---120-ml/36089024/buy",
+    "is_verified_low": true,
+    "deal_score": 68.05777777777777,
+    "timestamp": 1784381077.1560512,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 303,
+        "timestamp": 1784180515.3299298
+      },
+      {
+        "price": 337,
+        "timestamp": 1784272335.2345977
+      },
+      {
+        "price": 303,
+        "timestamp": 1784381077.1560512
+      }
+    ]
+  },
+  {
+    "id": "myntra_42274248",
+    "platform": "myntra_deals",
+    "title": "Crazyly",
+    "price": 390,
+    "mrp": 1799,
+    "discount": 78.3212896053363,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/MAY/18/Q1d26dyp_5c832fe8d60343f086fa301bcb65882a.jpg",
+    "url": "https://www.myntra.com/flip-flops/crazyly/crazyly-boys-printed-croslite-clogs/42274248/buy",
+    "is_verified_low": true,
+    "deal_score": 86.21823605706875,
+    "timestamp": 1784381076.9378123,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 362,
+        "timestamp": 1784143272.0259604
+      },
+      {
+        "price": 390,
+        "timestamp": 1784381076.9378123
+      }
+    ]
+  },
+  {
+    "id": "myntra_44230372",
+    "platform": "myntra_deals",
+    "title": "Anouk",
+    "price": 1455,
+    "mrp": 4999,
+    "discount": 70.89417883576715,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JULY/15/4QbIw3TA_a7541e009ca3464c99d7d74be2c4add2.jpg",
+    "url": "https://www.myntra.com/kurta-sets/anouk/anouk-women-floral-printed-regular-pure-cotton-kurta-with-trousers/44230372/buy",
+    "is_verified_low": true,
+    "deal_score": 91.625925185037,
+    "timestamp": 1784381069.2768607,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1455,
+        "timestamp": 1784381069.2768607
+      }
+    ]
+  },
+  {
+    "id": "myntra_11879246",
+    "platform": "myntra_deals",
+    "title": "indulekha",
+    "price": 607,
+    "mrp": 1215,
+    "discount": 50.041152263374485,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/MARCH/31/W9sf2sqQ_d6210d89a956458e8b698a10eeffab7b.jpg",
+    "url": "https://www.myntra.com/hair-oil/indulekha/indulekha-bringha-hair-oil-250-ml/11879246/buy",
+    "is_verified_low": true,
+    "deal_score": 66.08213991769547,
+    "timestamp": 1784381061.4999018,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 648,
+        "timestamp": 1784304641.461012
+      },
+      {
+        "price": 607,
+        "timestamp": 1784381061.4999018
+      }
+    ]
+  },
+  {
+    "id": "myntra_8667339",
+    "platform": "myntra_deals",
+    "title": "TRESemme",
+    "price": 792,
+    "mrp": 1762,
+    "discount": 55.05107832009081,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/8667339/2024/5/15/b466a377-8a21-4449-b607-e7dd583c00051715774223038-TRESemme-Hair-Fall-Defence-Shampoo-with-Keratin-for-Hair-Fal-1.jpg",
+    "url": "https://www.myntra.com/shampoo/tresemme/tresemme-hairfall-defense-shampoo-1-l/8667339/buy",
+    "is_verified_low": true,
+    "deal_score": 72.00242149073023,
+    "timestamp": 1784381053.7778764,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 845,
+        "timestamp": 1784298189.634409
+      },
+      {
+        "price": 792,
+        "timestamp": 1784381053.7778764
+      }
+    ]
+  },
+  {
+    "id": "SHOHNBMZNFAN9JCH",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "218- Pulse X | Stylish Casual Shoes | Comfortable | Lac...",
+    "price": 218,
+    "mrp": 660,
+    "discount": 66.96969696969697,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/shoe/b/k/i/8-lfr-218-wht-sky-8-bruton-white-sky-original-imahnbmxuu58phrn.jpeg?q=70",
+    "url": "/bruton-218-pulse-x-stylish-casual-shoes-comfortable-lace-up-daily-wear-loafers-men/p/itmd8c16c8b53430?pid=SHOHNBMZNFAN9JCH&lid=LSTSHOHNBMZNFAN9JCHKLRJTO&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_35&otracker=search&fm=organic&iid=3132b1de-3216-4432-a349-94ae452f5bb9.SHOHNBMZNFAN9JCH.SEARCH&ppt=None&ppn=None&ssid=twqxk3u1gg0000001784381018181&qH=d424b868764ef9b8&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
+    "is_verified_low": true,
+    "deal_score": 67.32545454545453,
+    "timestamp": 1784381036.270479,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 218,
+        "timestamp": 1784381036.270479
+      }
+    ]
+  },
+  {
+    "id": "DIAHGZRABZNPZSAA",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "SPIRAL Notebook A4 Notebook UNRULED/PLAIN 200 Pages",
+    "price": 200,
+    "mrp": 379,
+    "discount": 47.229551451187334,
+    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/diary-notebook/r/5/5/spiral-notebook-nb1-f-uniq-plain-200-5c-uniqpal-original-imahgzragzz3k4nf.jpeg?q=70",
+    "url": "/uniqpal-spiral-notebook-a4-unruled-plain-200-pages/p/itm4804d5d64d0de?pid=DIAHGZRABZNPZSAA&lid=LSTDIAHGZRABZNPZSAAOJCVC3&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_14&otracker=search&fm=organic&iid=3132b1de-3216-4432-a349-94ae452f5bb9.DIAHGZRABZNPZSAA.SEARCH&ppt=None&ppn=None&ssid=twqxk3u1gg0000001784381018181&qH=d424b868764ef9b8&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
+    "is_verified_low": true,
+    "deal_score": 51.754019349164466,
+    "timestamp": 1784381035.485874,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 200,
+        "timestamp": 1784381035.485874
+      }
+    ]
+  },
+  {
+    "id": "B07Y2Z7DLW",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Young & Forever Gift D'vine Spiritual Natural Semi Precious Stone Jewellery Necklace Hematite Lava Rock Lapis Lazuli Reiki Men Necklace Buddha Beads and Men Necklace Long",
+    "price": 559,
+    "mrp": 4050,
+    "discount": 86.19753086419753,
+    "image_url": "https://m.media-amazon.com/images/I/61JhvCaGNkL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B07Y2Z7DLW?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 100.0,
+    "timestamp": 1784380986.5947752,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 559,
+        "timestamp": 1784380986.5947752
+      }
+    ]
+  },
+  {
+    "id": "B0CZ9JT9J3",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Kaththai High Waist Body Shaper Briefs for Women | Tummy Tucker Shapewear Panty for Women | Shaper Seamless Panty for Women | Hipster Concealed Waistband Thigh Shaper",
+    "price": 299,
+    "mrp": 1299,
+    "discount": 76.98229407236336,
+    "image_url": "https://m.media-amazon.com/images/I/61q2+uIwjoL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0CZ9JT9J3?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 67.55427251732101,
+    "timestamp": 1784380974.9149888,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 299,
+        "timestamp": 1784380974.9149888
+      }
+    ]
+  },
+  {
+    "id": "B0DQ4X4L4D",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Wild Stone 4 Ultra Sensual and 4 Forest Spice Combo for Men, Pack of 8 (100gm each)",
+    "price": 220,
+    "mrp": 440,
+    "discount": 50.0,
+    "image_url": "https://m.media-amazon.com/images/I/71R9yEvRVCL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0DQ4X4L4D?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 66.46666666666667,
+    "timestamp": 1784380962.7595742,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 264,
+        "timestamp": 1784139598.8981361
+      },
+      {
+        "price": 220,
+        "timestamp": 1784272956.693372
+      },
+      {
+        "price": 264,
+        "timestamp": 1784304614.7953904
+      },
+      {
+        "price": 220,
+        "timestamp": 1784380962.7595742
+      }
+    ]
+  },
+  {
+    "id": "B08CK22S8P",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Durafit91\u2122 Focus Multifunction 7HP Peak BLDC Hydraulic Foldable Treadmill| Max Weight 150 Kg| Running Surface : L -1360mm & W -550 |18 Km/H Max Speed| 20-Auto Incline |Bluetooth Speaker | Wynd app",
+    "price": 52999,
+    "mrp": 124999,
+    "discount": 57.600460803686424,
+    "image_url": "https://m.media-amazon.com/images/I/719SWghRPqL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B08CK22S8P?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 83.82032256258049,
+    "timestamp": 1784380762.5314121,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 52999,
+        "timestamp": 1784380762.5314121
+      }
+    ]
+  },
+  {
+    "id": "B0DPB1PWVC",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Wakefit ShapeSense Orthopedic Classic Memory Foam Mattress | 10 Years Warranty | Mattress Double Bed, 8-Inch Bed Mattress, Double Size (74x48x8 Inches, Medium Firm)",
+    "price": 12149,
+    "mrp": 18723,
+    "discount": 35.11189446135769,
+    "image_url": "https://m.media-amazon.com/images/I/91wxHEnm4JL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0DPB1PWVC?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 68.07832612295039,
+    "timestamp": 1784315655.91191,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 12149,
+        "timestamp": 1784315655.91191
+      }
+    ]
+  },
+  {
+    "id": "B0H2DT5D38",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Sleepyhead Original Designed by Duroflex - 3 Layered BodyIQ Orthopedic Memory Foam Mattress | Zero Partner Disturbance | Medium Firm | 10 Years Warranty | 8 Inch Double Size Bed Mattress (72x48x8)",
+    "price": 10529,
+    "mrp": 16499,
+    "discount": 36.18401115219104,
+    "image_url": "https://m.media-amazon.com/images/I/71X95Upwp7L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H2DT5D38?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 68.82880780653373,
+    "timestamp": 1784315128.2866607,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 10529,
+        "timestamp": 1784315128.2866607
+      }
+    ]
+  },
+  {
+    "id": "grocery_sugar_jiomart",
+    "platform": "jiomart_clearance",
+    "title": "Madhur Pure Sugar 5kg (JioMart Regional Flash Offer)",
+    "price": 199,
+    "mrp": 350,
+    "discount": 43.1,
+    "image_url": "https://www.jiomart.com/images/products/Madhur-Pure-Sugar-5kg.jpg",
+    "url": "https://www.jiomart.com/product/madhur-sugar-5kg",
+    "is_verified_low": true,
+    "deal_score": 85.0,
+    "timestamp": 1784314399.7580495,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 199,
+        "timestamp": 1784314399.7580495
+      }
+    ]
+  },
+  {
+    "id": "grocery_oil_dmart",
+    "platform": "dmart_clearance",
+    "title": "Fortune Mustard Oil 1L (DMart Warehouse Clearance)",
+    "price": 110,
+    "mrp": 210,
+    "discount": 47.6,
+    "image_url": "https://www.dmart.in/images/products/Fortune-Mustard-Oil-1L.jpg",
+    "url": "https://www.dmart.in/product/fortune-mustard-oil-1l",
+    "is_verified_low": true,
+    "deal_score": 85.0,
+    "timestamp": 1784314399.7519865,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 110,
+        "timestamp": 1784314399.7519865
+      }
+    ]
+  },
+  {
+    "id": "B0DJMJG7GS",
+    "platform": "amazon_master_lightning_deals",
+    "title": "25W [BIS Certified] Type-C Fast Charger Adapter Compatible with Samsung Galaxy S26,S25,S24, S23,S22,S21,S20/Ultra/Fe, A55, M35, M17, M56, M07, M06, A17, A14, A35, F15. S/F/M/A/Z Series (White)",
+    "price": 378,
+    "mrp": 1999,
+    "discount": 81.09054527263632,
+    "image_url": "https://m.media-amazon.com/images/I/41baQ2Z-+vL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0DJMJG7GS?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 95.30666666666667,
+    "timestamp": 1784312637.5342326,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 378,
+        "timestamp": 1784312637.5342326
+      }
+    ]
+  },
+  {
+    "id": "B0B6FTJZK3",
+    "platform": "amazon",
+    "title": "Buy Nike Men M AIR MAX Alpha Trainer 5 Black/White-Black Cross Training Shoes 8 UK at Amazon.in",
+    "price": 3747,
+    "mrp": 7495,
+    "discount": 50.00667111407605,
+    "image_url": "https://m.media-amazon.com/images/I/71HiJbw-IVL._AC_SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B0B6FTJZK3?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 85.00466977985323,
+    "timestamp": 1784312045.4420793,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3747,
+        "timestamp": 1784312045.4420793
+      }
+    ]
+  },
+  {
+    "id": "B09JSH1GD3",
+    "platform": "amazon",
+    "title": "Buy Nike Court Legacy at Amazon.in",
+    "price": 2847,
+    "mrp": 5695,
+    "discount": 50.008779631255486,
+    "image_url": "https://m.media-amazon.com/images/I/61B00JVGv1L._AC_SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B09JSH1GD3?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 75.9928124085455,
+    "timestamp": 1784312045.2090206,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2847,
+        "timestamp": 1784312045.2090206
+      }
+    ]
+  },
+  {
+    "id": "B0044S733Q",
+    "platform": "amazon",
+    "title": "Buy Nike Men Air Max Invigor Wolf Grey/White Running Shoes 10 UK at Amazon.in",
+    "price": 3747,
+    "mrp": 7495,
+    "discount": 50.00667111407605,
+    "image_url": "https://m.media-amazon.com/images/I/71PF53z3OML._AC_SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B0044S733Q?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 82.00466977985323,
+    "timestamp": 1784312043.5931046,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3747,
+        "timestamp": 1784312043.5931046
+      }
+    ]
+  },
+  {
+    "id": "B0CLB16WJH",
+    "platform": "amazon",
+    "title": "Bumtum Super Soft New Born Baby Polka Dot Blanket | Wrapper Sheet for Baby Boys & Baby Girls | Lightweight | Super Comfortable (100cm x 75cm, Red) : Amazon.in: Baby Products",
+    "price": 361,
+    "mrp": 799,
+    "discount": 54.81852315394244,
+    "image_url": "https://m.media-amazon.com/images/I/61+c1988l5L._SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B0CLB16WJH?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 48.292966207759704,
+    "timestamp": 1784312043.5626712,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 157,
+        "timestamp": 1784298872.1766129
+      },
+      {
+        "price": 361,
+        "timestamp": 1784312043.5626712
+      }
+    ]
+  },
+  {
+    "id": "B07ZL27PDN",
+    "platform": "amazon",
+    "title": "Buy Nike Mens Killshot 2 Leather Sail/Oil Grey-Gum Yellow Tennis Shoes UK 10 at Amazon.in",
+    "price": 3997,
+    "mrp": 7995,
+    "discount": 50.00625390869293,
+    "image_url": "https://m.media-amazon.com/images/I/61PUOIs4ekL._AC_SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B07ZL27PDN?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 85.00437773608505,
+    "timestamp": 1784312042.5516567,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3997,
+        "timestamp": 1784312042.5516567
+      }
+    ]
+  },
+  {
+    "id": "B0D9WVKWXN",
+    "platform": "amazon_master_lightning_deals",
+    "title": "OURA Ring 4 - Stealth - Size 10 - Smart Ring | Size First Ring 4 Sizing Kit | Sleep Tracking Wearable - Heart Rate - Fitness Tracker - Up to 8 Days Battery Life",
+    "price": 27930,
+    "mrp": 39900,
+    "discount": 30.0,
+    "image_url": "https://m.media-amazon.com/images/I/71dB5XwAxPL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0D9WVKWXN?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 64.5,
+    "timestamp": 1784312033.2649817,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 27930,
+        "timestamp": 1784312033.2649817
+      }
+    ]
+  },
+  {
+    "id": "B0GL2LWCVL",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Acerpure Chill Neo1.5 Ton 3 star, New star rated, Split AC(4800W AC5IPG61.5TN3W48W 7 in 1 Convertible, Ice Blast Mode, 4 way swing, Cooling @ 58 degree, White) : Amazon.in: Home & Kitchen",
+    "price": 299,
+    "mrp": 403,
+    "discount": 25.806451612903224,
+    "image_url": "https://m.media-amazon.com/images/I/51j8RwfTT-L._SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B0GL2LWCVL?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 28.693333333333335,
+    "timestamp": 1784311755.2335906,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 25990,
+        "timestamp": 1784196569.5710564
+      },
+      {
+        "price": 299,
+        "timestamp": 1784311755.2335906
+      }
+    ]
+  },
+  {
+    "id": "ajio_700222333001",
+    "platform": "ajio_deals",
+    "title": "Men Jeans with Insert Pockets",
+    "price": 1474,
+    "mrp": 2499,
+    "discount": 41.0,
+    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240724/vcKj/66a057e56f60443f319df209/-286Wx359H-700222333-black-MODEL.jpg",
+    "url": "https://www.ajio.com/van-heusen-men-jeans-with-insert-pockets/p/700222333_black",
+    "is_verified_low": true,
+    "deal_score": 52.53333333333333,
+    "timestamp": 1784311686.4923809,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1474,
+        "timestamp": 1784311686.4923809
+      }
+    ]
+  },
+  {
+    "id": "myntra_43997895",
+    "platform": "myntra_deals",
+    "title": "Roadster",
+    "price": 275,
+    "mrp": 799,
+    "discount": 65.5819774718398,
+    "image_url": null,
+    "url": "https://www.myntra.com/ring/roadster/the-roadster-lifestyle-co-unisex-stainless-steel-finger-ring/43997895/buy",
+    "is_verified_low": true,
+    "deal_score": 66.4007175636212,
+    "timestamp": 1784311683.90019,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 275,
+        "timestamp": 1784311683.90019
+      }
+    ]
+  },
+  {
+    "id": "B0GZ34CCJB",
+    "platform": "amazon",
+    "title": "Buy Crackles Pretend Play Solid Colour Tea Party Kitchen Play Set Toy with Teapot, Cups Pretend Play Cooking Set, Toy Pots N Pans, Cookware, Utensils Online at Low Prices in India - Amazon.in",
+    "price": 199,
+    "mrp": 599,
+    "discount": 66.7779632721202,
+    "image_url": "https://m.media-amazon.com/images/I/6185z4Vk4cL._SX522_.jpg",
+    "url": "https://www.amazon.in/dp/B0GZ34CCJB?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 71.41124095715081,
+    "timestamp": 1784311524.267534,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 319,
+        "timestamp": 1784299232.045428
+      },
+      {
+        "price": 199,
+        "timestamp": 1784311524.267534
+      }
+    ]
+  },
+  {
+    "id": "B0CTH4CKGL",
+    "platform": "amazon",
+    "title": "Buy Dollar Bigboss Men's Pack of 5 Solid Combed Cotton Classy Trunk with Fly Front Access (8905203784721_MBTR-03-LONG-PO5-CO1-S24_L) Assorted at Amazon.in",
+    "price": 293,
+    "mrp": 1045,
+    "discount": 71.96172248803828,
+    "image_url": "https://m.media-amazon.com/images/I/619a4ZQwumL._SX679_.jpg",
+    "url": "https://www.amazon.in/dp/B0CTH4CKGL?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 77.38653907496013,
+    "timestamp": 1784311524.2638443,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 462,
+        "timestamp": 1784298972.7838554
+      },
+      {
+        "price": 495,
+        "timestamp": 1784308738.0664308
+      },
+      {
+        "price": 293,
+        "timestamp": 1784311524.2638443
+      }
+    ]
+  },
+  {
+    "id": "B0H4H579QP",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Wakefit Safari Ergonomic Office Chair for Work | 3 Year Warranty | Single Lock and Recline | Soft Armrest with 3 Dimension adjustability| Strong Nylon Base | 8+ Hours of Comfort| Black",
+    "price": 6748,
+    "mrp": 12999,
+    "discount": 48.08831448572967,
+    "image_url": "https://m.media-amazon.com/images/I/81dPhzMlY5L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H4H579QP?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 77.16182014001078,
+    "timestamp": 1784311454.570084,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 6748,
+        "timestamp": 1784311454.570084
       }
     ]
   },
@@ -420,30 +1440,6 @@
       {
         "price": 346,
         "timestamp": 1784308738.6088622
-      }
-    ]
-  },
-  {
-    "id": "B0CTH4CKGL",
-    "platform": "amazon",
-    "title": "Buy Dollar Bigboss Men's Pack of 5 Solid Combed Cotton Classy Trunk with Fly Front Access (8905203784721_MBTR-03-LONG-PO5-CO1-S24_L) Assorted at Amazon.in",
-    "price": 495,
-    "mrp": 668,
-    "discount": 25.898203592814372,
-    "image_url": "https://m.media-amazon.com/images/I/619a4ZQwumL._SX679_.jpg",
-    "url": "https://www.amazon.in/dp/B0CTH4CKGL?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 39.153333333333336,
-    "timestamp": 1784308738.0664308,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 462,
-        "timestamp": 1784298972.7838554
-      },
-      {
-        "price": 495,
-        "timestamp": 1784308738.0664308
       }
     ]
   },
@@ -1056,26 +2052,6 @@
     ]
   },
   {
-    "id": "myntra_537675",
-    "platform": "myntra_deals",
-    "title": "Sunsilk",
-    "price": 484,
-    "mrp": 1053,
-    "discount": 54.036087369420706,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JUNE/10/qvZMpj8u_fc5e579a31b34adf82a9c3b75359c42c.jpg",
-    "url": "https://www.myntra.com/shampoo/sunsilk/sunsilk-flowy-silk-smooth-shampoo---650-ml/537675/buy",
-    "is_verified_low": true,
-    "deal_score": 68.61859449192782,
-    "timestamp": 1784304642.9616017,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 484,
-        "timestamp": 1784304642.9616017
-      }
-    ]
-  },
-  {
     "id": "myntra_43244063",
     "platform": "myntra_deals",
     "title": "Mitera",
@@ -1112,26 +2088,6 @@
       {
         "price": 2390,
         "timestamp": 1784304641.5285091
-      }
-    ]
-  },
-  {
-    "id": "myntra_11879246",
-    "platform": "myntra_deals",
-    "title": "indulekha",
-    "price": 648,
-    "mrp": 1296,
-    "discount": 50.0,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/MARCH/31/W9sf2sqQ_d6210d89a956458e8b698a10eeffab7b.jpg",
-    "url": "https://www.myntra.com/hair-oil/indulekha/indulekha-bringha-hair-oil-250-ml/11879246/buy",
-    "is_verified_low": true,
-    "deal_score": 66.32,
-    "timestamp": 1784304641.461012,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 648,
-        "timestamp": 1784304641.461012
       }
     ]
   },
@@ -1292,34 +2248,6 @@
       {
         "price": 67649,
         "timestamp": 1784304616.189331
-      }
-    ]
-  },
-  {
-    "id": "B0DQ4X4L4D",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "Wild Stone 4 Ultra Sensual and 4 Forest Spice Combo for Men, Pack of 8 (100gm each)",
-    "price": 264,
-    "mrp": 440,
-    "discount": 40.0,
-    "image_url": "https://m.media-amazon.com/images/I/71R9yEvRVCL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0DQ4X4L4D?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 59.17333333333333,
-    "timestamp": 1784304614.7953904,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 264,
-        "timestamp": 1784139598.8981361
-      },
-      {
-        "price": 220,
-        "timestamp": 1784272956.693372
-      },
-      {
-        "price": 264,
-        "timestamp": 1784304614.7953904
       }
     ]
   },
@@ -1544,26 +2472,6 @@
     ]
   },
   {
-    "id": "B0GZ34CCJB",
-    "platform": "amazon",
-    "title": "Buy Crackles Pretend Play Solid Colour Tea Party Kitchen Play Set Toy with Teapot, Cups Pretend Play Cooking Set, Toy Pots N Pans, Cookware, Utensils Online at Low Prices in India - Amazon.in",
-    "price": 319,
-    "mrp": 499,
-    "discount": 36.07214428857716,
-    "image_url": "https://m.media-amazon.com/images/I/6185z4Vk4cL._SX522_.jpg",
-    "url": "https://www.amazon.in/dp/B0GZ34CCJB?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 51.45050100200401,
-    "timestamp": 1784299232.045428,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 319,
-        "timestamp": 1784299232.045428
-      }
-    ]
-  },
-  {
     "id": "B08243RQ89",
     "platform": "amazon",
     "title": "Happer Premium Foldable Aluminium Step Ladder, Clamber Pro, 5 Steps (Blue & Satin) : Amazon.in: Home Improvement",
@@ -1744,26 +2652,6 @@
     ]
   },
   {
-    "id": "B0CLB16WJH",
-    "platform": "amazon",
-    "title": "Bumtum Super Soft New Born Baby Polka Dot Blanket | Wrapper Sheet for Baby Boys & Baby Girls | Lightweight | Super Comfortable (100cm x 75cm, Pink) : Amazon.in: Baby Products",
-    "price": 157,
-    "mrp": 999,
-    "discount": 84.28428428428428,
-    "image_url": "https://m.media-amazon.com/images/I/616AfHx0iyL._SX679_.jpg",
-    "url": "https://www.amazon.in/dp/B0CLB16WJH?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 68.61333333333333,
-    "timestamp": 1784298872.1766129,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 157,
-        "timestamp": 1784298872.1766129
-      }
-    ]
-  },
-  {
     "id": "B0DB8P9PSS",
     "platform": "amazon",
     "title": "Buy Bajaj SWX 6 800-Watt 2-Slice Sandwich Griller | Non-Stick Coated Plates for Easy-to-Clean | Upright Compact Storage | Buckle Clips Lock | 2 Years Warranty | Black Online at Low Prices in India - Amazon.in",
@@ -1844,26 +2732,6 @@
     ]
   },
   {
-    "id": "myntra_36665107",
-    "platform": "myntra_deals",
-    "title": "Sangria",
-    "price": 821,
-    "mrp": 2999,
-    "discount": 72.62420806935646,
-    "image_url": null,
-    "url": "https://www.myntra.com/kurta-sets/sangria/sangria-boys-zari-kurta-pyjama-set-with-pink-patola-bandi/36665107/buy",
-    "is_verified_low": true,
-    "deal_score": 87.35694564854951,
-    "timestamp": 1784298191.1241026,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 821,
-        "timestamp": 1784298191.1241026
-      }
-    ]
-  },
-  {
     "id": "myntra_11783634",
     "platform": "myntra_deals",
     "title": "TRESemme",
@@ -1880,26 +2748,6 @@
       {
         "price": 657,
         "timestamp": 1784298190.3823428
-      }
-    ]
-  },
-  {
-    "id": "myntra_8667339",
-    "platform": "myntra_deals",
-    "title": "TRESemme",
-    "price": 845,
-    "mrp": 1762,
-    "discount": 52.04313280363224,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/8667339/2024/5/15/b466a377-8a21-4449-b607-e7dd583c00051715774223038-TRESemme-Hair-Fall-Defence-Shampoo-with-Keratin-for-Hair-Fal-1.jpg",
-    "url": "https://www.myntra.com/shampoo/tresemme/tresemme-hairfall-defense-shampoo-1-l/8667339/buy",
-    "is_verified_low": true,
-    "deal_score": 69.54352629587589,
-    "timestamp": 1784298189.634409,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 845,
-        "timestamp": 1784298189.634409
       }
     ]
   },
@@ -2220,14 +3068,14 @@
     ]
   },
   {
-    "id": "ajio_442404145002",
-    "platform": "ajio_deals",
-    "title": "Women Floral Print Straight Fit Palazzos",
-    "price": 450,
-    "mrp": 999,
-    "discount": 55.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240522/50ge/664d07b305ac7d77bb6d77d2/-286Wx359H-442404145-offwhite-MODEL.jpg",
-    "url": "https://www.ajio.com/biba-women-floral-print-straight-fit-palazzos/p/442404145_offwhite",
+    "id": "myntra_40085249",
+    "platform": "myntra_deals",
+    "title": "glitchez",
+    "price": 629,
+    "mrp": 1799,
+    "discount": 65.0361311839911,
+    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/JUNE/16/9eIJw26M_8f8788e320c84a9ab44554f45b993461.jpg",
+    "url": "https://www.myntra.com/track-pants/glitchez/glitchez-men-regular-fit-track-pants/40085249/buy",
     "is_verified_low": true,
     "deal_score": 73.32529182879377,
     "timestamp": 1784293879.239314,
@@ -3100,34 +3948,6 @@
     ]
   },
   {
-    "id": "AFRHKJK2T7NMNMWA",
-    "platform": "flipkart_appliances_deals",
-    "title": "Sansui Aeon Air Fryer",
-    "price": 1500,
-    "mrp": 3349,
-    "discount": 55.21051060017916,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/9/8/u/-original-imahhhwzdrgpanmm.jpeg?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=AFRHKJK2T7NMNMWA&affid=lootraiders",
-    "is_verified_low": true,
-    "deal_score": 75.97402408679208,
-    "timestamp": 1784273037.6928868,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3349,
-        "timestamp": 1784193169.555201
-      },
-      {
-        "price": 1466,
-        "timestamp": 1784228205.170422
-      },
-      {
-        "price": 1500,
-        "timestamp": 1784273037.6928868
-      }
-    ]
-  },
-  {
     "id": "AFRHF6RSP5SRBRXT",
     "platform": "flipkart_appliances_deals",
     "title": "Pigeon Healthifry+ with 360 High Speed Air Circulation ...",
@@ -3344,30 +4164,6 @@
       {
         "price": 10500,
         "timestamp": 1784272375.8644845
-      }
-    ]
-  },
-  {
-    "id": "myntra_36089024",
-    "platform": "myntra_deals",
-    "title": "indulekha",
-    "price": 337,
-    "mrp": 675,
-    "discount": 50.07407407407407,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2026/FEBRUARY/4/pYAJHVtZ_25bdd468917f4ac7a1d88a6f6576d455.jpg",
-    "url": "https://www.myntra.com/hair-oil/indulekha/indulekha-bringha-hair-oil-with-amla--almond-to-reduce-hair-fall--grow-new-hair---120-ml/36089024/buy",
-    "is_verified_low": true,
-    "deal_score": 64.30518518518518,
-    "timestamp": 1784272335.2345977,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 303,
-        "timestamp": 1784180515.3299298
-      },
-      {
-        "price": 337,
-        "timestamp": 1784272335.2345977
       }
     ]
   },
@@ -3968,62 +4764,6 @@
       {
         "price": 783,
         "timestamp": 1784271080.4948254
-      }
-    ]
-  },
-  {
-    "id": "AFRHY56JU42EH3ZT",
-    "platform": "flipkart_appliances_deals",
-    "title": "LIBRA Ceramix with Zeravion Vitrcore Coating Air Fryer",
-    "price": 712,
-    "mrp": 6999,
-    "discount": 89.82711815973711,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/e/c/h/black-6-5-1500-ceramix-with-zeravion-vitrcore-coating-libra-original-imahzyy37krg9kzy.jpeg?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=AFRHY56JU42EH3ZT&affid=lootraiders",
-    "is_verified_low": true,
-    "deal_score": 100.0,
-    "timestamp": 1784270993.0742993,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 6999,
-        "timestamp": 1784193379.0540824
-      },
-      {
-        "price": 694,
-        "timestamp": 1784228208.3699882
-      },
-      {
-        "price": 712,
-        "timestamp": 1784270993.0742993
-      }
-    ]
-  },
-  {
-    "id": "AFRHYFRBRRQCM6QG",
-    "platform": "flipkart_appliances_deals",
-    "title": "USHA iChef SMART AIR FRYER 4.5 L",
-    "price": 3387,
-    "mrp": 4999,
-    "discount": 32.24644928985797,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/9/r/g/black-4-5-1350-ichef-smart-air-fryer-4-5-l-usha-enriched-transparent-original-imahf582exxwfdeq.png?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=AFRHYFRBRRQCM6QG&affid=lootraiders",
-    "is_verified_low": true,
-    "deal_score": 50.319181169567244,
-    "timestamp": 1784270989.9836006,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 4999,
-        "timestamp": 1784193188.382473
-      },
-      {
-        "price": 3384,
-        "timestamp": 1784228207.3084671
-      },
-      {
-        "price": 3387,
-        "timestamp": 1784270989.9836006
       }
     ]
   },
@@ -5648,714 +6388,6 @@
       {
         "price": 839,
         "timestamp": 1784232069.9571917
-      }
-    ]
-  },
-  {
-    "id": "B0DN61YDMH",
-    "platform": "amazon_master_lightning_deals",
-    "title": "VISHWAKARMA DECOR Poster Bed King Size | Solid Wood Poster Bed Cot Wooden Double Bed Furniture for Bedroom Home and Hotel | Wooden Palang Divan (Honey Finish)",
-    "price": 37706,
-    "mrp": 54999,
-    "discount": 31.442389861633846,
-    "image_url": "https://m.media-amazon.com/images/I/81bmPUWUZFL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0DN61YDMH?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 65.5096729031437,
-    "timestamp": 1784232067.9496913,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 37706,
-        "timestamp": 1784232067.9496913
-      }
-    ]
-  },
-  {
-    "id": "B0DC6X6FPB",
-    "platform": "amazon_master_lightning_deals",
-    "title": "HOUZA Aluminium Ladder for Home 8 Steps Foldable with Tool Tray & Anti-Skid Wide Steps |8 Step Ladder for Home Use, Kitchen & Household | 250 Kg Capacity Folding Ladder | 5 Year Warranty (Orange)",
-    "price": 5599,
-    "mrp": 15999,
-    "discount": 65.00406275392211,
-    "image_url": "https://m.media-amazon.com/images/I/61XqBitmC8L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0DC6X6FPB?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 89.00284392774547,
-    "timestamp": 1784232064.401698,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 5599,
-        "timestamp": 1784232064.401698
-      }
-    ]
-  },
-  {
-    "id": "B0GH1S4B3R",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Kunjal Furniture Solid Sheesham Wood Sofa Cum Bed with Storage for Living Room | Natural Finish | 3-Seater Convertible Sofa Bed | Handmade Wooden Furniture (Walnut, Europian)",
-    "price": 32203,
-    "mrp": 64999,
-    "discount": 50.45616086401329,
-    "image_url": "https://m.media-amazon.com/images/I/71Pt0kjaHwL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GH1S4B3R?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 78.81931260480931,
-    "timestamp": 1784232060.8189402,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 32203,
-        "timestamp": 1784232060.8189402
-      }
-    ]
-  },
-  {
-    "id": "B0DN54MS3Y",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Tribit StormBox Lava Portable Bluetooth Speaker, 80W Loud Wireless Speaker, 24H Playtime, IP67 Waterproof, Bluetooth 5.4, Custom EQ, XBass, Built-in Mic, TWS Pairing for Camping/Beach/Party/Outdoor",
-    "price": 13999,
-    "mrp": 19999,
-    "discount": 30.00150007500375,
-    "image_url": "https://m.media-amazon.com/images/I/712uPFP3MrL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0DN54MS3Y?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 64.50105005250262,
-    "timestamp": 1784232057.2863252,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 13999,
-        "timestamp": 1784232057.2863252
-      }
-    ]
-  },
-  {
-    "id": "B0F1955GH4",
-    "platform": "amazon_master_lightning_deals",
-    "title": "REDTIGER F7N Elite 4K HDR Dual Dash Cam Front & Rear, STARVIS 2 Sensor, 5.8GHz WiFi 6 and APP Control, 3.18\" Touchscreen, Voice Control, GPS, 24H Parking Mode, WDR, 128G Card Included",
-    "price": 16499,
-    "mrp": 26990,
-    "discount": 38.869951834012596,
-    "image_url": "https://m.media-amazon.com/images/I/81hFSB-claL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0F1955GH4?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 70.70896628380882,
-    "timestamp": 1784232053.7094266,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 16499,
-        "timestamp": 1784232053.7094266
-      }
-    ]
-  },
-  {
-    "id": "B0GGBQ7Z98",
-    "platform": "amazon",
-    "title": "Holi Godslayer Water Gun | with Free Balloons | Blue | Assorted | Long Squirt Flow | PoPo Toys\u00ae",
-    "price": 363,
-    "mrp": 699,
-    "discount": 48.06866952789699,
-    "image_url": "https://m.media-amazon.com/images/I/616hRqz+SvL._SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0GGBQ7Z98?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 52.8880686695279,
-    "timestamp": 1784230996.7544463,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 363,
-        "timestamp": 1784230996.7544463
-      }
-    ]
-  },
-  {
-    "id": "B0C7C16BYK",
-    "platform": "amazon",
-    "title": "RATAN PLASTICWARE Plastic Bathroom Set of 3 Pieces Combo Pack Gloria Plain,18 Liters Bucket + Nova Stool Patla 107 + Gloria Plain Bath Mug 1 Liter - NIR Silver",
-    "price": 299,
-    "mrp": 899,
-    "discount": 66.74082313681868,
-    "image_url": "https://m.media-amazon.com/images/I/61k8TZH+GdL._SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0C7C16BYK?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 67.71857619577307,
-    "timestamp": 1784230469.2938287,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 299,
-        "timestamp": 1784230469.2938287
-      }
-    ]
-  },
-  {
-    "id": "B0GR9VHDF6",
-    "platform": "amazon",
-    "title": "Havells 400 mm SWING NEO Table Fan (ICY BLUE)",
-    "price": 2249,
-    "mrp": 3290,
-    "discount": 31.641337386018236,
-    "image_url": "https://m.media-amazon.com/images/I/61xMI6S9JRL._SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0GR9VHDF6?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 46.08893617021276,
-    "timestamp": 1784230434.687804,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2249,
-        "timestamp": 1784230434.687804
-      }
-    ]
-  },
-  {
-    "id": "B0FMFMQDDV",
-    "platform": "amazon",
-    "title": "EcoEarth Hexa Batten (1, 24W|Warm White)",
-    "price": 330,
-    "mrp": 599,
-    "discount": 44.90818030050083,
-    "image_url": "https://m.media-amazon.com/images/I/3133fmkYPML.jpg",
-    "url": "https://www.amazon.in/dp/B0FMFMQDDV?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 50.22905954368392,
-    "timestamp": 1784230380.3450935,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 330,
-        "timestamp": 1784230380.3450935
-      }
-    ]
-  },
-  {
-    "id": "B0BR49CZHC",
-    "platform": "amazon",
-    "title": "GLUN\u00ae Microfiber 850 GSM Cloth for Car Cleaning and Detailing, Double Sided, Extra Thick Plush Microfiber Towel Lint-Free, all Cleaning Purpose Pack of 4",
-    "price": 241,
-    "mrp": 1000,
-    "discount": 75.9,
-    "image_url": "https://m.media-amazon.com/images/I/71GtUyTvGzL._SX522_.jpg",
-    "url": "https://www.amazon.in/dp/B0BR49CZHC?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 75.19,
-    "timestamp": 1784230354.845363,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 241,
-        "timestamp": 1784230354.845363
-      }
-    ]
-  },
-  {
-    "id": "B0GS64VCZ2",
-    "platform": "amazon",
-    "title": "CELLO Breezer 45 Litres Heavy Duty Vertical Commercial Air Cooler | High-Density Honeycomb Cooling Pads, Auto-Fill Water Technology, Powerful Air Flow | Long Life Air Cooler For Restaurants & Office",
-    "price": 5649,
-    "mrp": 11990,
-    "discount": 52.88573811509592,
-    "image_url": "https://m.media-amazon.com/images/I/711TanCOxbL._SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0GS64VCZ2?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 74.02001668056714,
-    "timestamp": 1784230287.2871397,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 5649,
-        "timestamp": 1784230287.2871397
-      }
-    ]
-  },
-  {
-    "id": "B099Q2ZD1K",
-    "platform": "amazon",
-    "title": "TIMEX Fria Round 30mm Dial Analog Women Watch",
-    "price": 2747,
-    "mrp": 4995,
-    "discount": 45.005005005005,
-    "image_url": "https://m.media-amazon.com/images/I/51hJ7Hu2ycL._SL1200_.jpg",
-    "url": "https://www.amazon.in/dp/B099Q2ZD1K?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 63.49017017017017,
-    "timestamp": 1784229993.2366846,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2747,
-        "timestamp": 1784229993.2366846
-      }
-    ]
-  },
-  {
-    "id": "B0C1JRFL87",
-    "platform": "amazon",
-    "title": "Amazon Brand - Solimo Stainless Steel Water Bottle with Hand Grip and Sipper, Set of 2 | Leak-Proof | BPA Free | 1000 ml (Blue)",
-    "price": 184,
-    "mrp": 368,
-    "discount": 50.0,
-    "image_url": "https://m.media-amazon.com/images/I/91wH45L90XL._SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0C1JRFL87?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 53.22666666666667,
-    "timestamp": 1784229978.428681,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 184,
-        "timestamp": 1784229978.428681
-      }
-    ]
-  },
-  {
-    "id": "myntra_24752506",
-    "platform": "myntra_deals",
-    "title": "Wild stone",
-    "price": 399,
-    "mrp": 799,
-    "discount": 50.06257822277848,
-    "image_url": null,
-    "url": "https://www.myntra.com/grooming-combo/wild+stone/wild-stone-men-ultra-sensual-7-essentials-grooming-kit/24752506/buy",
-    "is_verified_low": true,
-    "deal_score": 54.710471422611604,
-    "timestamp": 1784229577.5828393,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 399,
-        "timestamp": 1784229577.5828393
-      }
-    ]
-  },
-  {
-    "id": "B0FCSL89SJ",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Carrito, Women Wedge Heels Thong Sandals | Comfortable Flats | Comfort Orthopaedic Sandals for Girls| Doctor Slippers/Flip-Flops | Arch Support & Stylish Block Heel Cushion | Casual Lightweight Anti-Skid Sole| Slip-on | Pump and Mule Sandals | Ultra-Cushioned Shock Absorbing Footbed | Open Toe & Toe Separator Style | Women Daily Use Formal | Platform Ladies Flat Wear Footwear",
-    "price": 899,
-    "mrp": 2499,
-    "discount": 64.02561024409763,
-    "image_url": "https://m.media-amazon.com/images/I/61b+bFn2uNL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FCSL89SJ?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 78.98459383753502,
-    "timestamp": 1784229575.672433,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 899,
-        "timestamp": 1784229575.672433
-      }
-    ]
-  },
-  {
-    "id": "B0FN87L798",
-    "platform": "amazon_master_lightning_deals",
-    "title": "AGEasy (Max Group) Relief Compact Massage Gun | 8 Speed Levels, 4 Massage Heads | USB Type-C Rechargeable Handheld Massager | Full Body Pain Relief Muscle Massage Machine for Men & Women (Black)",
-    "price": 949,
-    "mrp": 1499,
-    "discount": 36.69112741827885,
-    "image_url": "https://m.media-amazon.com/images/I/719h110GYjL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FN87L798?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 52.85045585946186,
-    "timestamp": 1784229572.0846777,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 949,
-        "timestamp": 1784229572.0846777
-      }
-    ]
-  },
-  {
-    "id": "B0FBL8MB52",
-    "platform": "amazon_master_lightning_deals",
-    "title": "ACTIVA JETTA 1200MM BLDC Ceiling Fan with 28W, 6 Wooden-Finish Blades, 7 LED Lights, Remote, Noiseless, BEE 5-Star Rated, Energy Efficient, 5 Years Warranty (Rose Wood)",
-    "price": 3997,
-    "mrp": 10990,
-    "discount": 63.63057324840764,
-    "image_url": "https://m.media-amazon.com/images/I/515G3odXqqL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FBL8MB52?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 88.04140127388536,
-    "timestamp": 1784229568.4397004,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3997,
-        "timestamp": 1784229568.4397004
-      }
-    ]
-  },
-  {
-    "id": "B0H28XGBW2",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Durafit91\u2122 Compact Lite 3HP Peak BLDC Motor Walkpad Treadmill with Remote Control | 120 kg User Capacity Walking Pad| 10km/h Max Speed | LED Display with Under-Desk Design | Home Use",
-    "price": 9999,
-    "mrp": 44999,
-    "discount": 77.77950621124914,
-    "image_url": "https://m.media-amazon.com/images/I/71frKXa8SyL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0H28XGBW2?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 97.9456543478744,
-    "timestamp": 1784229564.8352728,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 9999,
-        "timestamp": 1784229564.8352728
-      }
-    ]
-  },
-  {
-    "id": "B0GRW59RWC",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Adorn India Premium Luster 4 Seater L Shape Sofa Set | Velvet Suede Fabric | 3-Year Warranty | Color Ocean Blue with Golden Legs & Striped Pattern Cushion",
-    "price": 19999,
-    "mrp": 41999,
-    "discount": 52.38219957618039,
-    "image_url": "https://m.media-amazon.com/images/I/61eRMVS4yHL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GRW59RWC?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 80.16753970332627,
-    "timestamp": 1784229561.2537246,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 19999,
-        "timestamp": 1784229561.2537246
-      }
-    ]
-  },
-  {
-    "id": "AFRHCHFGYNJGYAPX",
-    "platform": "flipkart_appliances_deals",
-    "title": "Pigeon Healthifry+ with 360 High Speed Air Circulation ...",
-    "price": 360,
-    "mrp": 3119,
-    "discount": 88.45783905097788,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/j/u/s/-enriched-transparent-original-imahed2sy2dgyw2s.png?q=70",
-    "url": "/pigeon-healthifry-360-high-speed-air-circulation-technology-1200-w-non-stick-basket-grey-fryer/p/itm7295e20480928?pid=AFRHCHFGYNJGYAPX&lid=LSTAFRHCHFGYNJGYAPX6QKYE3&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_37&otracker=search&fm=organic&iid=07c825a4-c8c3-417b-bbe1-ae6d66d5279d.AFRHCHFGYNJGYAPX.SEARCH&ppt=None&ppn=None&ssid=2d9xq056m80000001784228737987&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 91.39333333333333,
-    "timestamp": 1784228755.5221055,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2944,
-        "timestamp": 1784193367.5421042
-      },
-      {
-        "price": 360,
-        "timestamp": 1784228755.5221055
-      }
-    ]
-  },
-  {
-    "id": "SOIGYEEXTJEEVX5D",
-    "platform": "flipkart_electronics_deals",
-    "title": "Walkers Basic 10 in1 Mobile Soldering Iron Equipment To...",
-    "price": 248,
-    "mrp": 419,
-    "discount": 40.81145584725537,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/soldering-iron/x/o/1/10-basic-10-in1-mobile-soldering-iron-equipment-tool-machine-original-imahacxjfr6fhygf.jpeg?q=70",
-    "url": "/walkers-basic-10-in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-flux-paste-wire-30-w-simple/p/itm530a8436812e0?pid=SOIGYEEXTJEEVX5D&lid=LSTSOIGYEEXTJEEVX5DG6QKTZ&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_39&otracker=search&fm=organic&iid=300ebc05-a44c-4bc7-b502-4c55da95fa21.SOIGYEEXTJEEVX5D.SEARCH&ppt=None&ppn=None&ssid=ip4ecpnonk0000001784228737285&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 46.708019093078754,
-    "timestamp": 1784228754.2771702,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 419,
-        "timestamp": 1784212097.1738238
-      },
-      {
-        "price": 248,
-        "timestamp": 1784228754.2771702
-      }
-    ]
-  },
-  {
-    "id": "SOIGYEEVSWSWCHHA",
-    "platform": "flipkart_electronics_deals",
-    "title": "Walkers Basic 5 in1 Mobile Soldering Iron Equipment Too...",
-    "price": 217,
-    "mrp": 347,
-    "discount": 37.46397694524496,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/kl8ccy80/soldering-iron/j/l/l/basic-5-in1-mobile-soldering-iron-equipment-tool-machine-combo-original-imagyeeuznuzygmu.jpeg?q=70",
-    "url": "/walkers-basic-5-in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-flux-paste-wire-30-w-simple/p/itm5f319d60548f9?pid=SOIGYEEVSWSWCHHA&lid=LSTSOIGYEEVSWSWCHHAVXXGZC&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_36&otracker=search&fm=organic&iid=300ebc05-a44c-4bc7-b502-4c55da95fa21.SOIGYEEVSWSWCHHA.SEARCH&ppt=None&ppn=None&ssid=ip4ecpnonk0000001784228737285&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 44.091450528338136,
-    "timestamp": 1784228754.2585416,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 217,
-        "timestamp": 1784228754.2585416
-      }
-    ]
-  },
-  {
-    "id": "myntra_1661472",
-    "platform": "myntra_deals",
-    "title": "Biotique",
-    "price": 150,
-    "mrp": 300,
-    "discount": 50.0,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/2025/JULY/22/U3SzkTXn_e5fc28acb94b4d2088cd6462082a9252.jpg",
-    "url": "https://www.myntra.com/day-cream/biotique/biotique-morning-nectar-nourish--hydrate-visibly-flawless-skin-moisturizer---120ml/1661472/buy",
-    "is_verified_low": true,
-    "deal_score": 53.0,
-    "timestamp": 1784228702.8873081,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 150,
-        "timestamp": 1784228702.8873081
-      }
-    ]
-  },
-  {
-    "id": "AFRGSVTBEYVMUPN6",
-    "platform": "flipkart_appliances_deals",
-    "title": "Pigeon Healthifry Manual with 360 High Speed Air Circul...",
-    "price": 360,
-    "mrp": 8107,
-    "discount": 95.55939311705933,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/m/k/j/-enriched-transparent-original-imagvgyzhyzbnc6e.png?q=70",
-    "url": "/pigeon-healthifry-manual-360-high-speed-air-circulation-technology-1200-w-non-stick-basket-green-fryer/p/itmfe200d99e46c2?pid=AFRGSVTBEYVMUPN6&lid=LSTAFRGSVTBEYVMUPN6VJ44VV&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_37&otracker=search&fm=organic&iid=14579222-fc86-4479-8b8c-06915413ced2.AFRGSVTBEYVMUPN6.SEARCH&ppt=None&ppn=None&ssid=vbnlhluu9s0000001784228186942&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 93.0,
-    "timestamp": 1784228207.8426774,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2959,
-        "timestamp": 1784193193.737514
-      },
-      {
-        "price": 360,
-        "timestamp": 1784228207.8426774
-      }
-    ]
-  },
-  {
-    "id": "IMMGG4DYT28KAXVH",
-    "platform": "flipkart_appliances_deals",
-    "title": "mi star 2022 copper red 2000 W Shock Proof Immersion He...",
-    "price": 2022,
-    "mrp": 18688,
-    "discount": 89.18022260273972,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/immersion-rod/h/y/5/2000-2022-copper-red-mi-star-original-imahja7bgxpyqqy9.jpeg?q=70",
-    "url": "/mi-star-2022-copper-red-2000-w-shock-proof-immersion-heater-rod/p/itm795bf1395e4e3?pid=IMMGG4DYT28KAXVH&lid=LSTIMMGG4DYT28KAXVHHYXMKC&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_22&otracker=search&fm=organic&iid=en_T6CDfeJDsVBVn7lbN6u_d9MVKg4iHG6RrhNfacy5kA84GzTi4ntr4OxTGE6Suh8gtcy9q1ZL3BfbSEewaBfCMRfDaqfuSH60z1mh0dTj26Gcu84Evz--NrYLhx9dXGEj&ppt=None&ppn=None&ssid=vbnlhluu9s0000001784228186942&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 93.0,
-    "timestamp": 1784228206.233305,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 492,
-        "timestamp": 1784193147.3185875
-      },
-      {
-        "price": 2022,
-        "timestamp": 1784228206.233305
-      }
-    ]
-  },
-  {
-    "id": "AFRHD63QYXSTJBGT",
-    "platform": "flipkart_appliances_deals",
-    "title": "Solara Air Fryer 4.5L with See Through Window, 10 Prese...",
-    "price": 756,
-    "mrp": 3699,
-    "discount": 79.56204379562044,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/v/c/n/black-4-5-1500-sol-af-124-solara-original-imahj2f585e5z8uk.jpeg?q=70",
-    "url": "/solara-air-fryer-4-5l-see-through-window-10-preset-menus-360-high-speed-circulation/p/itmf3a838c860543?pid=AFRHD63QYXSTJBGT&lid=LSTAFRHD63QYXSTJBGT5BMUJR&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_17&otracker=search&fm=organic&iid=en_T6CDfeJDsVBVn7lbN6u_d9MVKg4iHG6RrhNfacy5kA9XvBpM4ChZDAH889GHcmv_8oOnhEegYOTPmpfBFYhYzp_VYhhaGXrnBpgxLja89z9Eya2ZbOzaAjqat21QUuyA9QWMJPI4egdmz5nn89L_DQ%3D%3D&ppt=None&ppn=None&ssid=vbnlhluu9s0000001784228186942&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 92.3134306569343,
-    "timestamp": 1784228205.703156,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3699,
-        "timestamp": 1784195460.0622766
-      },
-      {
-        "price": 756,
-        "timestamp": 1784228205.703156
-      }
-    ]
-  },
-  {
-    "id": "AFRHDYGBPHNK3GZB",
-    "platform": "flipkart_appliances_deals",
-    "title": "Thomson AEROFRY Air Fryer",
-    "price": 246,
-    "mrp": 2499,
-    "discount": 90.15606242496999,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/air-fryer/r/y/c/-original-imahgtdqdsawsgqg.jpeg?q=70",
-    "url": "/thomson-aerofry-air-fryer/p/itm0598436960bc9?pid=AFRHDYGBPHNK3GZB&lid=LSTAFRHDYGBPHNK3GZB7ANUKL&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_2&otracker=search&fm=organic&iid=en_T6CDfeJDsVBVn7lbN6u_d9MVKg4iHG6RrhNfacy5kA94h8F1Ap1h-HF30K9CKIxSyox8cyyktqdZflJGNN_YJ2VZqmnOJWUes2Ypl30TAx1s96lHqpH-q21oJe0A8MRz&ppt=None&ppn=None&ssid=vbnlhluu9s0000001784228186942&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 88.02,
-    "timestamp": 1784228204.1191845,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2499,
-        "timestamp": 1784193125.3305628
-      },
-      {
-        "price": 2699,
-        "timestamp": 1784226762.539042
-      },
-      {
-        "price": 2499,
-        "timestamp": 1784226913.2575762
-      },
-      {
-        "price": 246,
-        "timestamp": 1784228204.1191845
-      }
-    ]
-  },
-  {
-    "id": "SOIFZ9MWYUTCZUXR",
-    "platform": "flipkart_electronics_deals",
-    "title": "Walkers Beginners 9in1 Mobile Soldering Iron Equipment ...",
-    "price": 205,
-    "mrp": 352,
-    "discount": 41.76136363636363,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/soldering-iron/z/s/0/9-beginners-9in1-mobile-soldering-iron-equipment-tool-machine-original-imaguw279zjq6hra.jpeg?q=70",
-    "url": "/walkers-beginners-9in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-flux-paste-wire-25-w-simple/p/itm5cfa6c5ece9e8?pid=SOIFZ9MWYUTCZUXR&lid=LSTSOIFZ9MWYUTCZUXRIL20YF&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_36&otracker=search&fm=organic&iid=051125c5-481f-4ecf-a542-b3bb726ff979.SOIFZ9MWYUTCZUXR.SEARCH&ppt=None&ppn=None&ssid=8auugsr5ds0000001784228176880&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 47.212954545454544,
-    "timestamp": 1784228194.6628573,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 352,
-        "timestamp": 1784202144.6098728
-      },
-      {
-        "price": 205,
-        "timestamp": 1784228194.6628573
-      }
-    ]
-  },
-  {
-    "id": "SOIG8ZK9VC7PWRNK",
-    "platform": "flipkart_electronics_deals",
-    "title": "Hillgrove Electronic 12in1 Professional Mobile Solderin...",
-    "price": 245,
-    "mrp": 878,
-    "discount": 72.09567198177676,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/soldering-iron/i/f/n/12-electronic-12in1-professional-mobile-soldering-and-original-imagrgzgzwc3zzgu.jpeg?q=70",
-    "url": "/hillgrove-electronic-12in1-professional-mobile-soldering-desoldering-equipment-tool-machine-combo-kit-set-flux-paste-wire-60-w-temperature-controlled/p/itm74ab91f3cad4f?pid=SOIG8ZK9VC7PWRNK&lid=LSTSOIG8ZK9VC7PWRNKTPYZBH&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_29&otracker=search&fm=organic&iid=051125c5-481f-4ecf-a542-b3bb726ff979.SOIG8ZK9VC7PWRNK.SEARCH&ppt=None&ppn=None&ssid=8auugsr5ds0000001784228176880&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 71.68697038724373,
-    "timestamp": 1784228194.133175,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 878,
-        "timestamp": 1784199359.7712085
-      },
-      {
-        "price": 245,
-        "timestamp": 1784228194.133175
-      }
-    ]
-  },
-  {
-    "id": "WSLGBSHUJ34NZEXV",
-    "platform": "flipkart_electronics_deals",
-    "title": "SONALEX 30kg Weighing scale electric compact Scale with...",
-    "price": 411,
-    "mrp": 1255,
-    "discount": 67.25099601593627,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/weighing-scale/7/s/6/electric-compact-scale-30kg-balancia-with-led-display-both-side-original-imagfayfgt69nabg.jpeg?q=70",
-    "url": "/sonalex-30kg-weighing-scale-electric-compact-led-display-both-side/p/itm67c3035a3e8f3?pid=WSLGBSHUJ34NZEXV&lid=LSTWSLGBSHUJ34NZEXVKHSYDG&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_15&otracker=search&fm=organic&iid=051125c5-481f-4ecf-a542-b3bb726ff979.WSLGBSHUJ34NZEXV.SEARCH&ppt=None&ppn=None&ssid=8auugsr5ds0000001784228176880&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 69.70236387782205,
-    "timestamp": 1784228193.6061108,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 1255,
-        "timestamp": 1784193342.8916526
-      },
-      {
-        "price": 411,
-        "timestamp": 1784228193.6061108
-      }
-    ]
-  },
-  {
-    "id": "TMRHETWXGBVPEBCZ",
-    "platform": "flipkart_electronics_deals",
-    "title": "NOVA NHT 1137 Trimmer 120 min Runtime 4 Length Setting...",
-    "price": 1137,
-    "mrp": 16168,
-    "discount": 92.96759030183077,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/trimmer/d/n/p/0-25-9-mm-nht-1137-stainless-steel-cordless-nova-original-imahndyh28ac4ysk.jpeg?q=70",
-    "url": "/nova-nht-1137-trimmer-120-min-runtime-4-length-settings/p/itm58156a53e3ff0?pid=TMRHETWXGBVPEBCZ&lid=LSTTMRHETWXGBVPEBCZJYZPZJ&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_14&otracker=search&fm=organic&iid=en_EKQsPmf6S47-GxxAd8z7Y394mJquNMQqqOJVVI0uMcyujIDWANZ_whNOrfWOApuVywh9ZeKpX1sXrCkIh4a-sPD6Ef_f-zoWtuWqgunEpEaICXtU2RbjPtUMH-dVDebu&ppt=None&ppn=None&ssid=8auugsr5ds0000001784228176880&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true&affid=YOUR_FLIPKART_AFFILIATE_ID",
-    "is_verified_low": true,
-    "deal_score": 93.0,
-    "timestamp": 1784228193.5826852,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 662,
-        "timestamp": 1784201321.895072
-      },
-      {
-        "price": 1137,
-        "timestamp": 1784228193.5826852
-      }
-    ]
-  },
-  {
-    "id": "ajio_442403154001",
-    "platform": "ajio_deals",
-    "title": "Women Embroidered Straight Kurta",
-    "price": 786,
-    "mrp": 1699,
-    "discount": 54.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240507/bpMj/6639e8ec05ac7d77bb44c5fe/-286Wx359H-442403154-blue-MODEL.jpg",
-    "url": "https://www.ajio.com/w-women-embroidered-straight-kurta/p/442403154_blue",
-    "is_verified_low": true,
-    "deal_score": 60.88666666666666,
-    "timestamp": 1784228142.4569137,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 786,
-        "timestamp": 1784228142.4569137
-      }
-    ]
-  },
-  {
-    "id": "ajio_469750540006",
-    "platform": "ajio_deals",
-    "title": "Girls Lightly Washed Relaxed Fit Jeans",
-    "price": 920,
-    "mrp": 2299,
-    "discount": 60.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20250418/HaFI/68020f317a6cd4182fdc6aab/-286Wx359H-469750540-dkblue-MODEL.jpg",
-    "url": "https://www.ajio.com/u-s-polo-assn-girls-lightly-washed-relaxed-fit-jeans/p/469750540_dkblue",
-    "is_verified_low": true,
-    "deal_score": 68.19333333333333,
-    "timestamp": 1784228141.9190133,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 920,
-        "timestamp": 1784228141.9190133
       }
     ]
   }

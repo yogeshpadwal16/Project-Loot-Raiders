@@ -36,7 +36,7 @@ def get_gemini_ai_ranking(
         return None
         
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
         
         prompt = (
             "You are an expert retail deal analyst. Evaluate this deal and return a desirability score between 0 and 100. "
@@ -59,7 +59,7 @@ def get_gemini_ai_ranking(
         
         logging.info(f"[AI Ranker] Querying Gemini for: {title[:40]}... (Price: ₹{price})")
         
-        res = requests.post(url, json=payload, timeout=10)
+        res = requests.post(url, json=payload, timeout=25)
         if res.status_code == 200:
             data = res.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -277,7 +277,7 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
         api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
         if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
                 prompt = (
                     "You are a price error auditor for e-commerce sites (Amazon, Flipkart). "
                     "Analyze if this discount looks like a merchant price error/glitch (e.g., brand-new laptop for Rs. 500, "
@@ -294,7 +294,7 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
                         "parts": [{"text": prompt}]
                     }]
                 }
-                res = requests.post(url, json=payload, timeout=8)
+                res = requests.post(url, json=payload, timeout=25)
                 if res.status_code == 200:
                     text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                     if text.startswith("```"):
