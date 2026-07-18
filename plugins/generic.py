@@ -31,7 +31,7 @@ def auto_heal_with_gemini(driver, platform_id: str, config: dict, settings: dict
         html = driver.page_source
         clean_html = clean_and_truncate_html(html)
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
         
         prompt = (
             f"You are a web scraping expert. Analyze the clean HTML structure of the {platform_id.upper()} e-commerce product feed page below "

@@ -40,7 +40,7 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
         return None
         
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
         
         prompt = (
             f"You are a professional, high-energy, witty shopping deal alert bot. Write a Telegram post in HTML formatting for this deal:\n\n"
@@ -92,7 +92,7 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
                 "parts": [{"text": prompt}]
             }]
         }
-        res = requests.post(url, json=payload, timeout=12)
+        res = requests.post(url, json=payload, timeout=25)
         if res.status_code == 200:
             data = res.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
