@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from database.db_session import SessionLocal, init_db
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings
+load_settings()
 from deal_engine.scorer import calculate_deal_score, should_publish_deal
 from deal_engine.notifier import start_notifier, enqueue_alert
 from deal_engine.bot_listener import start_telegram_bot_listener
@@ -221,7 +222,7 @@ def scrape_platform(platform: str, config: dict, history: set):
                 review_grade = "N/A"
                 
                 try:
-                    enriched = scrape_product_details(final_url)
+                    enriched = scrape_product_details(final_url, driver=driver)
                     if enriched:
                         img_url = enriched.get("image_url") or img_url
                         bank_offers = enriched.get("bank_offers", [])
@@ -325,13 +326,16 @@ def sync_database_to_json():
     finally:
         db.close()
 
-def scrape_product_details(url: str) -> dict:
+def scrape_product_details(url: str, driver=None) -> dict:
     from selenium.webdriver.common.by import By
     import time
     import re
     import json
     
-    driver = init_driver()
+    local_driver = False
+    if driver is None:
+        driver = init_driver()
+        local_driver = True
     try:
         driver.get(url)
         time.sleep(5)  # Wait for dynamic JS content to fully load
@@ -656,7 +660,8 @@ def scrape_product_details(url: str) -> dict:
             "review_grade": review_grade
         }
     finally:
-        driver.quit()
+        if local_driver:
+            driver.quit()
 
 def main():
     import signal
