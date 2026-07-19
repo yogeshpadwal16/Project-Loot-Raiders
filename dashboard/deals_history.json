@@ -2,96 +2,76 @@
   {
     "id": "jiomart_groceries",
     "platform": "jiomart_deals",
-    "title": "Wipro Garnet B22 LED Bulb 26 W",
-    "price": 309,
-    "mrp": 640,
-    "discount": 51.71875,
-    "image_url": "https://cdn1.jiomartjcp.com/v2/catalog-cloud/jiomar/t.resize(w:300)/images/othe/egurhk/.j/pg/wipro-b22-garnet-6500k-led-bulb-0-20210803.jpg.68eddda398.jpg",
-    "url": "https://www.jiomart.com/p/groceries/wipro-garnet-b22-led-bulb-26-w/492336499",
+    "title": "Bassonic Finger Counter Pack of 2 | LED LCD Hand Tally Counter Clicker with Reset Button | Finger Ring Counter for Prayer, Knitting, Sports & Inventory Counting",
+    "price": 250,
+    "mrp": 399,
+    "discount": 37.34335839598997,
+    "image_url": "https://cdn1.jiomartjcp.com/v2/catalog-cloud/jiomar/t.resize(w:300)/images/othe/m0mnxu/jp/eg/whatsappimage2026-02-25at7.51.17pm2.jpeg.a8c0468832.jpeg",
+    "url": "https://www.jiomart.com/p/groceries/bassonic-finger-counter-pack-of-2-led-lcd-hand-tally-counter-clicker-with-reset-button-finger-ring-counter-for-prayer-knitting-sports-inventory-counting/RVR2O9GWAG",
     "is_verified_low": true,
-    "deal_score": 70.40979166666666,
-    "timestamp": 1784449090.6902702,
+    "deal_score": 59.13368421052631,
+    "timestamp": 1784456362.9030845,
     "clicks": 0,
     "price_history": [
       {
-        "price": 179,
-        "timestamp": 1784449048.8986378
-      },
-      {
         "price": 14999,
-        "timestamp": 1784449057.0155728
+        "timestamp": 1784456317.1392868
       },
       {
         "price": 199,
-        "timestamp": 1784449057.1441488
+        "timestamp": 1784456317.2825575
       },
       {
         "price": 249,
-        "timestamp": 1784449065.2654188
+        "timestamp": 1784456326.628322
       },
       {
         "price": 299,
-        "timestamp": 1784449065.3759673
+        "timestamp": 1784456326.7889922
       },
       {
         "price": 379,
-        "timestamp": 1784449065.506618
+        "timestamp": 1784456326.9293616
       },
       {
         "price": 349,
-        "timestamp": 1784449065.6454535
+        "timestamp": 1784456327.0851967
       },
       {
         "price": 699,
-        "timestamp": 1784449073.9181437
+        "timestamp": 1784456336.3751538
       },
       {
         "price": 849,
-        "timestamp": 1784449074.0518782
+        "timestamp": 1784456336.5284197
       },
       {
         "price": 6999,
-        "timestamp": 1784449074.1783736
+        "timestamp": 1784456336.6829681
       },
       {
         "price": 699,
-        "timestamp": 1784449074.3046312
+        "timestamp": 1784456336.8271906
       },
       {
         "price": 14999,
-        "timestamp": 1784449082.3346918
+        "timestamp": 1784456345.3897889
       },
       {
         "price": 399,
-        "timestamp": 1784449082.4702716
+        "timestamp": 1784456345.5092444
       },
       {
         "price": 1449,
-        "timestamp": 1784449090.5747154
+        "timestamp": 1784456354.0812988
       },
       {
         "price": 309,
-        "timestamp": 1784449090.6902702
-      }
-    ]
-  },
-  {
-    "id": "ajio_467011005001",
-    "platform": "ajio_deals",
-    "title": "TW2V87000X6 Round Digital Watch",
-    "price": 12347,
-    "mrp": 18995,
-    "discount": 35.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240125/c3rA/65b16d248cdf1e0df5cd8c03/-286Wx359H-467011005-black-MODEL.jpg",
-    "url": "https://www.ajio.com/timex-tw2v87000x6-round-digital-watch/p/467011005_black",
-    "is_verified_low": true,
-    "deal_score": 61.5,
-    "timestamp": 1784448328.1600592,
-    "clicks": 0,
-    "price_history": [
+        "timestamp": 1784456354.221109
+      },
       {
-        "price": 12347,
-        "timestamp": 1784448328.1600592
+        "price": 250,
+        "timestamp": 1784456362.9030845
       }
     ]
   },
@@ -106,12 +86,12 @@
     "url": "https://www.ajio.com/ea7-emporio-armani-logo-series-stretch-boat-neck-cotton-t-shirt/p/410522796_ua092",
     "is_verified_low": true,
     "deal_score": 65.0,
-    "timestamp": 1784448321.2746723,
+    "timestamp": 1784455563.7570639,
     "clicks": 0,
     "price_history": [
       {
         "price": 6600,
-        "timestamp": 1784448321.2746723
+        "timestamp": 1784455563.7570639
       }
     ]
   },
@@ -126,12 +106,12 @@
     "url": "https://www.ajio.com/puma-the-golden-ticket-men-basketball-t-shirt/p/469625182_white",
     "is_verified_low": true,
     "deal_score": 63.92666666666667,
-    "timestamp": 1784448314.437957,
+    "timestamp": 1784455556.9285862,
     "clicks": 0,
     "price_history": [
       {
         "price": 1035,
-        "timestamp": 1784448314.437957
+        "timestamp": 1784455556.9285862
       }
     ]
   },
@@ -146,12 +126,12 @@
     "url": "https://www.ajio.com/fashion-grab-infants-printed-top--pants-set/p/467227483_grey",
     "is_verified_low": true,
     "deal_score": 56.99333333333333,
-    "timestamp": 1784448307.5995095,
+    "timestamp": 1784455550.120415,
     "clicks": 0,
     "price_history": [
       {
         "price": 750,
-        "timestamp": 1784448307.5995095
+        "timestamp": 1784455550.120415
       }
     ]
   },
@@ -166,12 +146,12 @@
     "url": "https://www.ajio.com/arte-women-sterling-silver-marcasite--pearl-necklace/p/6006459970_multi",
     "is_verified_low": true,
     "deal_score": 76.9,
-    "timestamp": 1784448300.7887278,
+    "timestamp": 1784455543.2523093,
     "clicks": 0,
     "price_history": [
       {
         "price": 21070,
-        "timestamp": 1784448300.7887278
+        "timestamp": 1784455543.2523093
       }
     ]
   },
@@ -186,12 +166,12 @@
     "url": "https://www.ajio.com/arte-women-sterling-silver-oxidised-necklace--earrings-set/p/6006459840_multi",
     "is_verified_low": true,
     "deal_score": 80.4,
-    "timestamp": 1784448293.9962451,
+    "timestamp": 1784455536.428004,
     "clicks": 0,
     "price_history": [
       {
         "price": 22420,
-        "timestamp": 1784448293.9962451
+        "timestamp": 1784455536.428004
       }
     ]
   },
@@ -206,12 +186,12 @@
     "url": "https://www.ajio.com/yuniqee-women-floral-print-shift-dress-with-cutouts/p/467174022_multi",
     "is_verified_low": true,
     "deal_score": 68.16,
-    "timestamp": 1784448287.099573,
+    "timestamp": 1784455529.3853595,
     "clicks": 0,
     "price_history": [
       {
         "price": 2425,
-        "timestamp": 1784448287.099573
+        "timestamp": 1784455529.3853595
       }
     ]
   },
@@ -226,12 +206,12 @@
     "url": "https://www.ajio.com/magneq-mg-5158-s-c7-5018-men-uv-protected-round-sunglasses/p/467281977_grey",
     "is_verified_low": true,
     "deal_score": 55.64,
-    "timestamp": 1784448280.2010243,
+    "timestamp": 1784455522.5689878,
     "clicks": 0,
     "price_history": [
       {
         "price": 2394,
-        "timestamp": 1784448280.2010243
+        "timestamp": 1784455522.5689878
       }
     ]
   },
@@ -246,12 +226,12 @@
     "url": "https://www.ajio.com/biba-women-floral-print-straight-kurta-with-slip-pocket/p/469610797_peach",
     "is_verified_low": true,
     "deal_score": 70.32666666666667,
-    "timestamp": 1784448273.3086312,
+    "timestamp": 1784455515.5765088,
     "clicks": 0,
     "price_history": [
       {
         "price": 720,
-        "timestamp": 1784448273.3086312
+        "timestamp": 1784455515.5765088
       }
     ]
   },
@@ -266,12 +246,12 @@
     "url": "https://www.ajio.com/van-heusen-men-checks-regular-fit-shirt/p/701592202_white",
     "is_verified_low": true,
     "deal_score": 60.093333333333334,
-    "timestamp": 1784448266.318527,
+    "timestamp": 1784455508.7507968,
     "clicks": 0,
     "price_history": [
       {
         "price": 3107,
-        "timestamp": 1784448266.318527
+        "timestamp": 1784455508.7507968
       }
     ]
   },
@@ -286,12 +266,12 @@
     "url": "https://www.ajio.com/biba-women-floral-print-straight-fit-palazzos/p/442404145_offwhite",
     "is_verified_low": true,
     "deal_score": 59.16,
-    "timestamp": 1784448259.4470274,
+    "timestamp": 1784455501.9421327,
     "clicks": 0,
     "price_history": [
       {
         "price": 450,
-        "timestamp": 1784448259.4470274
+        "timestamp": 1784455501.9421327
       }
     ]
   },
@@ -306,12 +286,12 @@
     "url": "https://www.ajio.com/vlam-joker-print-slim-fit-crew-neck-t-shirt/p/467262692_white",
     "is_verified_low": true,
     "deal_score": 53.18666666666667,
-    "timestamp": 1784448252.6406684,
+    "timestamp": 1784455495.1297264,
     "clicks": 0,
     "price_history": [
       {
         "price": 701,
-        "timestamp": 1784448252.6406684
+        "timestamp": 1784455495.1297264
       }
     ]
   },
@@ -326,12 +306,12 @@
     "url": "https://www.ajio.com/vlam-women-typographic-print-regular-fit-crew-neck-t-shirt/p/467267277_white",
     "is_verified_low": true,
     "deal_score": 53.18666666666667,
-    "timestamp": 1784448245.8125236,
+    "timestamp": 1784455488.3027399,
     "clicks": 0,
     "price_history": [
       {
         "price": 701,
-        "timestamp": 1784448245.8125236
+        "timestamp": 1784455488.3027399
       }
     ]
   },
@@ -346,12 +326,12 @@
     "url": "https://www.ajio.com/yuniqee-women-lace-tiered-maxi-dress/p/467188929_white",
     "is_verified_low": true,
     "deal_score": 69.49333333333334,
-    "timestamp": 1784448238.896429,
+    "timestamp": 1784455481.4655125,
     "clicks": 0,
     "price_history": [
       {
         "price": 2625,
-        "timestamp": 1784448238.896429
+        "timestamp": 1784455481.4655125
       }
     ]
   },
@@ -366,32 +346,32 @@
     "url": "https://www.ajio.com/bewakoof-men-solid--solid-solid-oversized-fit-hoodies/p/702254928_brown",
     "is_verified_low": true,
     "deal_score": 56.53333333333333,
-    "timestamp": 1784448231.9244308,
+    "timestamp": 1784455474.5066729,
     "clicks": 0,
     "price_history": [
       {
         "price": 1299,
-        "timestamp": 1784448231.9244308
+        "timestamp": 1784455474.5066729
       }
     ]
   },
   {
-    "id": "B0F3GYMWG5",
+    "id": "B0GPCX82G8",
     "platform": "amazon_master_lightning_deals",
-    "title": "Tineco Floor ONE i5 Stretch Plus 2 Smart Cordless Wet & Dry Vacuum Cleaner & Mop for Hard Floors, 180\u00b0 Flat Design, Clean Tough Stains & Pet Hair, Self-Cleaning Brush, 2 Yr Warranty",
-    "price": 19999,
-    "mrp": 35999,
-    "discount": 44.44567904664019,
-    "image_url": "https://m.media-amazon.com/images/I/61L+f7jvShL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0F3GYMWG5?tag=YOUR_AMAZON_TAG",
+    "title": "Amayra Women's Pure Cotton Straight Kurta Set with Palazzo Pants & Dupatta|Ethnic wear|Kurta Set for Women",
+    "price": 897,
+    "mrp": 1999,
+    "discount": 55.12756378189094,
+    "image_url": "https://m.media-amazon.com/images/I/81vCseZYquL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GPCX82G8?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 74.61197533264813,
-    "timestamp": 1784447760.6510913,
+    "deal_score": 69.43596131399033,
+    "timestamp": 1784455002.639446,
     "clicks": 0,
     "price_history": [
       {
-        "price": 19999,
-        "timestamp": 1784447760.6510913
+        "price": 897,
+        "timestamp": 1784455002.639446
       }
     ]
   },
@@ -406,292 +386,152 @@
     "url": "https://www.amazon.in/dp/B0GXQ48ZDT?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
     "deal_score": 88.9066326116922,
-    "timestamp": 1784447750.730807,
+    "timestamp": 1784454992.744857,
     "clicks": 0,
     "price_history": [
       {
         "price": 12999,
-        "timestamp": 1784447750.730807
+        "timestamp": 1784454992.744857
       }
     ]
   },
   {
-    "id": "B0D6GK2871",
+    "id": "B0H44SBX2T",
     "platform": "amazon_master_lightning_deals",
-    "title": "Noise Pulse 4 Max Smart Watch with AI Create (India's 1st Ever with Unlimited Watch Faces), AI Search, 1.96\" AMOLED Display, Functional Crown, Premium Metallic Finish, Health Suite (Jet Black)",
-    "price": 2499,
-    "mrp": 6999,
-    "discount": 64.29489927132448,
-    "image_url": "https://m.media-amazon.com/images/I/61Iw0g8zYYL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0D6GK2871?tag=YOUR_AMAZON_TAG",
+    "title": "Aquaguard Enrich Ritz Pro RO+UV+Copper+Alkaline Water Purifier | India\u2019s 1st 4-Year Warranty | Smart Purifier & TDS Display | Stainless Steel Tank | No AMC Required | Zero Hidden Costs | 12-Stage",
+    "price": 22999,
+    "mrp": 37000,
+    "discount": 37.84054054054054,
+    "image_url": "https://m.media-amazon.com/images/I/51bLdtKTwgL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H44SBX2T?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 88.50642948992714,
-    "timestamp": 1784447739.2772958,
+    "deal_score": 69.98837837837837,
+    "timestamp": 1784454981.0084984,
     "clicks": 0,
     "price_history": [
       {
-        "price": 2499,
-        "timestamp": 1784447739.2772958
+        "price": 22999,
+        "timestamp": 1784454981.0084984
       }
     ]
   },
   {
-    "id": "B0C3XL5Y64",
+    "id": "B0H1HKQTRL",
     "platform": "amazon_master_lightning_deals",
-    "title": "The Sleep Company Stylux Premium Ergonomic Office Chair | Patented SmartGRID seat | SpinePro Lumbar Support | Work, Home, Study | Adjustable Headrest & 4D Armrests | Free Installation| Black",
-    "price": 15001,
-    "mrp": 35999,
-    "discount": 58.32939803883441,
-    "image_url": "https://m.media-amazon.com/images/I/61IDG+ghMoL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0C3XL5Y64?tag=YOUR_AMAZON_TAG",
+    "title": "Kids Station 3 Side Premium Bed Rail Guard (6ftx6ftx6ft / 180cmx180cmx180cm), Bed Railing for Baby Safety, Kids Toddler Bed Protector Side Walls, Adjustable Height, Portable & Foldable (Maroon)",
+    "price": 5849,
+    "mrp": 8999,
+    "discount": 35.00388932103567,
+    "image_url": "https://m.media-amazon.com/images/I/81P-x6Wq0TL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H1HKQTRL?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 84.33057862718408,
-    "timestamp": 1784447729.3809314,
+    "deal_score": 68.00272252472497,
+    "timestamp": 1784454971.140657,
     "clicks": 0,
     "price_history": [
       {
-        "price": 15001,
-        "timestamp": 1784447729.3809314
+        "price": 5849,
+        "timestamp": 1784454971.140657
       }
     ]
   },
   {
-    "id": "B0CVF9YPPD",
+    "id": "B0GJGGYPJW",
     "platform": "amazon_master_lightning_deals",
-    "title": "SEZNIK Josh Bluetooth Thermal Label Printer | Inkless Mini Rechargeable | MRP, Barcode, Excel File Print | Cloud, Mobile, Desktop | Jewellery, Round Labels | 2-inch Print | Free App | 1 Year Warranty",
-    "price": 2977,
-    "mrp": 4999,
-    "discount": 40.448089617923586,
-    "image_url": "https://m.media-amazon.com/images/I/81skHl4UDzL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0CVF9YPPD?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 70.29366273254651,
-    "timestamp": 1784447718.3312268,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2977,
-        "timestamp": 1784447718.3312268
-      }
-    ]
-  },
-  {
-    "id": "B0BYT4H317",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Voltas CVF320DB3 Double Door Deep Freezer cum chiller, Convertible, GREY (303L Gross, 295L Net)",
-    "price": 24150,
+    "title": "Uniboom_Optima Series 108 cm (43 inch) HD Smart LED TV| Android TV with Voice Command App | 5000+ Free Movies | 30W Sonic Boom Speakers | 500+ Certified Apps | Mobile Remote | 43S-ULT-AED",
+    "price": 14581,
     "mrp": 41990,
-    "discount": 42.486306263396045,
-    "image_url": "https://m.media-amazon.com/images/I/611Xj3-Lg0L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0BYT4H317?tag=YOUR_AMAZON_TAG",
+    "discount": 65.27506549178376,
+    "image_url": "https://m.media-amazon.com/images/I/61n5tyjRy8L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GJGGYPJW?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 73.24041438437723,
-    "timestamp": 1784447707.406228,
+    "deal_score": 89.19254584424863,
+    "timestamp": 1784454961.2431622,
     "clicks": 0,
     "price_history": [
       {
-        "price": 24150,
-        "timestamp": 1784447707.406228
+        "price": 14581,
+        "timestamp": 1784454961.2431622
       }
     ]
   },
   {
-    "id": "B0CV7J49TQ",
+    "id": "B0DQD8HWWG",
     "platform": "amazon_master_lightning_deals",
-    "title": "Amazon Brand - Presto! Active Wash Detergent Powder | 8 Kg | Tough On Stains | Gentle On Fabrics | Colour-Safe | Refreshing Fragrance | Machine And Hand Wash",
-    "price": 449,
-    "mrp": 800,
-    "discount": 43.875,
-    "image_url": "https://m.media-amazon.com/images/I/61hx-ExBRhL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0CV7J49TQ?tag=YOUR_AMAZON_TAG",
+    "title": "GRENARO Mic for YouTube Wireless, 3-Level Adjustable Noise Reduction Mic Wireless,S12 Wireless Microphone for Youtubers with LED Indicator Light (Single Channel Type-C Port Version)",
+    "price": 786,
+    "mrp": 1999,
+    "discount": 60.680340170085046,
+    "image_url": "https://m.media-amazon.com/images/I/71dhDqkgHPL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0DQD8HWWG?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 56.5525,
-    "timestamp": 1784447697.569472,
+    "deal_score": 74.0629047857262,
+    "timestamp": 1784454951.3436182,
     "clicks": 0,
     "price_history": [
       {
-        "price": 449,
-        "timestamp": 1784447697.569472
+        "price": 786,
+        "timestamp": 1784454951.3436182
       }
     ]
   },
   {
-    "id": "B0BJ72WZQ7",
+    "id": "B07VVK39F7",
     "platform": "amazon_master_lightning_deals",
-    "title": "Noise Twist Round dial Smart Watch with Bluetooth Calling, 1.38\" TFT Display, up-to 7 Days Battery, 100+ Watch Faces, IP68, Heart Rate Monitor, Sleep Tracking (Jet Black)",
-    "price": 1399,
-    "mrp": 4999,
-    "discount": 72.01440288057611,
-    "image_url": "https://m.media-amazon.com/images/I/61-vRq2ulOL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0BJ72WZQ7?tag=YOUR_AMAZON_TAG",
+    "title": "LEVOIT Air Purifier for Home Allergies and Pets Hair Smokers in Bedroom, H13 True HEPA Filter, 24db Filtration System Cleaner Odor Eliminators, Remove 99.97% Dust Smoke Mold Pollen, Core 300, White",
+    "price": 9999,
+    "mrp": 17900,
+    "discount": 44.13966480446928,
+    "image_url": "https://m.media-amazon.com/images/I/71t-9BTIg9L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B07VVK39F7?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 93.91008201640328,
-    "timestamp": 1784447687.710003,
+    "deal_score": 74.39776536312849,
+    "timestamp": 1784454941.5125265,
     "clicks": 0,
     "price_history": [
       {
-        "price": 1399,
-        "timestamp": 1784447687.710003
+        "price": 9999,
+        "timestamp": 1784454941.5125265
       }
     ]
   },
   {
-    "id": "B0FLQGFVXT",
+    "id": "B0F3GYMWG5",
     "platform": "amazon_master_lightning_deals",
-    "title": "Elica 75cm 1500 m3/hr BLDC Filterless Autoclean Kitchen Chimney | 15 Years Motor and 5 Years Comprehensive Warranty | FLAT FL 750 BLDC HAC LTW MS NERO | Black | 9 Speed Touch Control + Motion Sensor",
+    "title": "Tineco Floor ONE i5 Stretch Plus 2 Smart Cordless Wet & Dry Vacuum Cleaner & Mop for Hard Floors, 180\u00b0 Flat Design, Clean Tough Stains & Pet Hair, Self-Cleaning Brush, 2 Yr Warranty",
+    "price": 19999,
+    "mrp": 35999,
+    "discount": 44.44567904664019,
+    "image_url": "https://m.media-amazon.com/images/I/61L+f7jvShL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0F3GYMWG5?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 74.61197533264813,
+    "timestamp": 1784454931.6514041,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 19999,
+        "timestamp": 1784454931.6514041
+      }
+    ]
+  },
+  {
+    "id": "B0H44RVFFK",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Aquaguard Aspire Glow RO+UV+Copper+Alkaline Water Purifier | 2-Year Unconditional Warranty | Intelligent Halo Lights & TDS Display | No AMC Required | Zero Hidden Costs | 5th Gen UV LED | 12-Stage",
     "price": 16499,
-    "mrp": 32990,
-    "discount": 49.98787511367081,
-    "image_url": "https://m.media-amazon.com/images/I/61mqU6bvFTL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FLQGFVXT?tag=YOUR_AMAZON_TAG",
+    "mrp": 24000,
+    "discount": 31.254166666666666,
+    "image_url": "https://m.media-amazon.com/images/I/51prRT-FvVL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H44RVFFK?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 78.49151257956956,
-    "timestamp": 1784447677.7052484,
+    "deal_score": 65.37791666666666,
+    "timestamp": 1784454921.7979655,
     "clicks": 0,
     "price_history": [
       {
         "price": 16499,
-        "timestamp": 1784447677.7052484
-      }
-    ]
-  },
-  {
-    "id": "B0GXBQ54BP",
-    "platform": "amazon_master_lightning_deals",
-    "title": "RESTOFIT Orthopedic Dual Comfort Queen Size Mattress 75x60x10 Inches | Medium Firm 10-Inch HR Foam Mattress for Back Support | Premium Cotton, 7-Year Warranty | Vacuum Packed Roll | Sleep Well Comfort",
-    "price": 13199,
-    "mrp": 25278,
-    "discount": 47.784634860352874,
-    "image_url": "https://m.media-amazon.com/images/I/91mSUHz85ZL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GXBQ54BP?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 76.94924440224702,
-    "timestamp": 1784447667.8322573,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 13199,
-        "timestamp": 1784447667.8322573
-      }
-    ]
-  },
-  {
-    "id": "B00RACAX12",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Wakefit Mattress | 7 Years Warranty | Dual Comfort with Hard & Soft Foam, Double Bed, Foam Mattress, 6-Inch Bed Mattress, King Size (78x72x6_7 Pressure Zone Foam)",
-    "price": 12081,
-    "mrp": 18570,
-    "discount": 34.94345718901454,
-    "image_url": "https://m.media-amazon.com/images/I/91ZWU79MdlL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B00RACAX12?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 67.96042003231017,
-    "timestamp": 1784447657.9649506,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 12081,
-        "timestamp": 1784447657.9649506
-      }
-    ]
-  },
-  {
-    "id": "B0GMWLSVKS",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Huggies Complete Comfort Wonder Pants | Pant Style Baby Diapers Medium Size (M), 76 Count | India's Fastest Absorbing Diaper, Prevents Diaper Rash, Ideal for 7 to 12 Kgs (Pack of 2)",
-    "price": 1199,
-    "mrp": 2098,
-    "discount": 42.850333651096285,
-    "image_url": "https://m.media-amazon.com/images/I/81-+Zbwnr3L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GMWLSVKS?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 59.48856688910073,
-    "timestamp": 1784447648.1000974,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 1199,
-        "timestamp": 1784447648.1000974
-      }
-    ]
-  },
-  {
-    "id": "B0B11LJ69K",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Logitech MX Master 3S Bluetooth Edition Wireless Mouse, No USB Receiver - Ultra-Fast Scrolling, Ergo, 8K DPI, Track on Glass, Quiet Clicks, Works with Apple Mac, Windows PC, Linux, Chrome - Graphite",
-    "price": 6995,
-    "mrp": 12495,
-    "discount": 44.017607042817126,
-    "image_url": "https://m.media-amazon.com/images/I/618IJzC-fFL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0B11LJ69K?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 77.84985994397759,
-    "timestamp": 1784447638.0354834,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 6995,
-        "timestamp": 1784447638.0354834
-      }
-    ]
-  },
-  {
-    "id": "B0H4RVDHXD",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Sleepwell Dual Mattress | King Size 84x72x6 Inch | One Side Soft One Side Firm | Orthopedic Support | Resitec Foam with VPF | Knitted Fabric | Neem Fresche Anti-Microbial | 10 Yr Warranty",
-    "price": 13499,
-    "mrp": 23157,
-    "discount": 41.70661139180377,
-    "image_url": "https://m.media-amazon.com/images/I/91jYJk7PAtL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0H4RVDHXD?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 72.69462797426263,
-    "timestamp": 1784447624.7921648,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 13499,
-        "timestamp": 1784447624.7921648
-      }
-    ]
-  },
-  {
-    "id": "B0GPDG4NG3",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Amayra Women's Pure Cotton Straight Kurta Set with Palazzo Pants & Dupatta|Ethnic wear|Kurta Set for Women",
-    "price": 895,
-    "mrp": 1999,
-    "discount": 55.227613806903456,
-    "image_url": "https://m.media-amazon.com/images/I/81vCseZYquL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GPDG4NG3?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 72.01546373186594,
-    "timestamp": 1784447614.937763,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 895,
-        "timestamp": 1784447614.937763
-      }
-    ]
-  },
-  {
-    "id": "B08GJ57MKL",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Coway Airmega 150 (Ap-1019C) Air Purifier For Home,Longest Filter Life 8500Hrs (Approx. 1.5-2 Yrs),Anti-Virus True Hepa Filter (H13),Kills Allergies,Virus,Germs & Pm 0.01 With 99.999% Efficiency,White",
-    "price": 15999,
-    "mrp": 34900,
-    "discount": 54.15759312320917,
-    "image_url": "https://m.media-amazon.com/images/I/91mE+0CCnGL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B08GJ57MKL?tag=YOUR_AMAZON_TAG",
-    "is_verified_low": true,
-    "deal_score": 67.12825214899712,
-    "timestamp": 1784447602.1455054,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 15999,
-        "timestamp": 1784447602.1455054
+        "timestamp": 1784454921.7979655
       }
     ]
   },
@@ -706,152 +546,152 @@
     "url": "https://www.amazon.in/dp/B0G2B39Q4H?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
     "deal_score": 70.26549310273832,
-    "timestamp": 1784447588.1080186,
+    "timestamp": 1784454911.9170303,
     "clicks": 0,
     "price_history": [
       {
         "price": 20999,
-        "timestamp": 1784447588.1080186
+        "timestamp": 1784454911.9170303
       }
     ]
   },
   {
-    "id": "B0DQD8HWWG",
+    "id": "B07DLCZT11",
     "platform": "amazon_master_lightning_deals",
-    "title": "GRENARO Mic for YouTube Wireless, 3-Level Adjustable Noise Reduction Mic Wireless,S12 Wireless Microphone for Youtubers with LED Indicator Light (Single Channel Type-C Port Version)",
-    "price": 786,
-    "mrp": 1999,
-    "discount": 60.680340170085046,
-    "image_url": "https://m.media-amazon.com/images/I/71dhDqkgHPL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0DQD8HWWG?tag=YOUR_AMAZON_TAG",
+    "title": "Kuvings B1700 Dark Silver Cold Press Juicer for Home, All-in-1 Juicer for Fruits, Vegetables & Nut Milk, Patented JMCS Technology for 10% More Juice, Easy to Clean & Assemble, 12 Yrs Warranty (Motor)",
+    "price": 21999,
+    "mrp": 35900,
+    "discount": 38.721448467966574,
+    "image_url": "https://m.media-amazon.com/images/I/61V7QKqCERL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B07DLCZT11?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 73.65032382858097,
-    "timestamp": 1784447578.2376497,
+    "deal_score": 70.6050139275766,
+    "timestamp": 1784454901.744649,
     "clicks": 0,
     "price_history": [
       {
-        "price": 786,
-        "timestamp": 1784447578.2376497
+        "price": 21999,
+        "timestamp": 1784454901.744649
       }
     ]
   },
   {
-    "id": "B0D66ZBQ36",
+    "id": "B0C281C231",
     "platform": "amazon_master_lightning_deals",
-    "title": "Colorbot Stella BLDC Ceiling Fans 1200mm | BEE 5 Star Rated Power Saver | AeroQuiet+ Technology | 370 RPM | Remote Control (Boost, Timer, LED, Reverse Mode) | 4 Years Warranty (Cocoa Brown)",
-    "price": 2749,
-    "mrp": 6377,
-    "discount": 56.89195546495217,
-    "image_url": "https://m.media-amazon.com/images/I/51SEtv6zk6L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0D66ZBQ36?tag=YOUR_AMAZON_TAG",
+    "title": "BonKaso Climb Easy 5 Step Heavy Duty Steel Folding Climbing Ladder for Home, Home & Office \u2013 with Safety Lock, Anti-Slip Wide Durable Plastic Steps, Support Handle & Tool Tray (Orange & Black)",
+    "price": 2748,
+    "mrp": 5999,
+    "discount": 54.19236539423237,
+    "image_url": "https://m.media-amazon.com/images/I/81+guVWHIJL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0C281C231?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 88.32436882546651,
-    "timestamp": 1784447564.646161,
+    "deal_score": 81.43465577596265,
+    "timestamp": 1784454891.8848686,
     "clicks": 0,
     "price_history": [
       {
-        "price": 2749,
-        "timestamp": 1784447564.646161
+        "price": 2748,
+        "timestamp": 1784454891.8848686
       }
     ]
   },
   {
-    "id": "B0GH7FM3ZR",
+    "id": "B08W8QQLWD",
     "platform": "amazon_master_lightning_deals",
-    "title": "Everflame Marvel 4 Burner Gas Stove | 2mm Heavy Steel Body | 6G Brass Burners | Manual Ignition | Italian SABAF Valve | 5 Years Warranty (Body & Burners) + 2 Years Comprehensive + Doorstep Service",
-    "price": 10476,
-    "mrp": 21499,
-    "discount": 51.272152193125265,
-    "image_url": "https://m.media-amazon.com/images/I/712OsBIXynL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GH7FM3ZR?tag=YOUR_AMAZON_TAG",
+    "title": "Nutricook Smart Pot 2 Stainless Steel 6 QT (5.7L), 1000W 9-in-1 Instant Programmable Electric Pressure Cooker, Slow Cooker, Rice Cooker, Steamer, Saut\u00e9 Pot, Sous Vide, Smart Lid, 2-Year Warranty",
+    "price": 7999,
+    "mrp": 20999,
+    "discount": 61.907709890947196,
+    "image_url": "https://m.media-amazon.com/images/I/61YwpwVzRSL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B08W8QQLWD?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 79.71240522815015,
-    "timestamp": 1784447554.7738113,
+    "deal_score": 86.83539692366304,
+    "timestamp": 1784454881.992255,
     "clicks": 0,
     "price_history": [
       {
-        "price": 10476,
-        "timestamp": 1784447554.7738113
+        "price": 7999,
+        "timestamp": 1784454881.992255
       }
     ]
   },
   {
-    "id": "B0F4Y17ZVD",
+    "id": "B0FDGHW6NG",
     "platform": "amazon_master_lightning_deals",
-    "title": "amazon basics Mild Steel Double Supported 3 Layer Cloth Drying Rack | Foldable and Movable | Silver & Teal | Iron, Plastic |",
-    "price": 1699,
-    "mrp": 4129,
-    "discount": 58.85202228142408,
-    "image_url": "https://m.media-amazon.com/images/I/91uKPP7YBML._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0F4Y17ZVD?tag=YOUR_AMAZON_TAG",
+    "title": "FURNY Holland 6 Seater Fabric LHS L Shape Pull Out Sofa Cum Bed with Storage & 2 Puffy for Living Room (Blue)",
+    "price": 36599,
+    "mrp": 85999,
+    "discount": 57.44252840149304,
+    "image_url": "https://m.media-amazon.com/images/I/71CxX36kZ8L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0FDGHW6NG?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 82.31713247759748,
-    "timestamp": 1784447541.3689804,
+    "deal_score": 83.70976988104513,
+    "timestamp": 1784454872.1374059,
     "clicks": 0,
     "price_history": [
       {
-        "price": 1699,
-        "timestamp": 1784447541.3689804
+        "price": 36599,
+        "timestamp": 1784454872.1374059
       }
     ]
   },
   {
-    "id": "B0F2J6QCJB",
+    "id": "B0FDQKGB28",
     "platform": "amazon_master_lightning_deals",
-    "title": "TCL 189 cm (75 inches) Metallic Bezel Less Series 4K Ultra HD Smart LED Google TV 75V6C (Black)",
-    "price": 64990,
-    "mrp": 179990,
-    "discount": 63.892438468803824,
-    "image_url": "https://m.media-amazon.com/images/I/71LD1gonu1L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0F2J6QCJB?tag=YOUR_AMAZON_TAG",
+    "title": "Samsung Galaxy Watch8 (40mm, LTE, Graphite) with 3nm Processor | Dual GPS | Sapphire Glass & Armor Aluminum | 5ATM & IP68 | BP, ECG, IHRN & Vascular Load Monitoring | Anti-oxidant Index",
+    "price": 24999,
+    "mrp": 42999,
+    "discount": 41.86143863810786,
+    "image_url": "https://m.media-amazon.com/images/I/619tP9hJ1sL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0FDQKGB28?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 88.57976554253014,
-    "timestamp": 1784447527.7886329,
+    "deal_score": 72.8030070466755,
+    "timestamp": 1784454862.25019,
     "clicks": 0,
     "price_history": [
       {
-        "price": 64990,
-        "timestamp": 1784447527.7886329
+        "price": 24999,
+        "timestamp": 1784454862.25019
       }
     ]
   },
   {
-    "id": "B08KFMFHDD",
+    "id": "B0FHW238R2",
     "platform": "amazon_master_lightning_deals",
-    "title": "Tamron 70-300mm F/4.5-6.3 Di III RXD for Sony Full-Frame mirrorless Camera Lens (Black)",
-    "price": 28850,
-    "mrp": 50000,
-    "discount": 42.3,
-    "image_url": "https://m.media-amazon.com/images/I/51Mt96smmpL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B08KFMFHDD?tag=YOUR_AMAZON_TAG",
+    "title": "Sparnod STH-3004N 2 in 1 Walking Pad Treadmill for Home Use, 1\u201310 km/h, Foldable Rail, 7% Incline, LED Display, Shock Absorption, 90kg Capacity for Home & Office Use",
+    "price": 9998,
+    "mrp": 32895,
+    "discount": 69.6063231494148,
+    "image_url": "https://m.media-amazon.com/images/I/71LuwAQQ4AL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0FHW238R2?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 87.288,
-    "timestamp": 1784447513.9397476,
+    "deal_score": 92.22442620459036,
+    "timestamp": 1784454851.2328587,
     "clicks": 0,
     "price_history": [
       {
-        "price": 28850,
-        "timestamp": 1784447513.9397476
+        "price": 9998,
+        "timestamp": 1784454851.2328587
       }
     ]
   },
   {
-    "id": "B0FM38MRWL",
+    "id": "B0FQJ1RFDN",
     "platform": "amazon_master_lightning_deals",
-    "title": "boAt Rockerz 371, 40mm Drivers, 50hrs Battery, 60ms Low Latency, ENx Tech, BT v5.4, Foldable Cups, Voice Assistant, Bluetooth Headphones, Wireless Headphone with Mic (Black Sabre)",
-    "price": 999,
-    "mrp": 2999,
-    "discount": 66.68889629876625,
-    "image_url": "https://m.media-amazon.com/images/I/61j9YVOfAzL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FM38MRWL?tag=YOUR_AMAZON_TAG",
+    "title": "XGIMI Vibe One 1080p Full HD Projector, Official Netflix & Google TV, Supports 4k Ultra HD, Built-in Battery (1.2 Hrs Playtime), 250 ISO Lumens(320 ANSI), 2\u00d73W JBL Speakers, Auto Keystone & Auto Focus | Google TV with Licensed Netflix, JBL Sound, Built-in Battery, Auto Focus & Keystone, HD Projector for Bedroom, and Backyard",
+    "price": 21999,
+    "mrp": 49999,
+    "discount": 56.00112002240045,
+    "image_url": "https://m.media-amazon.com/images/I/51AxRu92U8L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0FQJ1RFDN?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 84.81244859397576,
-    "timestamp": 1784447500.8793316,
+    "deal_score": 67.70078401568031,
+    "timestamp": 1784454841.3655257,
     "clicks": 0,
     "price_history": [
       {
-        "price": 999,
-        "timestamp": 1784447500.8793316
+        "price": 21999,
+        "timestamp": 1784454841.3655257
       }
     ]
   },
@@ -866,92 +706,212 @@
     "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
     "deal_score": 67.96002400480097,
-    "timestamp": 1784447487.9481173,
+    "timestamp": 1784454831.4924064,
     "clicks": 0,
     "price_history": [
       {
         "price": 2848,
-        "timestamp": 1784447487.9481173
+        "timestamp": 1784454831.4924064
       }
     ]
   },
   {
-    "id": "B0F4WWCMNK",
+    "id": "B0GRVLYNVW",
     "platform": "amazon_master_lightning_deals",
-    "title": "Midea 563 L Inverter Compressor with Multi Air Flow Cooling, Digital Display, Side by Side Refrigerator (MDRS710FGF46, Portable Ice Maker, Frost Free, Bru-Steel Finish)",
-    "price": 42490,
-    "mrp": 99990,
-    "discount": 57.505750575057505,
-    "image_url": "https://m.media-amazon.com/images/I/71x9w2ajO2L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0F4WWCMNK?tag=YOUR_AMAZON_TAG",
+    "title": "Adorn India Premium Luster 4 Seater L Shape Sofa Set | Velvet Suede Fabric | 3-Year Warranty | Color Camel with Golden Legs & Striped Pattern Cushion",
+    "price": 19998,
+    "mrp": 41999,
+    "discount": 52.384580585252024,
+    "image_url": "https://m.media-amazon.com/images/I/61aI5Tb0o8L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GRVLYNVW?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 85.0032203220322,
-    "timestamp": 1784447478.042746,
+    "deal_score": 80.16920640967642,
+    "timestamp": 1784454821.586268,
     "clicks": 0,
     "price_history": [
       {
-        "price": 42490,
-        "timestamp": 1784447478.042746
+        "price": 19998,
+        "timestamp": 1784454821.586268
       }
     ]
   },
   {
-    "id": "B0FHW238R2",
+    "id": "B077XDK8KR",
     "platform": "amazon_master_lightning_deals",
-    "title": "Sparnod STH-3004N 2 in 1 Walking Pad Treadmill for Home Use, 1\u201310 km/h, Foldable Rail, 7% Incline, LED Display, Shock Absorption, 90kg Capacity for Home & Office Use",
-    "price": 9998,
-    "mrp": 32895,
-    "discount": 69.6063231494148,
-    "image_url": "https://m.media-amazon.com/images/I/71LuwAQQ4AL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FHW238R2?tag=YOUR_AMAZON_TAG",
+    "title": "Sleepyhead Original Designed by Duroflex - 3 Layered BodyIQ Orthopedic Memory Foam Mattress | Zero Partner Disturbance | Medium Firm | 10 Years Warranty | 6 Inch King Size Bed Mattress (78x72x6)",
+    "price": 13389,
+    "mrp": 19299,
+    "discount": 30.623348360018653,
+    "image_url": "https://m.media-amazon.com/images/I/71NQerz-k0L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B077XDK8KR?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 91.37954096367228,
-    "timestamp": 1784447463.9793773,
+    "deal_score": 64.93634385201305,
+    "timestamp": 1784454811.6808875,
     "clicks": 0,
     "price_history": [
       {
-        "price": 9998,
-        "timestamp": 1784447463.9793773
+        "price": 13389,
+        "timestamp": 1784454811.6808875
       }
     ]
   },
   {
-    "id": "B08W8QQLWD",
+    "id": "B0D66ZBQ36",
     "platform": "amazon_master_lightning_deals",
-    "title": "Nutricook Smart Pot 2 Stainless Steel 6 QT (5.7L), 1000W 9-in-1 Instant Programmable Electric Pressure Cooker, Slow Cooker, Rice Cooker, Steamer, Saut\u00e9 Pot, Sous Vide, Smart Lid, 2-Year Warranty",
-    "price": 7999,
-    "mrp": 20999,
-    "discount": 61.907709890947196,
-    "image_url": "https://m.media-amazon.com/images/I/61YwpwVzRSL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B08W8QQLWD?tag=YOUR_AMAZON_TAG",
+    "title": "Colorbot Stella BLDC Ceiling Fans 1200mm | BEE 5 Star Rated Power Saver | AeroQuiet+ Technology | 370 RPM | Remote Control (Boost, Timer, LED, Reverse Mode) | 4 Years Warranty (Cocoa Brown)",
+    "price": 2749,
+    "mrp": 6377,
+    "discount": 56.89195546495217,
+    "image_url": "https://m.media-amazon.com/images/I/51SEtv6zk6L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0D66ZBQ36?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 86.46831753893044,
-    "timestamp": 1784447449.9890137,
+    "deal_score": 88.32436882546651,
+    "timestamp": 1784454800.346928,
     "clicks": 0,
     "price_history": [
       {
-        "price": 7999,
-        "timestamp": 1784447449.9890137
+        "price": 2749,
+        "timestamp": 1784454800.346928
       }
     ]
   },
   {
-    "id": "B0H44RVFFK",
+    "id": "B08GJ57MKL",
     "platform": "amazon_master_lightning_deals",
-    "title": "Aquaguard Aspire Glow RO+UV+Copper+Alkaline Water Purifier | 2-Year Unconditional Warranty | Intelligent Halo Lights & TDS Display | No AMC Required | Zero Hidden Costs | 5th Gen UV LED | 12-Stage",
-    "price": 16499,
-    "mrp": 24000,
-    "discount": 31.254166666666666,
-    "image_url": "https://m.media-amazon.com/images/I/51prRT-FvVL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0H44RVFFK?tag=YOUR_AMAZON_TAG",
+    "title": "Coway Airmega 150 (Ap-1019C) Air Purifier For Home,Longest Filter Life 8500Hrs (Approx. 1.5-2 Yrs),Anti-Virus True Hepa Filter (H13),Kills Allergies,Virus,Germs & Pm 0.01 With 99.999% Efficiency,White",
+    "price": 15999,
+    "mrp": 34900,
+    "discount": 54.15759312320917,
+    "image_url": "https://m.media-amazon.com/images/I/91mE+0CCnGL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B08GJ57MKL?tag=YOUR_AMAZON_TAG",
     "is_verified_low": true,
-    "deal_score": 70.30233333333334,
-    "timestamp": 1784447435.5529752,
+    "deal_score": 66.41031518624641,
+    "timestamp": 1784454790.4478126,
     "clicks": 0,
     "price_history": [
       {
-        "price": 16499,
-        "timestamp": 1784447435.5529752
+        "price": 15999,
+        "timestamp": 1784454790.4478126
+      }
+    ]
+  },
+  {
+    "id": "B084Q92WBH",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Sleepyhead Flip Designed by Duroflex - Premium Dual Sided High Density Foam Queen Bed Mattress with Firm & Medium Soft Sides |7 Years Warranty |5 Inch Queen Size Bed Mattress (72x60x5)",
+    "price": 8879,
+    "mrp": 12699,
+    "discount": 30.08110874872037,
+    "image_url": "https://m.media-amazon.com/images/I/61+q48jxwYL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B084Q92WBH?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 64.55677612410426,
+    "timestamp": 1784454780.571377,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 8879,
+        "timestamp": 1784454780.571377
+      }
+    ]
+  },
+  {
+    "id": "B0GXKC3ZXH",
+    "platform": "amazon_master_lightning_deals",
+    "title": "VW 100 cm (40 inches) Frameless Series HD Ready QLED TV VW40S1",
+    "price": 11299,
+    "mrp": 19999,
+    "discount": 43.50217510875544,
+    "image_url": "https://m.media-amazon.com/images/I/81oZcQGUwKL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GXKC3ZXH?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 73.95152257612881,
+    "timestamp": 1784454770.7213197,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 11299,
+        "timestamp": 1784454770.7213197
+      }
+    ]
+  },
+  {
+    "id": "B0F2J6QCJB",
+    "platform": "amazon_master_lightning_deals",
+    "title": "TCL 189 cm (75 inches) Metallic Bezel Less Series 4K Ultra HD Smart LED Google TV 75V6C (Black)",
+    "price": 64990,
+    "mrp": 179990,
+    "discount": 63.892438468803824,
+    "image_url": "https://m.media-amazon.com/images/I/71LD1gonu1L._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0F2J6QCJB?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 88.17976554253013,
+    "timestamp": 1784454760.8420095,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 64990,
+        "timestamp": 1784454760.8420095
+      }
+    ]
+  },
+  {
+    "id": "B0H4R9GJPZ",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Kurlon Dual Mattress | King Size 72x72x5 Inches | Medium Soft & Firm Dual Side Comfort | Strong High Resilience Core Support | Soft PU Foam Comfort Layer | 10 Years Warranty",
+    "price": 9699,
+    "mrp": 15704,
+    "discount": 38.23866530820173,
+    "image_url": "https://m.media-amazon.com/images/I/817xn8TOCJL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0H4R9GJPZ?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 70.26706571574121,
+    "timestamp": 1784454747.3568795,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 9699,
+        "timestamp": 1784454747.3568795
+      }
+    ]
+  },
+  {
+    "id": "B0GX5BF141",
+    "platform": "amazon_master_lightning_deals",
+    "title": "VW 80 cm (32 inches) Spectra Series HD Ready Smart QLED Android TV VW32AQ3",
+    "price": 9699,
+    "mrp": 19999,
+    "discount": 51.50257512875643,
+    "image_url": "https://m.media-amazon.com/images/I/81oOBnd1iiL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GX5BF141?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 79.55180259012951,
+    "timestamp": 1784454737.50149,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 9699,
+        "timestamp": 1784454737.50149
+      }
+    ]
+  },
+  {
+    "id": "B0DBGP48NW",
+    "platform": "amazon_master_lightning_deals",
+    "title": "realme Buds T310 True Wireless in-Ear Earbuds with 46dB Hybrid ANC, 360\u00b0 Spatial Audio, 12.4mm Dynamic Bass Driver, Upto 40Hrs Battery and Fast Charging (Vibrant Black)",
+    "price": 1999,
+    "mrp": 3999,
+    "discount": 50.01250312578145,
+    "image_url": "https://m.media-amazon.com/images/I/61dj32WdrxL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0DBGP48NW?tag=YOUR_AMAZON_TAG",
+    "is_verified_low": true,
+    "deal_score": 75.07366841710427,
+    "timestamp": 1784454727.5851314,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1999,
+        "timestamp": 1784454727.5851314
       }
     ]
   }
