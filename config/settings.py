@@ -1,8 +1,14 @@
 import os
 import json
+import time as _time
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
+
+# Settings cache with TTL to avoid excessive disk reads
+_settings_cache = None
+_settings_cache_time = 0
+_SETTINGS_CACHE_TTL = 30  # seconds
 
 def load_dotenv():
     dotenv_path = os.path.join(BASE_DIR, ".env")
@@ -23,6 +29,9 @@ def load_dotenv():
             pass
 
 def load_settings() -> dict:
+    global _settings_cache, _settings_cache_time
+    if _settings_cache is not None and (_time.time() - _settings_cache_time) < _SETTINGS_CACHE_TTL:
+        return _settings_cache.copy()
     load_dotenv()
     
     default_settings = {
@@ -35,6 +44,7 @@ def load_settings() -> dict:
         "cuelinks_pub_id": "",
         "earnkaro_pub_id": "",
         "discord_webhook_url": "",
+        "sendgrid_api_key": "",
         "min_discount": 30.0,
         "min_deal_price": 299,
         "min_deal_savings": 250,
@@ -79,7 +89,7 @@ def load_settings() -> dict:
                 loaded = json.load(f)
                 for k, v in loaded.items():
                     saved[k] = v
-        except:
+        except Exception:
             pass
             
     # Environmental variable overrides for secure production environments
@@ -110,6 +120,9 @@ def load_settings() -> dict:
     env_earnkaro = os.environ.get("EARNKARO_PUB_ID")
     if env_earnkaro:
         saved["earnkaro_pub_id"] = env_earnkaro
+    env_sendgrid = os.environ.get("SENDGRID_API_KEY")
+    if env_sendgrid:
+        saved["sendgrid_api_key"] = env_sendgrid
         
     # SMTP email configuration overrides
     env_smtp_server = os.environ.get("SMTP_SERVER")
@@ -118,7 +131,7 @@ def load_settings() -> dict:
     env_smtp_port = os.environ.get("SMTP_PORT")
     if env_smtp_port:
         try: saved["smtp_port"] = int(env_smtp_port)
-        except: pass
+        except (ValueError, TypeError): pass
     env_smtp_user = os.environ.get("SMTP_USERNAME")
     if env_smtp_user:
         saved["smtp_username"] = env_smtp_user
@@ -131,7 +144,9 @@ def load_settings() -> dict:
     env_smtp_to = os.environ.get("SMTP_TO")
     if env_smtp_to:
         saved["smtp_to"] = env_smtp_to
-        
+    
+    _settings_cache = saved.copy()
+    _settings_cache_time = _time.time()
     return saved
 
 def save_settings(settings: dict):
@@ -148,6 +163,7 @@ def save_settings(settings: dict):
             ("CUELINKS_PUB_ID", "cuelinks_pub_id"),
             ("EARNKARO_PUB_ID", "earnkaro_pub_id"),
             ("DISCORD_WEBHOOK_URL", "discord_webhook_url"),
+            ("SENDGRID_API_KEY", "sendgrid_api_key"),
             ("SMTP_SERVER", "smtp_server"),
             ("SMTP_PORT", "smtp_port"),
             ("SMTP_USERNAME", "smtp_username"),
@@ -160,6 +176,8 @@ def save_settings(settings: dict):
             
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(to_save, f, indent=2)
+        global _settings_cache
+        _settings_cache = None  # Invalidate cache after save
     except Exception as e:
         import logging
         logging.error(f"Failed to save settings.json: {e}")

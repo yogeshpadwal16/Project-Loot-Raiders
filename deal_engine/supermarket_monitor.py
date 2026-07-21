@@ -11,6 +11,7 @@ def supermarket_monitor_loop():
     logging.info("Supermarket clearance monitor loop activated.")
     while True:
         # Scrape / seed simulated JioMart/DMart grocery clearance drops
+        db = None
         try:
             db = SessionLocal()
             clearance_deals = [
@@ -37,50 +38,57 @@ def supermarket_monitor_loop():
             ]
             
             for deal in clearance_deals:
-                # Check duplicate
-                existing = db.query(Product).filter_by(id=deal["id"]).first()
-                if not existing:
-                    prod = Product(
-                        id=deal["id"],
-                        platform=deal["platform"],
-                        title=deal["title"],
-                        image_url=deal["image_url"],
-                        url=deal["url"]
-                    )
-                    db.add(prod)
-                    db.commit()
-                    
-                    price_hist = PriceHistory(
-                        product_id=deal["id"],
-                        price=deal["price"],
-                        mrp=deal["mrp"],
-                        discount=deal["discount"],
-                        is_verified_low=True,
-                        deal_score=85.0
-                    )
-                    db.add(price_hist)
-                    db.commit()
-                    
-                    # Alert channel
-                    enqueue_alert(
-                        platform=deal["platform"],
-                        title=deal["title"],
-                        price=deal["price"],
-                        mrp=deal["mrp"],
-                        discount=deal["discount"],
-                        img_url=deal["image_url"],
-                        final_url=deal["url"],
-                        is_verified_low=True,
-                        deal_score=85.0,
-                        unique_id=deal["id"],
-                        bank_offers=["Extra 10% instant discount on orders above Rs 999"],
-                        coupon_detail="FREE_DELIVERY",
-                        review_grade="A+"
-                    )
-                    logging.info(f"Broadcasted supermarket clearance loot drop: {deal['title']}")
-            db.close()
+                try:
+                    # Check duplicate
+                    existing = db.query(Product).filter_by(id=deal["id"]).first()
+                    if not existing:
+                        prod = Product(
+                            id=deal["id"],
+                            platform=deal["platform"],
+                            title=deal["title"],
+                            image_url=deal["image_url"],
+                            url=deal["url"]
+                        )
+                        db.add(prod)
+                        db.flush()
+                        
+                        price_hist = PriceHistory(
+                            product_id=deal["id"],
+                            price=deal["price"],
+                            mrp=deal["mrp"],
+                            discount=deal["discount"],
+                            is_verified_low=True,
+                            deal_score=85.0,
+                            timestamp=time.time()
+                        )
+                        db.add(price_hist)
+                        db.commit()
+                        
+                        # Alert channel
+                        enqueue_alert(
+                            platform=deal["platform"],
+                            title=deal["title"],
+                            price=deal["price"],
+                            mrp=deal["mrp"],
+                            discount=deal["discount"],
+                            img_url=deal["image_url"],
+                            final_url=deal["url"],
+                            is_verified_low=True,
+                            deal_score=85.0,
+                            unique_id=deal["id"],
+                            bank_offers=["Extra 10% instant discount on orders above Rs 999"],
+                            coupon_detail="FREE_DELIVERY",
+                            review_grade="A+"
+                        )
+                        logging.info(f"Broadcasted supermarket clearance loot drop: {deal['title']}")
+                except Exception as deal_err:
+                    db.rollback()
+                    logging.error(f"Error processing supermarket deal {deal.get('id', 'unknown')}: {deal_err}")
         except Exception as e:
             logging.error(f"Error in supermarket monitor loop: {e}")
+        finally:
+            if db:
+                db.close()
             
         # Check every 4 hours
         time.sleep(14400)

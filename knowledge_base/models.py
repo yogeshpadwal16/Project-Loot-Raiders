@@ -96,3 +96,11 @@ class ReferralLog(Base):
     referrer_id = Column(String, index=True)
     referred_id = Column(String, unique=True, index=True)
     timestamp = Column(Float, default=time.time)
+
+class ChannelGrowthLog(Base):
+    __tablename__ = 'channel_growth_log'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    subscribers = Column(Integer)
+    timestamp = Column(Float, default=time.time)
+

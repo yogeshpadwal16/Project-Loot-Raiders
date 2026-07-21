@@ -1,4 +1,4 @@
-import time
+﻿import time
 import logging
 import random
 import threading
@@ -34,10 +34,10 @@ class PlaywrightElementAdapter:
                 return self.locator.evaluate("el => el.innerHTML")
             elif attr == "href":
                 try: return self.locator.evaluate("el => el.href")
-                except: pass
+                except Exception: pass
             elif attr == "src":
                 try: return self.locator.evaluate("el => el.src")
-                except: pass
+                except Exception: pass
             return self.locator.get_attribute(attr)
         except Exception as e:
             return None
@@ -179,11 +179,7 @@ class PlaywrightSeleniumAdapter:
         except Exception as e:
             logging.debug(f"Error closing Playwright elements: {e}")
         finally:
-            global playwright_lock
-            try:
-                playwright_lock.release()
-            except RuntimeError:
-                pass
+            pass
 
     def close(self):
         try:
@@ -208,6 +204,7 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
     
     global playwright_lock
     playwright_lock.acquire()
+    lock_held = True
     
     try:
         try:
@@ -266,10 +263,21 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
         page = context.new_page()
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
+        # Release the lock immediately now that the browser launch is complete.
+        # This serializes launches (preventing high CPU load spikes) but allows concurrent scraping.
+        if lock_held:
+            try:
+                playwright_lock.release()
+                lock_held = False
+            except RuntimeError:
+                pass
+            
         return PlaywrightSeleniumAdapter(playwright, browser, context, page)
     except Exception as e:
-        try:
-            playwright_lock.release()
-        except RuntimeError:
-            pass
+        if lock_held:
+            try:
+                playwright_lock.release()
+                lock_held = False
+            except RuntimeError:
+                pass
         raise e

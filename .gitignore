@@ -62,4 +62,5 @@ scratch/
 
 # Root level test files
 /deals_history.json
+omega_history.json
 TELEGRAM_STRING_SESSION.txt

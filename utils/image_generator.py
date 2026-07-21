@@ -45,7 +45,7 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
         label_font = ImageFont.truetype(font_path_bold, 28)
         meta_font = ImageFont.truetype(font_path_reg, 22)
         tiny_font = ImageFont.truetype(font_path_reg, 16)
-    except:
+    except Exception:
         title_font = ImageFont.load_default()
         price_font = title_font
         label_font = title_font

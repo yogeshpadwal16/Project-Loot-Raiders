@@ -8,6 +8,7 @@
   "cuelinks_pub_id": "",
   "earnkaro_pub_id": "",
   "discord_webhook_url": "",
+  "sendgrid_api_key": "",
   "min_discount": 30.0,
   "min_deal_price": 149,
   "min_deal_savings": 100,
@@ -62,5 +63,6 @@
       "flipkart_clearance_master_feed": 85
     }
   },
-  "last_digest_date": "2026-07-17"
+  "last_digest_date": "2026-07-19",
+  "last_growth_check_time": 1784470980.708082
 }

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import queue
 import threading
 import time
@@ -19,14 +19,14 @@ def log_failure(component: str, context: str, err: Exception, severity: str = "E
     timestamp = datetime.now().isoformat()
     msg = (
         f"\n==========================================================================\n"
-        f"🚨 FAILURE REPORTED:\n"
-        f"📅 Timestamp: {timestamp}\n"
-        f"🔌 Component: {component}\n"
-        f"📝 Context: {context}\n"
-        f"🔍 Root Cause: {type(err).__name__} - {str(err)}\n"
-        f"🔥 Severity: {severity}\n"
-        f"🩹 Recovery Status: {recovery_status}\n"
-        f"💡 Recommended Action: {recommended_action}\n"
+        f"ðŸš¨ FAILURE REPORTED:\n"
+        f"ðŸ“… Timestamp: {timestamp}\n"
+        f"ðŸ”Œ Component: {component}\n"
+        f"ðŸ“ Context: {context}\n"
+        f"ðŸ” Root Cause: {type(err).__name__} - {str(err)}\n"
+        f"ðŸ”¥ Severity: {severity}\n"
+        f"ðŸ©¹ Recovery Status: {recovery_status}\n"
+        f"ðŸ’¡ Recommended Action: {recommended_action}\n"
         f"=========================================================================="
     )
     logging.error(msg)
@@ -40,7 +40,7 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
         return None
         
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
         
         prompt = (
             f"You are a professional, high-energy, witty shopping deal alert bot. Write a Telegram post in HTML formatting for this deal:\n\n"
@@ -81,7 +81,7 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
         prompt += (
             "\nFormatting Rules:\n"
             "- Use bold <b>...</b>, italics <i>...</i>, strike <s>...</s> for MRP, and code <code>...</code> for prices.\n"
-            "- Include exact buy link in this HTML format: <a href='{final_url}'>👉 CLICK HERE TO BUY NOW</a>\n"
+            "- Include exact buy link in this HTML format: <a href='{final_url}'>ðŸ‘‰ CLICK HERE TO BUY NOW</a>\n"
             "- Keep it exciting, short, and use engaging shopping/warning emojis.\n"
             "- Write in clean, valid HTML tags that Telegram supports (only <b>, <i>, <s>, <u>, <code>, <pre>, <a>).\n"
             "- Return ONLY the post text (no markdown ```html wrappers, no extra explanation text)."
@@ -92,7 +92,7 @@ def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, f
                 "parts": [{"text": prompt}]
             }]
         }
-        res = requests.post(url, json=payload, timeout=25)
+        res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
         if res.status_code == 200:
             data = res.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -111,17 +111,17 @@ def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, dis
             "url": final_url,
             "color": 16750848 if is_amazon else 114686,
             "fields": [
-                {"name": "Price", "value": f"₹{price:,}", "inline": True},
-                {"name": "MRP", "value": f"₹{mrp:,}", "inline": True},
+                {"name": "Price", "value": f"â‚¹{price:,}", "inline": True},
+                {"name": "MRP", "value": f"â‚¹{mrp:,}", "inline": True},
                 {"name": "Discount", "value": f"{discount:.1f}% OFF", "inline": True},
                 {"name": "Deal Score", "value": f"{deal_score:.1f}/100", "inline": True}
             ],
             "footer": {
-                "text": "Loot Raiders Deal Alert • Curated by Yogesh Padwal"
+                "text": "Loot Raiders Deal Alert â€¢ Curated by Yogesh Padwal"
             }
         }
         if is_verified_low:
-            embed["description"] = "🔥 **VERIFIED ALL-TIME LOW PRICE!**"
+            embed["description"] = "ðŸ”¥ **VERIFIED ALL-TIME LOW PRICE!**"
         if img_url and "base64" not in img_url:
             embed["image"] = {"url": img_url}
             
@@ -152,12 +152,12 @@ def send_whatsapp_alert(title: str, price: int, mrp: int, discount: float, final
         url = f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
         
         message_body = (
-            f"🍊💣 *Loot Raiders Deal Alert!* 💣*🍊\n\n"
-            f"🛍️ *{title[:60]}...*\n\n"
-            f"🔥 *Loot Price:* ₹{price:,} (MRP: ~₹{mrp:,}~)\n"
-            f"📉 *Discount:* {discount:.0f}% OFF\n"
-            f"💎 *Deal Score:* {deal_score:.0f}/100\n\n"
-            f"👉 *Buy Link:* {final_url}"
+            f"ðŸŠðŸ’£ *Loot Raiders Deal Alert!* ðŸ’£*ðŸŠ\n\n"
+            f"ðŸ›ï¸ *{title[:60]}...*\n\n"
+            f"ðŸ”¥ *Loot Price:* â‚¹{price:,} (MRP: ~â‚¹{mrp:,}~)\n"
+            f"ðŸ“‰ *Discount:* {discount:.0f}% OFF\n"
+            f"ðŸ’Ž *Deal Score:* {deal_score:.0f}/100\n\n"
+            f"ðŸ‘‰ *Buy Link:* {final_url}"
         )
         
         payload = {
@@ -188,18 +188,13 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
     smtp_pass = settings.get("smtp_password")
     smtp_from = settings.get("smtp_from")
     smtp_to = settings.get("smtp_to")
+    sendgrid_api_key = settings.get("sendgrid_api_key")
     
-    if not smtp_server or not smtp_user or not smtp_pass or not smtp_from or not smtp_to:
+    if not sendgrid_api_key and (not smtp_server or not smtp_user or not smtp_pass or not smtp_from or not smtp_to):
         # Not configured, skip silently
         return False
         
     try:
-        # Prepare email
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"🔥 LOOT ALERT: {discount:.0f}% OFF - {title[:50]}... (Rs. {price:,})"
-        msg['From'] = smtp_from
-        msg['To'] = smtp_to
-        
         invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals")
         
         # Build beautiful HTML body
@@ -230,10 +225,10 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🚀 Project Loot Raiders 🚀</h1>
+                    <h1>ðŸš€ Project Loot Raiders ðŸš€</h1>
                 </div>
                 <div class="content">
-                    {f'<div class="badge">🔥 VERIFIED ALL-TIME LOW PRICE</div>' if is_verified_low else ''}
+                    {f'<div class="badge">ðŸ”¥ VERIFIED ALL-TIME LOW PRICE</div>' if is_verified_low else ''}
                     <div class="product-title">{title}</div>
                     
                     {f'<img class="product-img" src="{img_url}" alt="Product Image" />' if img_url and 'base64' not in img_url else ''}
@@ -241,11 +236,11 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
                     <div class="price-box">
                         <div class="stat">
                             <div class="stat-lbl">Loot Price</div>
-                            <div class="stat-val text-green">₹{price:,}</div>
+                            <div class="stat-val text-green">â‚¹{price:,}</div>
                         </div>
                         <div class="stat">
                             <div class="stat-lbl">Original MRP</div>
-                            <div class="stat-val text-strike">₹{mrp:,}</div>
+                            <div class="stat-val text-strike">â‚¹{mrp:,}</div>
                         </div>
                         <div class="stat">
                             <div class="stat-lbl">Discount</div>
@@ -253,38 +248,79 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
                         </div>
                     </div>
                     
-                    <a class="btn-cta" href="{final_url}" target="_blank">GRAB THIS DEAL NOW →</a>
+                    <a class="btn-cta" href="{final_url}" target="_blank">GRAB THIS DEAL NOW â†’</a>
                 </div>
                 <div class="footer">
                     <p>You received this alert because you subscribed to Project Loot Raiders deal updates.</p>
-                    <p>📢 <b>Want more deals?</b> <a href="{invite_link}" target="_blank">Join our Telegram Channel</a></p>
+                    <p>ðŸ“¢ <b>Want more deals?</b> <a href="{invite_link}" target="_blank">Join our Telegram Channel</a></p>
                 </div>
             </div>
         </body>
         </html>
         """
         
-        msg.attach(MIMEText(html_body, 'html'))
+        # 1. Try SendGrid REST API if configured
+        if sendgrid_api_key and sendgrid_api_key.strip() != "" and "YOUR_SENDGRID" not in sendgrid_api_key:
+            try:
+                targets = [t.strip() for t in smtp_to.split(",") if t.strip()]
+                personalizations = [{"to": [{"email": target}]} for target in targets]
+                payload = {
+                    "personalizations": personalizations,
+                    "from": {
+                        "email": smtp_from if smtp_from else "alerts@lootraiders.com",
+                        "name": "Project Loot Raiders"
+                    },
+                    "subject": f"ðŸ”¥ LOOT ALERT: {discount:.0f}% OFF - {title[:50]}... (Rs. {price:,})",
+                    "content": [
+                        {
+                            "type": "text/html",
+                            "value": html_body
+                        }
+                    ]
+                }
+                headers = {
+                    "Authorization": f"Bearer {sendgrid_api_key}",
+                    "Content-Type": "application/json"
+                }
+                res = requests.post("https://api.sendgrid.com/v3/mail/send", json=payload, headers=headers, timeout=15)
+                if res.status_code in [200, 201, 202]:
+                    logging.info(f"SendGrid API email alert successfully sent to {len(targets)} recipient(s).")
+                    return True
+                else:
+                    logging.warning(f"SendGrid API email dispatch returned status {res.status_code}: {res.text}. Trying SMTP fallback.")
+            except Exception as sg_err:
+                logging.error(f"SendGrid API email alert failed: {sg_err}. Trying SMTP fallback.")
         
-        # Connect to server
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        
-        # Send mail
-        targets = [t.strip() for t in smtp_to.split(",") if t.strip()]
-        server.sendmail(smtp_from, targets, msg.as_string())
-        server.quit()
-        
-        logging.info(f"Email alert successfully sent to {len(targets)} recipient(s).")
-        return True
+        # 2. SMTP fallback
+        if smtp_server and smtp_user and smtp_pass and smtp_from and smtp_to:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"ðŸ”¥ LOOT ALERT: {discount:.0f}% OFF - {title[:50]}... (Rs. {price:,})"
+            msg['From'] = smtp_from
+            msg['To'] = smtp_to
+            msg.attach(MIMEText(html_body, 'html'))
+            
+            # Connect to server
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            
+            # Send mail
+            targets = [t.strip() for t in smtp_to.split(",") if t.strip()]
+            server.sendmail(smtp_from, targets, msg.as_string())
+            server.quit()
+            
+            logging.info(f"Email alert successfully sent via SMTP to {len(targets)} recipient(s).")
+            return True
+            
+        return False
     except Exception as e:
         logging.error(f"Email alert dispatch failed: {e}")
         return False
 
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
-                        bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None) -> bool:
+                        bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
+    invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
     cloaker_domain = settings.get("cloaker_domain", "").strip()
     if cloaker_domain:
         if not cloaker_domain.startswith("http"):
@@ -300,29 +336,29 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # 1. Premium Headers
     if is_glitch:
         header = (
-            "🚨🚨 <b>[ LOOT GLITCH ALERT ]</b> 🚨🚨\n"
-            "🔥 <b>PRICE ERROR DETECTED</b> 🔥\n"
-            "━━━━━━━━━━━━━━━━━━━━━━"
+            "ðŸš¨ðŸš¨ <b>[ LOOT GLITCH ALERT ]</b> ðŸš¨ðŸš¨\n"
+            "ðŸ”¥ <b>PRICE ERROR DETECTED</b> ðŸ”¥\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"
         )
-        badge = "⚠️ <b>HURRY! Prices will rise or sell out in seconds!</b>\n⚠️ <i>Forward to friends immediately!</i>\n"
+        badge = "âš ï¸ <b>HURRY! Prices will rise or sell out in seconds!</b>\nâš ï¸ <i>Forward to friends immediately!</i>\n"
     else:
         badge_title = f"{platform.upper()} LOOT"
         if "amazon" in platform.lower():
-            icon = "🍊"
+            icon = "ðŸŠ"
         elif "flipkart" in platform.lower():
-            icon = "💣"
+            icon = "ðŸ’£"
         elif "myntra" in platform.lower():
-            icon = "👗"
+            icon = "ðŸ‘—"
         elif "meesho" in platform.lower():
-            icon = "🛍️"
+            icon = "ðŸ›ï¸"
         else:
-            icon = "✨"
+            icon = "âœ¨"
             
         header = (
             f"<b>{icon} [ {badge_title} DEAL ] {icon}</b>\n"
-            "━━━━━━━━━━━━━━━━━━━━━━"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"
         )
-        badge = "🔥 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>\n" if is_verified_low else ""
+        badge = "ðŸ”¥ <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>\n" if is_verified_low else ""
         
     clean_title = title.split('\n')[0].strip()
     truncated_title = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
@@ -344,11 +380,11 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             for match in matches:
                 lp = db.query(PriceHistory).filter_by(product_id=match.id).order_by(PriceHistory.timestamp.desc()).first()
                 if lp and match.platform != platform and match.platform not in seen_platforms:
-                    comparison_list.append(f"  • {match.platform.upper()}: ₹{lp.price:,}")
+                    comparison_list.append(f"  â€¢ {match.platform.upper()}: â‚¹{lp.price:,}")
                     seen_platforms.add(match.platform)
                     
             if comparison_list:
-                comparison_text = "\n\n📊 <b>Multi-Retailer Comparison:</b>\n" + "\n".join(comparison_list)
+                comparison_text = "\n\nðŸ“Š <b>Multi-Retailer Comparison:</b>\n" + "\n".join(comparison_list)
     except Exception as db_err:
         logging.error(f"Error querying comparisons in notifier: {db_err}")
     finally:
@@ -356,7 +392,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         
     savings = mrp - price
     rating_score = deal_score / 10.0
-    stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
+    stars = "â˜…" * int(round(rating_score / 2)) + "â˜†" * (5 - int(round(rating_score / 2)))
     
     # Calculate price stats from local database
     price_stats = None
@@ -381,11 +417,11 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     effective_cashback_prompt = ""
     if "amazon" in platform.lower():
         effective_price = int(price * 0.95)
-        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Amazon Pay Card 5% Cashback)\n"
+        effective_cashback_text = f"ðŸª™ <b>Effective Price:</b>  <code>â‚¹{effective_price:,}</code> (with Amazon Pay Card 5% Cashback)\n"
         effective_cashback_prompt = f"Effective Price (with 5% Amazon Pay Card Cashback): Rs. {effective_price}"
     elif "flipkart" in platform.lower():
         effective_price = int(price * 0.95)
-        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Flipkart Axis Card / SuperCoins)\n"
+        effective_cashback_text = f"ðŸª™ <b>Effective Price:</b>  <code>â‚¹{effective_price:,}</code> (with Flipkart Axis Card / SuperCoins)\n"
         effective_cashback_prompt = f"Effective Price (with Flipkart Axis Card or SuperCoins): Rs. {effective_price}"
         
     # 1.6 UPI / RuPay Offer Matcher (Feature 8)
@@ -394,7 +430,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if bank_offers:
         for offer in bank_offers:
             if any(x in offer.lower() for x in ["rupay", "upi", "phonepe", "gpay", "paytm"]):
-                upi_matcher_text = f"📱 <b>UPI / RuPay Offer:</b> Extra UPI app discount detected at checkout!\n"
+                upi_matcher_text = f"ðŸ“± <b>UPI / RuPay Offer:</b> Extra UPI app discount detected at checkout!\n"
                 upi_matcher_prompt = "UPI / RuPay specific offers: Extra instant cashback is available for UPI payments."
                 break
                 
@@ -404,7 +440,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     offline_comparison_text = ""
     offline_comparison_prompt = ""
     if offline_savings > 100:
-        offline_comparison_text = f"🏬 <b>Offline Store Match:</b> Typical price <code>₹{offline_retail_price:,}</code> in retail stores (Save <code>₹{offline_savings:,}</code>!)\n"
+        offline_comparison_text = f"ðŸ¬ <b>Offline Store Match:</b> Typical price <code>â‚¹{offline_retail_price:,}</code> in retail stores (Save <code>â‚¹{offline_savings:,}</code>!)\n"
         offline_comparison_prompt = f"Offline retail comparison: Typical offline price is Rs. {offline_retail_price} (User saves Rs. {offline_savings} compared to local retail store)."
 
     # Attempt Gemini generation
@@ -421,33 +457,33 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         # Build extra promotional/meta fields
         promo_fields = ""
         if coupon_detail:
-            promo_fields += f"🏷️ <b>Coupon:</b>        <code>{coupon_detail}</code>\n"
+            promo_fields += f"ðŸ·ï¸ <b>Coupon:</b>        <code>{coupon_detail}</code>\n"
         if bank_offers:
-            promo_fields += f"💳 <b>Bank Offer:</b>    <code>{', '.join(bank_offers)}</code>\n"
+            promo_fields += f"ðŸ’³ <b>Bank Offer:</b>    <code>{', '.join(bank_offers)}</code>\n"
         if review_grade and review_grade != "N/A":
-            promo_fields += f"⭐ <b>Review Trust:</b>  <code>Grade {review_grade}</code>\n"
+            promo_fields += f"â­ <b>Review Trust:</b>  <code>Grade {review_grade}</code>\n"
         if promo_fields:
-            promo_fields = f"━━━━━━━━━━━━━━━━━━━━━\n{promo_fields}"
+            promo_fields = f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{promo_fields}"
             
         caption = (
             f"{header}\n"
-            f"🛍️ <b>{truncated_title}</b>\n\n"
+            f"ðŸ›ï¸ <b>{truncated_title}</b>\n\n"
             f"{badge}"
-            f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>\n"
-            f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>\n"
-            f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
-            f"💰 <b>Total Savings:</b> <code>₹{savings:,}</code>\n\n"
+            f"ðŸ’µ <b>Loot Price:</b>  <code>â‚¹{price:,}</code>\n"
+            f"âŒ <b>Original MRP:</b> <s>â‚¹{mrp:,}</s>\n"
+            f"ðŸ“‰ <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
+            f"ðŸ’° <b>Total Savings:</b> <code>â‚¹{savings:,}</code>\n\n"
             f"{effective_cashback_text}"
             f"{upi_matcher_text}"
             f"{offline_comparison_text}"
             f"{promo_fields}"
-            f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-            f"🛡️ <b>Verification:</b> <code>{verification_text}</code>"
+            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            f"ðŸ’Ž <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
+            f"ðŸ›¡ï¸ <b>Verification:</b> <code>{verification_text}</code>"
             f"{comparison_text}\n\n"
-            f"🚀 <i>Price drops don't last! Grab it before stock ends!</i>\n"
-            f"━━━━━━━━━━━━━━━━━━━━━\n"
-            f"📢 <b>Join @LootRaidersDeals for more verified loot!</b>"
+            f"ðŸš€ <i>Price drops don't last! Grab it before stock ends!</i>\n"
+            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            + (f"ðŸ“¢ <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more verified loot!</b>" if include_invite_link else "")
         )
         
     # Guardrail: If caption exceeds 1000 chars, Telegram photo API fails.
@@ -459,11 +495,11 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             promo_info += f" | Coupon: {coupon_detail}"
         caption = (
             f"{header}\n\n"
-            f"🛍️ <b>{truncated_title}</b>\n\n"
-            f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
-            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>{promo_info}\n"
-            f"🛡️ <b>Verification:</b> <code>{verification_text}</code>\n\n"
-            f"📢 <b>Join @LootRaidersDeals for more!</b>"
+            f"ðŸ›ï¸ <b>{truncated_title}</b>\n\n"
+            f"ðŸ’Ž <b>Loot Price:</b> <code>â‚¹{price:,}</code> (<s>â‚¹{mrp:,}</s>)\n"
+            f"ðŸ”¥ <b>Discount:</b> <b>{discount:.0f}% OFF</b>{promo_info}\n"
+            f"ðŸ›¡ï¸ <b>Verification:</b> <code>{verification_text}</code>"
+            + (f"\n\nðŸ“¢ <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more!</b>" if include_invite_link else "")
         )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
@@ -499,13 +535,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     import json
     row_1 = [
         {
-            "text": "🛍️ BUY NOW 🛍️",
+            "text": "ðŸ›ï¸ BUY NOW ðŸ›ï¸",
             "url": buy_url
         }
     ]
     if auto_cart_url:
         row_1.append({
-            "text": "🛒 AUTO-CART 🛒",
+            "text": "ðŸ›’ AUTO-CART ðŸ›’",
             "url": auto_cart_url
         })
         
@@ -514,11 +550,11 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             row_1,
             [
                 {
-                    "text": f"🔥 Verified ({vote_verify_count})",
+                    "text": f"ðŸ”¥ Verified ({vote_verify_count})",
                     "callback_data": f"vote:verify:{unique_id}"
                 },
                 {
-                    "text": f"❌ Expired ({vote_expire_count})",
+                    "text": f"âŒ Expired ({vote_expire_count})",
                     "callback_data": f"vote:expire:{unique_id}"
                 }
             ]
@@ -573,11 +609,11 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             logging.error(f"Failed to upload photo card: {upload_err}")
         finally:
             try: os.remove(local_card_path)
-            except: pass
+            except Exception: pass
     elif local_card_path:
         # Cleanup local card path if we already successfully sent raw image URL
         try: os.remove(local_card_path)
-        except: pass
+        except Exception: pass
     if photo_sent:
         return True
         
@@ -653,12 +689,12 @@ def update_telegram_message(product_id: str):
         is_expired = (expires - verifies) >= 3
         
         if is_expired:
-            new_caption = f"❌ <b>[ DEAL EXPIRED / SOLD OUT ]</b> ❌\n\n<s>{original_caption}</s>"
+            new_caption = f"âŒ <b>[ DEAL EXPIRED / SOLD OUT ]</b> âŒ\n\n<s>{original_caption}</s>"
             reply_markup = {
                 "inline_keyboard": [
                     [
                         {
-                            "text": "❌ EXPIRED / SOLD OUT ❌",
+                            "text": "âŒ EXPIRED / SOLD OUT âŒ",
                             "url": buy_url
                         }
                     ]
@@ -668,25 +704,25 @@ def update_telegram_message(product_id: str):
             hotness_text = ""
             if recent_clicks > 0:
                 hotness = min(10.0, 5.0 + (recent_clicks * 0.5))
-                fires = "🔥" * min(3, max(1, int(hotness / 3)))
-                hotness_text = f"\n\n⚡ <b>{fires} Hotness: {hotness:.1f}/10</b> - <i>{recent_clicks} clicks in last 15m</i>"
+                fires = "ðŸ”¥" * min(3, max(1, int(hotness / 3)))
+                hotness_text = f"\n\nâš¡ <b>{fires} Hotness: {hotness:.1f}/10</b> - <i>{recent_clicks} clicks in last 15m</i>"
                 
             new_caption = f"{original_caption}{hotness_text}"
             reply_markup = {
                 "inline_keyboard": [
                     [
                         {
-                            "text": "🛍️ CLICK HERE TO BUY NOW 🛍️",
+                            "text": "ðŸ›ï¸ CLICK HERE TO BUY NOW ðŸ›ï¸",
                             "url": buy_url
                         }
                     ],
                     [
                         {
-                            "text": f"🔥 Verified ({verifies})",
+                            "text": f"ðŸ”¥ Verified ({verifies})",
                             "callback_data": f"vote:verify:{product_id}"
                         },
                         {
-                            "text": f"❌ Expired ({expires})",
+                            "text": f"âŒ Expired ({expires})",
                             "callback_data": f"vote:expire:{product_id}"
                         }
                     ]
@@ -756,28 +792,28 @@ def send_daily_digest_if_time():
         top_5 = deals_list[:5]
         
         digest_copy = (
-            "🍊💣 <b>LOOT RAIDERS DAILY DIGEST</b> 💣🍊\n"
-            f"📅 <b>Date:</b> {today_str}\n"
-            "━━━━━━━━━━━━━━━━━━━━━━\n"
+            "ðŸŠðŸ’£ <b>LOOT RAIDERS DAILY DIGEST</b> ðŸ’£ðŸŠ\n"
+            f"ðŸ“… <b>Date:</b> {today_str}\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             "Here are the top 5 highest-rated loot deals of the day:\n\n"
         )
         
         for idx, (p, lp) in enumerate(top_5, 1):
             is_amazon = "amazon" in p.platform.lower()
-            badge = "🍊" if is_amazon else "💣"
+            badge = "ðŸŠ" if is_amazon else "ðŸ’£"
             clean_title = p.title.split('\n')[0].strip()
             truncated_title = clean_title[:45] + "..." if len(clean_title) > 48 else clean_title
             
             digest_copy += (
-                f"<b>{idx}️⃣ {badge} {truncated_title}</b>\n"
-                f"💰 <b>Deal Price:</b> <code>₹{lp.price:,}</code> (<s>₹{lp.mrp:,}</s>)\n"
-                f"📉 <b>Discount:</b> {lp.discount:.0f}% OFF  🔥 <b>Score:</b> <code>{lp.deal_score:.0f}/100</code>\n"
-                f"👉 <b><a href='{p.url}'>GRAB THIS LOOT DEAL</a></b>\n\n"
+                f"<b>{idx}ï¸âƒ£ {badge} {truncated_title}</b>\n"
+                f"ðŸ’° <b>Deal Price:</b> <code>â‚¹{lp.price:,}</code> (<s>â‚¹{lp.mrp:,}</s>)\n"
+                f"ðŸ“‰ <b>Discount:</b> {lp.discount:.0f}% OFF  ðŸ”¥ <b>Score:</b> <code>{lp.deal_score:.0f}/100</code>\n"
+                f"ðŸ‘‰ <b><a href='{p.url}'>GRAB THIS LOOT DEAL</a></b>\n\n"
             )
             
         digest_copy += (
-            "━━━━━━━━━━━━━━━━━━━━━━\n"
-            "⚡ <b>Don't miss a single price drop! Join @LootRaidersDeals!</b>"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "âš¡ <b>Don't miss a single price drop! Join @LootRaidersDeals!</b>"
         )
         
         # Send digest
@@ -855,17 +891,17 @@ def check_and_send_presale_alerts():
                 if not bot_token or "YOUR_TELEGRAM" in bot_token or bot_token.strip() == "":
                     continue
                     
-                icon = "🍊" if sale["platform"] == "amazon" else "💣"
+                icon = "ðŸŠ" if sale["platform"] == "amazon" else "ðŸ’£"
                 checklist_text = "\n".join(sale["checklist"])
                 
                 alert_text = (
-                    f"⏰🚨 <b>[ MEGA SALE ALERT - 5 MINS TO GO ]</b> 🚨⏰\n"
+                    f"â°ðŸš¨ <b>[ MEGA SALE ALERT - 5 MINS TO GO ]</b> ðŸš¨â°\n"
                     f"{icon} <b>{sale_name} is starting in 5 minutes!</b> {icon}\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
                     f"Here is your checklist to grab price errors and lightning deals:\n\n"
                     f"{checklist_text}\n"
-                    f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                    f"⚡ <i>Keep your notifications on Loud! We are scanning at 1-second intervals!</i>"
+                    f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+                    f"âš¡ <i>Keep your notifications on Loud! We are scanning at 1-second intervals!</i>"
                 )
                 
                 url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -885,11 +921,59 @@ def check_and_send_presale_alerts():
         except Exception as err:
             logging.error(f"Error checking presale alert for {sale_name}: {err}")
 
+def track_channel_growth():
+    """
+    Retrieves the Telegram channel's current subscriber count and logs it in the database.
+    """
+    settings = load_settings()
+    bot_token = settings.get("telegram_bot_token")
+    channel_id = settings.get("telegram_chat_id")
+    
+    if not bot_token or not channel_id or "YOUR_TELEGRAM" in bot_token or bot_token.strip() == "":
+        return
+        
+    # Check last check time from settings to avoid rate limits / spamming
+    # We only log once every 4 hours
+    last_check = settings.get("last_growth_check_time", 0)
+    if time.time() - last_check < 14400: # 4 hours
+        return
+        
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount?chat_id={channel_id}"
+        res = requests.get(url, timeout=10)
+        if res.status_code == 200:
+            data = res.json()
+            count = data.get("result", 0)
+            if count > 0:
+                from database.db_session import SessionLocal
+                from knowledge_base.models import ChannelGrowthLog
+                db = SessionLocal()
+                try:
+                    log_entry = ChannelGrowthLog(subscribers=count, timestamp=time.time())
+                    db.add(log_entry)
+                    db.commit()
+                    logging.info(f"Telegram subscriber growth tracked: {count} subscribers.")
+                    
+                    settings["last_growth_check_time"] = time.time()
+                    save_settings(settings)
+                except Exception as db_err:
+                    logging.error(f"Error saving growth log: {db_err}")
+                finally:
+                    db.close()
+    except Exception as e:
+        logging.error(f"Failed to fetch Telegram subscriber count: {e}")
+
 def notifier_worker():
     logging.info("Background Alert Dispatch Worker Activated.")
     while True:
         # Check and send Daily digests
         send_daily_digest_if_time()
+        
+        # Track Telegram channel growth
+        try:
+            track_channel_growth()
+        except Exception as e:
+            logging.error(f"Error tracking channel growth: {e}")
         
         # Check and send Mega-Sale checklist alerts (Feature 30)
         try:
