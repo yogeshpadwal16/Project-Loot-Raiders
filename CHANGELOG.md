@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [3.1.0] — 2026-07-21
+
+### 🔄 Changed
+- **Zero-API post generation** — replaced Gemini-powered Telegram captions with a smart template engine using randomized headlines, urgency hooks, and CTAs (100% free, always works)
+- **Heuristic deal scoring** — replaced Gemini AI ranking with category-aware desirability scorer (product type, brand tier, price sweet-spots, discount magnitude)
+- **Heuristic glitch detection** — replaced Gemini AI price-error validation with category-aware electronics detection heuristics
+- **DOM-based self-healing selectors** — replaced Gemini CSS selector repair with structural DOM pattern scanner
+
+### 🐛 Fixed
+- Absolute URL resolution for Flipkart deals and Telegram inline keyboard buttons
+- Invalid auto-cart URLs now safely dropped instead of crashing Telegram API
+- Placeholder affiliate IDs no longer appended to product URLs
+- UTF-8 BOM encoding fix in notifier.py
+
+### 🗑️ Removed
+- All 4 Gemini API (`gemini-3.5-flash`) external calls completely removed from codebase
+- No external API dependency required for core deal scoring, posting, or selector healing
+
+---
+
 ## [3.0.0] — 2026-07-21
 
 ### ✨ Added
