@@ -12,6 +12,24 @@ from config.settings import load_settings
 active_client = None
 should_terminate = False
 
+# Auth-error patterns that indicate a corrupted/invalid session
+AUTH_ERROR_PATTERNS = [
+    "authorization key",
+    "auth_key_duplicated",
+    "session revoked",
+    "user deactivated",
+    "not authorized",
+]
+
+# Non-product URL patterns to skip (search pages, category listings, etc.)
+SKIP_URL_PATTERNS = [
+    r'amazon\.in/s\?',        # Amazon search pages
+    r'flipkart\.com/.*/pr\?', # Flipkart category pages
+    r'/gp/goldbox',            # Amazon deals hub
+    r'/gp/bestsellers',        # Amazon bestsellers
+    r'/gp/new-releases',       # Amazon new releases
+]
+
 # Bounded concurrency control to prevent OOM errors on VPS by limiting parallel browser runs (Feature 2)
 process_semaphore = threading.Semaphore(3)
 
@@ -49,21 +67,131 @@ def stop_channel_mirror():
         except Exception as shutdown_err:
             logging.error(f"[Channel Mirror] Error during clean client shutdown: {shutdown_err}")
 
+def _load_string_session() -> str:
+    """Load TELEGRAM_STRING_SESSION from env var or from the text file fallback."""
+    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
+    if session_str:
+        return session_str
+    # Fallback: read from TELEGRAM_STRING_SESSION.txt in project root
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    session_file = os.path.join(base_dir, "TELEGRAM_STRING_SESSION.txt")
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+            if content:
+                logging.info("[Channel Mirror] Loaded StringSession from TELEGRAM_STRING_SESSION.txt")
+                return content
+        except Exception as e:
+            logging.warning(f"[Channel Mirror] Failed to read TELEGRAM_STRING_SESSION.txt: {e}")
+    return ""
+
+def _is_auth_error(error_str: str) -> bool:
+    """Check if an error indicates a corrupted or revoked session."""
+    error_lower = error_str.lower()
+    return any(pattern in error_lower for pattern in AUTH_ERROR_PATTERNS)
+
+def _invalidate_file_session():
+    """Delete the corrupted file-based session to allow re-authentication."""
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    session_path = os.path.join(base_dir, "channel_mirror.session")
+    for ext in ["", "-journal", "-shm", "-wal"]:
+        path = session_path + ext
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+                logging.info(f"[Channel Mirror] Removed corrupted session file: {path}")
+            except Exception as e:
+                logging.warning(f"[Channel Mirror] Failed to remove {path}: {e}")
+
+def _extract_urls_from_message(event) -> list:
+    """Extract URLs from both raw text AND message entities (buttons, hyperlinks)."""
+    urls = []
+    text = event.raw_text or ""
+    
+    # 1. Extract from raw text
+    text_urls = re.findall(r'(https?://[^\s>]+)', text)
+    urls.extend(text_urls)
+    
+    # 2. Extract from message entities (inline URLs, text links)
+    if hasattr(event, 'message') and event.message and hasattr(event.message, 'entities') and event.message.entities:
+        from telethon.tl.types import MessageEntityUrl, MessageEntityTextUrl
+        for entity in event.message.entities:
+            if isinstance(entity, MessageEntityTextUrl):
+                # Hyperlinked text with a different URL
+                if entity.url and entity.url.startswith("http"):
+                    urls.append(entity.url)
+            elif isinstance(entity, MessageEntityUrl):
+                # URL visible in the text (already captured by regex, but be safe)
+                start = entity.offset
+                end = entity.offset + entity.length
+                entity_url = text[start:end]
+                if entity_url.startswith("http") and entity_url not in urls:
+                    urls.append(entity_url)
+    
+    # 3. Extract from reply_markup buttons (inline keyboards)
+    if hasattr(event, 'message') and event.message and hasattr(event.message, 'reply_markup') and event.message.reply_markup:
+        markup = event.message.reply_markup
+        if hasattr(markup, 'rows'):
+            for row in markup.rows:
+                if hasattr(row, 'buttons'):
+                    for button in row.buttons:
+                        if hasattr(button, 'url') and button.url:
+                            urls.append(button.url)
+    
+    # Deduplicate while preserving order
+    seen = set()
+    unique_urls = []
+    for u in urls:
+        clean = u.rstrip('.,;()[]{}*#"\'') 
+        if clean not in seen:
+            seen.add(clean)
+            unique_urls.append(clean)
+    
+    return unique_urls
+
+def _should_skip_url(url: str) -> bool:
+    """Check if a URL is a non-product page (search, category, etc.) that should be skipped."""
+    for pattern in SKIP_URL_PATTERNS:
+        if re.search(pattern, url, re.IGNORECASE):
+            return True
+    return False
+
 def run_mirror_loop():
     """Initializes a dedicated asyncio event loop for Telethon client with auto-restart capability."""
     global should_terminate
+    backoff = 20  # Start with 20 seconds
+    max_backoff = 600  # Cap at 10 minutes
+    consecutive_auth_errors = 0
+    max_auth_retries = 5  # Give up after 5 consecutive auth errors
+    
     while not should_terminate:
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(mirror_main())
+            # If mirror_main completed normally (not from a crash), reset backoff
+            backoff = 20
+            consecutive_auth_errors = 0
         except Exception as loop_err:
-            logging.error(f"[Channel Mirror] Loop crashed: {loop_err}")
+            error_str = str(loop_err)
+            logging.error(f"[Channel Mirror] Loop crashed: {error_str}")
+            
+            if _is_auth_error(error_str):
+                consecutive_auth_errors += 1
+                logging.warning(f"[Channel Mirror] Auth error #{consecutive_auth_errors}/{max_auth_retries}. Invalidating corrupted session...")
+                _invalidate_file_session()
+                
+                if consecutive_auth_errors >= max_auth_retries:
+                    logging.error(f"[Channel Mirror] {max_auth_retries} consecutive auth errors. Mirror listener stopped. "
+                                  f"Please re-generate your Telegram session (delete channel_mirror.session and restart).")
+                    break
             
         if should_terminate:
             break
-        logging.warning("[Channel Mirror] Telethon client disconnected or loop finished. Re-initiating connection in 20 seconds...")
-        time.sleep(20)
+        logging.warning(f"[Channel Mirror] Telethon client disconnected or loop finished. Re-initiating connection in {backoff} seconds...")
+        time.sleep(backoff)
+        backoff = min(backoff * 2, max_backoff)  # Exponential backoff
 
 async def mirror_main():
     global active_client
@@ -85,6 +213,9 @@ async def mirror_main():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     session_path = os.path.join(base_dir, "channel_mirror.session")
     
+    # Prefer StringSession (more resilient than file-based sessions)
+    session_str = _load_string_session()
+    
     logging.info("[Channel Mirror] Preparing Telethon Client setup...")
     # Authentication warning on startup
     logging.info("==========================================================================")
@@ -93,7 +224,6 @@ async def mirror_main():
     logging.info("   You will be prompted to enter your phone number and login code.")
     logging.info("==========================================================================")
     
-    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
     if session_str:
         logging.info("[Channel Mirror] Initializing Telethon Client using StringSession...")
         client = TelegramClient(StringSession(session_str), api_id, api_hash)
@@ -191,15 +321,17 @@ async def mirror_main():
             chat_name = getattr(event.chat, 'username', None) or str(event.chat_id)
             logging.info(f"[Channel Mirror] Captured post from competitor channel (@{chat_name})")
             
-            text = event.raw_text or ""
-            urls = re.findall(r'(https?://[^\s>]+)', text)
+            # Extract URLs from text, entities, and buttons
+            urls = _extract_urls_from_message(event)
             if not urls:
                 logging.info("[Channel Mirror] Post contains no links. Ignored.")
                 return
                 
-            for url in urls:
-                clean_url = url.rstrip('.,;()[]{}*#"\'')
-                logging.info(f"[Channel Mirror] Extracted raw link: {clean_url}")
+            for clean_url in urls:
+                if _should_skip_url(clean_url):
+                    logging.info(f"[Channel Mirror] Skipping non-product URL: {clean_url[:80]}")
+                    continue
+                logging.info(f"[Channel Mirror] Extracted link: {clean_url}")
                 t = threading.Thread(target=process_deal_url_sem, args=(clean_url,), daemon=True)
                 t.start()
                 
@@ -267,7 +399,7 @@ async def mirror_single_run_async():
     session_path = os.path.join(base_dir, "channel_mirror.session")
     
     logging.info("[Channel Mirror Single-Run] Authenticating Telethon Client...")
-    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
+    session_str = _load_string_session()
     if session_str:
         logging.info("[Channel Mirror Single-Run] Initializing Telethon Client using StringSession...")
         client = TelegramClient(StringSession(session_str), api_id, api_hash)
