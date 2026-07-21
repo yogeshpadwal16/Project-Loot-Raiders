@@ -2208,31 +2208,59 @@ function triggerPWAInstall() {
     }
 }
 
-async function requestPushNotificationPermission() {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('[PWA] Push messaging is not supported in this browser');
-        return;
+// Wire PWA Install Buttons & Guide Modal Controls
+document.addEventListener('DOMContentLoaded', () => {
+    const bannerInstallBtn = document.getElementById('pwa-banner-install-btn');
+    const headerInstallBtn = document.getElementById('pwa-install-btn');
+    const bannerCloseBtn = document.getElementById('pwa-banner-close-btn');
+    const guideModal = document.getElementById('pwa-install-guide-modal');
+    const closeGuideBtn = document.getElementById('close-pwa-modal');
+    const dismissGuideBtn = document.getElementById('pwa-dismiss-btn');
+
+    if (bannerInstallBtn) {
+        bannerInstallBtn.addEventListener('click', () => {
+            if (deferredInstallPrompt) {
+                triggerPWAInstall();
+            } else if (guideModal) {
+                guideModal.style.display = 'flex';
+            }
+        });
     }
-    
-    try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: null
-            });
-            
-            await fetch(`${API_BASE}/api/push/subscribe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(sub)
-            });
-            console.log('[PWA] Successfully subscribed to WebPush notifications!');
-        }
-    } catch (err) {
-        console.error('[PWA] WebPush subscription error:', err);
+
+    if (headerInstallBtn) {
+        headerInstallBtn.addEventListener('click', () => {
+            if (deferredInstallPrompt) {
+                triggerPWAInstall();
+            } else if (guideModal) {
+                guideModal.style.display = 'flex';
+            }
+        });
     }
-}
+
+    if (bannerCloseBtn) {
+        bannerCloseBtn.addEventListener('click', () => {
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner) banner.style.display = 'none';
+            localStorage.setItem('pwa_banner_dismissed', 'true');
+        });
+    }
+
+    if (closeGuideBtn && guideModal) {
+        closeGuideBtn.addEventListener('click', () => {
+            guideModal.style.display = 'none';
+        });
+    }
+
+    if (dismissGuideBtn && guideModal) {
+        dismissGuideBtn.addEventListener('click', () => {
+            guideModal.style.display = 'none';
+        });
+    }
+
+    // Auto-request Push Permission if app is installed / running in standalone mode
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        requestPushNotificationPermission();
+    }
+});
 
 
