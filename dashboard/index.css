@@ -300,8 +300,8 @@ body::after {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 20px;
+    gap: var(--loot-space-sm);
+    padding: var(--loot-space-sm) var(--loot-space-md);
     border-radius: 14px;
     font-family: inherit;
     font-size: 0.78rem;
@@ -326,7 +326,7 @@ body::after {
 }
 
 .btn-sm {
-    padding: 6px 14px;
+    padding: var(--loot-space-xs) var(--loot-space-sm);
     font-size: 0.72rem;
     border-radius: 10px;
 }
