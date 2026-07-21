@@ -16,6 +16,17 @@ module.exports = {
         TELEGRAM_API_HASH: 'd648fd457db96dffa53ae18d3d1869d8',
         TELEGRAM_STRING_SESSION: '1BVtsOI4Bu3KXmCdLBppBSQyogA7ha8p-Io0pH-Dg_I-fyAB4eGW87HgIb1dZduXL0BubMlQmHReMyGkUWS3rE2WNl47gpdZOZZRAvPQIoHZoePsKUkEvXRmvuhqwClVpi8CYSOpzehbjJZCzBMbxpt0e3C2kGu4lGFfMbGl-qXGZvC_i6_sM9bLc4_KbFRinkEn7Mq4qeJJBB0bBeNn7Vk-InGZ1Jtfdg00kiSUIWjbUcxqM7dnpQVMVmCuQa4oHOArc60gexeK9STJbp6biqtOZN40fbAicFf3brnSDRpcW1cLzOYkUuQrgmYuT9lYzfKtn2KG-qOuXuqXxbi5R3qga7uCJs3s='
       }
+    },
+    {
+      name: 'loot-raiders-backup',
+      script: 'scripts/backup_db.py',
+      cwd: '/var/www/loot-raiders',
+      interpreter: '/var/www/loot-raiders/venv/bin/python',
+      autorestart: false,
+      cron_restart: '0 */12 * * *',      // Run database backup every 12 hours
+      env: {
+        PYTHONUNBUFFERED: '1'
+      }
     }
   ]
 };
