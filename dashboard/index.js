@@ -710,6 +710,65 @@ function updateLocalSelectorsState() {
 // EVENT LISTENERS
 // ==========================================
 
+// Category Pills & Voice Search Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const pillBtns = document.querySelectorAll('.pill-btn');
+    const searchInput = document.getElementById('feed-search');
+    const voiceBtn = document.getElementById('voice-search-btn');
+    const platformFilter = document.getElementById('feed-filter-platform');
+
+    pillBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            pillBtns.forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'rgba(255,255,255,0.05)';
+                b.style.color = '#fff';
+            });
+            btn.classList.add('active');
+            btn.style.background = 'var(--loot-primary)';
+            btn.style.color = '#000';
+
+            const cat = btn.getAttribute('data-category');
+            if (cat === 'all') {
+                if (platformFilter) platformFilter.value = 'all';
+                if (searchInput) searchInput.value = '';
+            } else if (cat === 'amazon' || cat === 'flipkart' || cat === 'verified_low') {
+                if (platformFilter) platformFilter.value = cat;
+            } else {
+                if (searchInput) searchInput.value = cat;
+            }
+            filterAndRenderDeals();
+        });
+    });
+
+    if (voiceBtn && searchInput) {
+        voiceBtn.addEventListener('click', () => {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showToast('Voice Search is not supported in this browser.', 'error');
+                return;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            voiceBtn.style.color = '#ff1744';
+            showToast('🎙️ Listening... Speak your query!');
+            
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                voiceBtn.style.color = 'var(--loot-primary)';
+                showToast(`Searching for: "${transcript}"`);
+                filterAndRenderDeals();
+            };
+            recognition.onerror = () => {
+                voiceBtn.style.color = 'var(--loot-primary)';
+                showToast('Voice recognition failed.', 'error');
+            };
+            recognition.start();
+        });
+    }
+});
+
 // Toggle running status
 if (toggleBtn) {
     toggleBtn.addEventListener('click', async () => {

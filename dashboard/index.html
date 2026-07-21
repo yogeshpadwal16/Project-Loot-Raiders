@@ -133,11 +133,23 @@
                     <span class="badge" id="deals-count">0 Deals</span>
                 </div>
 
+                <!-- CATEGORY PILL NAVIGATION BAR -->
+                <div class="category-pill-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -ms-overflow-style: none;">
+                    <button class="pill-btn active" data-category="all" style="padding: 8px 16px; border-radius: 100px; background: var(--loot-primary); color: #000; font-weight: 700; border: none; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🔥 All Deals</button>
+                    <button class="pill-btn" data-category="flash" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">⚡ Flash Drops</button>
+                    <button class="pill-btn" data-category="amazon" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🟠 Amazon</button>
+                    <button class="pill-btn" data-category="flipkart" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🔵 Flipkart</button>
+                    <button class="pill-btn" data-category="verified_low" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🏆 Record Lows</button>
+                    <button class="pill-btn" data-category="electronics" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">💻 Tech & Gadgets</button>
+                    <button class="pill-btn" data-category="fashion" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">👗 Fashion</button>
+                </div>
+
                 <!-- Live Search, Filtering and Sorting Panel -->
                 <div class="feed-controls">
                     <div class="search-box">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        <input type="text" id="feed-search" placeholder="Search deals...">
+                        <input type="text" id="feed-search" placeholder="Ask AI: 'Best laptop under ₹50,000' or search deals...">
+                        <button id="voice-search-btn" title="Voice Search Assistant" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: var(--loot-primary); cursor: pointer; font-size: 0.9rem;"><i class="fa-solid fa-microphone"></i></button>
                     </div>
                     <div class="filter-selects">
                         <select id="feed-filter-platform" title="Filter by Platform">
