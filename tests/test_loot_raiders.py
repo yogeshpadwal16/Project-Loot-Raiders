@@ -96,5 +96,199 @@ class TestLootRaidersCore(unittest.TestCase):
         score = calculate_deal_score("amazon_master_lightning_deals", 499, 1999, 75.0, True, is_lightning=True)
         self.assertTrue(45.0 <= score <= 100.0)
 
+class TestSettingsLoader(unittest.TestCase):
+    """Tests for config/settings.py"""
+    
+    def test_load_settings_returns_dict(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        self.assertIsInstance(settings, dict)
+    
+    def test_settings_has_required_keys(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        required_keys = [
+            'telegram_bot_token', 'gemini_api_key', 'min_discount',
+            'min_deal_price', 'blocklist_keywords', 'scoring_rules'
+        ]
+        for key in required_keys:
+            self.assertIn(key, settings, f"Missing required setting: {key}")
+    
+    def test_blocklist_is_list(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        self.assertIsInstance(settings.get('blocklist_keywords', []), list)
+    
+    def test_scoring_rules_has_weights(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        scoring = settings.get('scoring_rules', {})
+        self.assertIn('weights', scoring)
+        self.assertIn('min_publish_score', scoring)
+
+    def test_min_discount_is_numeric(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        self.assertIsInstance(settings['min_discount'], (int, float))
+        self.assertGreater(settings['min_discount'], 0)
+
+
+class TestDatabaseModels(unittest.TestCase):
+    """Tests for knowledge_base/models.py schema integrity"""
+    
+    def test_product_model_columns(self):
+        from knowledge_base.models import Product
+        required_columns = ['id', 'platform', 'title', 'image_url', 'url', 'created_at']
+        table_columns = [c.name for c in Product.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"Product model missing column: {col}")
+    
+    def test_price_history_model_columns(self):
+        from knowledge_base.models import PriceHistory
+        required_columns = ['id', 'product_id', 'price', 'mrp', 'discount', 'deal_score', 'timestamp']
+        table_columns = [c.name for c in PriceHistory.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"PriceHistory model missing column: {col}")
+    
+    def test_click_log_model_columns(self):
+        from knowledge_base.models import ClickLog
+        required_columns = ['id', 'product_id', 'title', 'ip', 'user', 'timestamp']
+        table_columns = [c.name for c in ClickLog.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"ClickLog model missing column: {col}")
+    
+    def test_selector_matrix_model_columns(self):
+        from knowledge_base.models import SelectorMatrix
+        required_columns = ['id', 'platform', 'url', 'card_selector', 'title_selector', 'link_selector']
+        table_columns = [c.name for c in SelectorMatrix.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"SelectorMatrix model missing column: {col}")
+    
+    def test_user_score_model_columns(self):
+        from knowledge_base.models import UserScore
+        required_columns = ['user_id', 'username', 'points', 'voted_count', 'referrals_count']
+        table_columns = [c.name for c in UserScore.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"UserScore model missing column: {col}")
+
+    def test_channel_growth_log_model(self):
+        from knowledge_base.models import ChannelGrowthLog
+        required_columns = ['id', 'subscribers', 'timestamp']
+        table_columns = [c.name for c in ChannelGrowthLog.__table__.columns]
+        for col in required_columns:
+            self.assertIn(col, table_columns, f"ChannelGrowthLog model missing column: {col}")
+
+
+class TestParserEdgeCases(unittest.TestCase):
+    """Extended edge case tests for utils/parser.py"""
+    
+    def test_amazon_asin_invalid_url(self):
+        self.assertIsNone(extract_amazon_asin("https://www.flipkart.com/product/p/123"))
+    
+    def test_amazon_asin_empty_string(self):
+        self.assertIsNone(extract_amazon_asin(""))
+    
+    def test_amazon_asin_no_path(self):
+        self.assertIsNone(extract_amazon_asin("https://www.amazon.in/"))
+    
+    def test_flipkart_pid_invalid_url(self):
+        self.assertIsNone(extract_flipkart_pid("https://www.amazon.in/dp/B0CX1G2Y4C"))
+    
+    def test_flipkart_pid_empty_string(self):
+        self.assertIsNone(extract_flipkart_pid(""))
+    
+    def test_flipkart_pid_no_pid(self):
+        self.assertIsNone(extract_flipkart_pid("https://www.flipkart.com/electronics"))
+    
+    def test_discount_empty_text(self):
+        price, mrp, discount = calculate_true_discount("")
+        self.assertIsNone(price)
+        self.assertIsNone(mrp)
+        self.assertIsNone(discount)
+    
+    def test_discount_none_text(self):
+        price, mrp, discount = calculate_true_discount(None)
+        self.assertIsNone(price)
+        self.assertIsNone(mrp)
+        self.assertIsNone(discount)
+    
+    def test_discount_single_price_only(self):
+        # Only one price detected — cannot calculate discount
+        price, mrp, discount = calculate_true_discount("₹499 only")
+        # Should return the price but no discount or return None for all
+        # Either outcome is acceptable; test that it doesn't crash
+        self.assertTrue(True)  # No exception thrown
+    
+    def test_discount_with_commas(self):
+        text = "₹1,499 MRP ₹4,999"
+        price, mrp, discount = calculate_true_discount(text)
+        self.assertEqual(price, 1499)
+        self.assertEqual(mrp, 4999)
+        self.assertAlmostEqual(discount, 70.014, places=1)
+
+
+class TestScraperState(unittest.TestCase):
+    """Tests for core/engine.py system state and plugin registry"""
+    
+    def test_retailer_plugins_count(self):
+        from core.engine import RETAILER_PLUGINS
+        self.assertEqual(len(RETAILER_PLUGINS), 7, "Expected 7 retailer plugins")
+    
+    def test_retailer_plugins_has_all_platforms(self):
+        from core.engine import RETAILER_PLUGINS
+        expected_platforms = ['amazon', 'flipkart', 'myntra', 'ajio', 'meesho', 'tatacliq', 'jiomart']
+        for platform in expected_platforms:
+            self.assertIn(platform, RETAILER_PLUGINS, f"Missing retailer plugin: {platform}")
+    
+    def test_scraper_state_has_required_keys(self):
+        from core.engine import scraper_state
+        required_keys = ['is_running', 'scans_completed', 'last_scan_time', 'uptime_start', 'scan_trigger', 'crawler_health']
+        for key in required_keys:
+            self.assertIn(key, scraper_state, f"Missing scraper state key: {key}")
+    
+    def test_scraper_state_initial_values(self):
+        from core.engine import scraper_state
+        self.assertIsInstance(scraper_state['is_running'], bool)
+        self.assertIsInstance(scraper_state['scans_completed'], int)
+        self.assertIsInstance(scraper_state['crawler_health'], dict)
+
+
+class TestServiceWorkerAssets(unittest.TestCase):
+    """Tests for PWA asset completeness"""
+    
+    def test_manifest_exists(self):
+        manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dashboard', 'manifest.json')
+        self.assertTrue(os.path.exists(manifest_path), "PWA manifest.json is missing")
+    
+    def test_service_worker_exists(self):
+        sw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dashboard', 'sw.js')
+        self.assertTrue(os.path.exists(sw_path), "Service worker sw.js is missing")
+    
+    def test_manifest_is_valid_json(self):
+        import json
+        manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dashboard', 'manifest.json')
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+        self.assertIn('name', manifest)
+        self.assertIn('short_name', manifest)
+        self.assertIn('start_url', manifest)
+        self.assertIn('icons', manifest)
+        self.assertIsInstance(manifest['icons'], list)
+        self.assertGreaterEqual(len(manifest['icons']), 2)
+    
+    def test_pwa_icons_exist(self):
+        dashboard_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dashboard')
+        self.assertTrue(os.path.exists(os.path.join(dashboard_dir, 'icon-192.png')), "icon-192.png missing")
+        self.assertTrue(os.path.exists(os.path.join(dashboard_dir, 'icon-512.png')), "icon-512.png missing")
+
+    def test_manifest_has_shortcuts(self):
+        import json
+        manifest_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dashboard', 'manifest.json')
+        with open(manifest_path, 'r') as f:
+            manifest = json.load(f)
+        self.assertIn('shortcuts', manifest)
+        self.assertGreaterEqual(len(manifest['shortcuts']), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

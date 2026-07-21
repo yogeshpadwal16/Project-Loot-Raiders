@@ -1,4 +1,4 @@
-const CACHE_NAME = 'loot-raiders-v14';
+const CACHE_NAME = 'loot-raiders-v15';
 const ASSETS = [
   '/',
   '/index.html',
