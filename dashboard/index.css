@@ -1,43 +1,43 @@
 :root {
     /* ==========================================
-       CRED NEO-BRUTALIST PREMIUM DARK TOKENS
+       LOOT RAIDERS OBSIDIAN GLASS DESIGN TOKENS
        ========================================== */
-    --cred-bg: #030303;
-    --cred-surface: #0a0a0b;
-    --cred-surface-high: #131315;
-    --cred-surface-highest: #1a1a1c;
+    --loot-bg: #06070a;
+    --loot-surface: #0f111a;
+    --loot-surface-high: #161926;
+    --loot-surface-highest: #1e2233;
     
     /* Neon glow highlights */
-    --cred-primary: #00e676; /* Neon Green */
-    --cred-secondary: #2979ff; /* Neon Blue */
-    --cred-tertiary: #ffd600; /* Neon Gold */
-    --cred-accent: #e040fb; /* Neon Purple */
+    --loot-primary: #00f0ff; /* Electric Cyan */
+    --loot-secondary: #7c4dff; /* Neon Indigo/Purple */
+    --loot-tertiary: #ffd700; /* Loot Gold */
+    --loot-accent: #00e676; /* Neon Emerald */
     
-    --md-sys-color-background: var(--cred-bg);
+    --md-sys-color-background: var(--loot-bg);
     --md-sys-color-on-background: #ffffff;
     
     /* Surface colors */
-    --md-sys-color-surface: var(--cred-surface);
-    --md-sys-color-surface-dim: var(--cred-surface);
-    --md-sys-color-surface-container: var(--cred-surface);
-    --md-sys-color-surface-container-low: #060607;
-    --md-sys-color-surface-container-high: var(--cred-surface-high);
-    --md-sys-color-surface-container-highest: var(--cred-surface-highest);
+    --md-sys-color-surface: var(--loot-surface);
+    --md-sys-color-surface-dim: var(--loot-surface);
+    --md-sys-color-surface-container: var(--loot-surface);
+    --md-sys-color-surface-container-low: #090a0f;
+    --md-sys-color-surface-container-high: var(--loot-surface-high);
+    --md-sys-color-surface-container-highest: var(--loot-surface-highest);
     
     /* Primary */
-    --md-sys-color-primary: var(--cred-primary);
+    --md-sys-color-primary: var(--loot-primary);
     --md-sys-color-on-primary: #000000;
-    --md-sys-color-primary-container: #003311;
-    --md-sys-color-on-primary-container: #a6ffd5;
+    --md-sys-color-primary-container: #002e3b;
+    --md-sys-color-on-primary-container: #80f7ff;
     
     /* Secondary */
-    --md-sys-color-secondary: var(--cred-secondary);
+    --md-sys-color-secondary: var(--loot-secondary);
     --md-sys-color-on-secondary: #ffffff;
-    --md-sys-color-secondary-container: #002266;
+    --md-sys-color-secondary-container: #220066;
     --md-sys-color-on-secondary-container: #d6e4ff;
     
     /* Tertiary */
-    --md-sys-color-tertiary: var(--cred-tertiary);
+    --md-sys-color-tertiary: var(--loot-tertiary);
     --md-sys-color-on-tertiary: #000000;
     --md-sys-color-tertiary-container: #332a00;
     --md-sys-color-on-tertiary-container: #fff4b3;
@@ -49,8 +49,8 @@
     --md-sys-color-on-error-container: #ffdad6;
     
     /* Outline & Borders */
-    --md-sys-color-outline: #222225;
-    --md-sys-color-outline-variant: #161619;
+    --md-sys-color-outline: #222636;
+    --md-sys-color-outline-variant: #1a1e2d;
     
     /* Accent Utilities */
     --md-sys-color-success-container: #003311;
@@ -60,6 +60,12 @@
     
     --transition-duration: 0.25s;
     --transition-timing: cubic-bezier(0.2, 0, 0, 1);
+    
+    /* Fallback alias mappings */
+    --cred-primary: var(--loot-primary);
+    --cred-secondary: var(--loot-secondary);
+    --cred-tertiary: var(--loot-tertiary);
+    --cred-accent: var(--loot-accent);
 }
 
 /* ==========================================
