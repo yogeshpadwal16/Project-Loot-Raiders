@@ -1211,12 +1211,12 @@ function initJackpotSpinner() {
                 if (!response.ok) throw new Error('Jackpot draw failed');
                 const data = await response.json();
                 
-                // Custom high-end CRED rewards list fallback/display
+                // Custom Loot Raiders rewards list display
                 const rewards = [
                     "🎉 YOU WON: Flat 10% Off Amazon Coupons!",
                     "🎉 YOU WON: ₹250 Flipkart Gift Voucher!",
-                    "🎉 YOU WON: 500 CRED Pay Coins!",
-                    "🎉 YOU WON: 1% Additional Cashback on next checkout!"
+                    "🎉 YOU WON: ₹500 Loot Cashback Voucher!",
+                    "🎉 YOU WON: 500 Bonus Loot Points!"
                 ];
                 const finalReward = data.message || rewards[Math.floor(Math.random() * rewards.length)];
 
@@ -1226,8 +1226,8 @@ function initJackpotSpinner() {
             } catch (e) {
                 console.error(e);
                 result.style.display = 'block';
-                result.textContent = "🎉 YOU WON: 250 CRED Pay Coins!";
-                showToast("Jackpot Draw: 250 CRED Pay Coins credited!");
+                result.textContent = "🎉 YOU WON: ₹250 Loot Cashback Voucher!";
+                showToast("Vault Draw: ₹250 Loot Cashback Voucher unlocked!");
             }
         }, 4000); // Wait for the transition to finish
     });
