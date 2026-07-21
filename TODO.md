@@ -18,7 +18,11 @@
 - [x] Automated Telegram channel invite link inclusion on manual deal forms
 - [x] Channel growth analytics (integrating subscriber growth telemetry)
 
-## Future
-- [x] AI deal ranking (Gemini DIE scoring engine)
-- [ ] Mobile app (PWA for instant access)
-- [ ] Public API for deal distribution
+## Future & Innovation Roadmap
+- [x] Zero-API Heuristic Scorer & Smart Template Engine (100% free, zero external API latency)
+- [x] Predictive Price Intelligence Engine (PPIE - statistical price trend forecasting)
+- [x] Dual Database Adapter (SQLite local / PostgreSQL cloud via DATABASE_URL)
+- [x] Automated Database Backup & Optimization Pipeline (scripts/backup_db.py + PM2 12h cron)
+- [x] Mobile app (PWA installable with WebPush & offline support)
+- [x] WebPush Notification Engine (/api/push/subscribe + ServiceWorker push handlers)
+- [ ] Public API for deal distribution (v3.2.0 milestone)

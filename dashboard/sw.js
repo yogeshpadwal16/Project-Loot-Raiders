@@ -94,3 +94,53 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+
+// ==============================================================================
+// 🔔 WebPush Notification Event Listeners
+// ==============================================================================
+self.addEventListener('push', (e) => {
+  let data = { title: '🔥 New Loot Deal Alert!', body: 'A verified price drop was just detected!', url: '/' };
+  try {
+    if (e.data) {
+      data = e.data.json();
+    }
+  } catch (err) {
+    if (e.data) data.body = e.data.text();
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' },
+    actions: [
+      { action: 'open', title: '🛍️ View Deal' },
+      { action: 'close', title: 'Dismiss' }
+    ]
+  };
+
+  e.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  if (e.action === 'close') return;
+
+  const targetUrl = (e.notification.data && e.notification.data.url) ? e.notification.data.url : '/';
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

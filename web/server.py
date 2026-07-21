@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import logging
 import urllib.parse
@@ -61,7 +61,9 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             '/api/lootmap/events',
             '/api/rewards/scratch',
             '/api/channel/growth',
-            '/api/whatsapp/share'
+            '/api/whatsapp/share',
+            '/api/push/subscribe',
+            '/api/deals/stream'
         ]
         if clean_path in public_endpoints or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
             return True
@@ -391,6 +393,29 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
             finally:
                 db.close()
+            return
+                
+        elif self.path == '/api/push/subscribe':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                sub_data = json.loads(post_data.decode('utf-8'))
+                settings = load_settings()
+                subs = settings.get("push_subscriptions", [])
+                if sub_data not in subs:
+                    subs.append(sub_data)
+                    settings["push_subscriptions"] = subs
+                    save_settings(settings)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "success", "message": "Push subscription saved."}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
             return
                 
         elif self.path == '/api/scraper/health':
