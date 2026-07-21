@@ -35,11 +35,12 @@ def log_failure(component: str, context: str, err: Exception, severity: str = "E
 
 def generate_smart_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None,
                             bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A",
-                            effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "") -> str:
+                            effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "",
+                            buying_advice: dict = None) -> str:
     """
     Smart template-based caption generator for Telegram deal posts.
-    Uses randomized headlines, emoji patterns, and urgency triggers
-    to create varied, engaging posts — no external API required.
+    Uses randomized headlines, emoji patterns, urgency triggers,
+    and Predictive Price Intelligence (PPIE) badges to create varied, engaging posts.
     """
     import random
     import hashlib
@@ -99,8 +100,15 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     parts.append(f"🛍️ <b>{truncated}</b>")
     parts.append("")
     
-    # Verified badge
-    if is_verified_low:
+    # Predictive Buying Intelligence Badge
+    if buying_advice and buying_advice.get("badge"):
+        badge = buying_advice["badge"]
+        conf = buying_advice.get("confidence", 85)
+        reason = buying_advice.get("reason", "")
+        parts.append(f"🧠 <b>[ {badge} ]</b> (<i>{conf}% AI Confidence</i>)")
+        if reason:
+            parts.append(f"💡 <i>{reason}</i>")
+    elif is_verified_low:
         parts.append("🏆 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
     
     # Price block
@@ -499,10 +507,15 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         offline_comparison_text = f"🛒 <b>Offline Store Match:</b> Typical price <code>₹{offline_retail_price:,}</code> in retail stores (Save <code>₹{offline_savings:,}</code>!)\n"
         offline_comparison_prompt = f"Offline retail comparison: Typical offline price is Rs. {offline_retail_price} (User saves Rs. {offline_savings} compared to local retail store)."
 
+    # Calculate Predictive Price Intelligence Advice (PPIE)
+    from deal_engine.scorer import get_predictive_buying_advice
+    buying_advice = get_predictive_buying_advice(unique_id, price)
+
     # Generate smart template caption (no API required)
     caption = generate_smart_caption(truncated_title, price, mrp, discount, buy_url, is_verified_low, deal_score, platform, comparison_text, price_stats,
                                       bank_offers=bank_offers, coupon_detail=coupon_detail, review_grade=review_grade,
-                                      effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt)
+                                      effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt,
+                                      buying_advice=buying_advice)
     
     # Prepend the official branded header so the platform is ALWAYS clear
     caption = f"{header}\n\n{caption}"
