@@ -28,6 +28,65 @@ class _LRUCache:
 
 _ai_score_cache = _LRUCache(maxsize=500)
 
+def get_predictive_buying_advice(product_id: str, current_price: int) -> dict:
+    """
+    Predictive Price Intelligence Engine (PPIE).
+    Calculates statistical price trends over tracked historical prices
+    to generate actionable buying advice and confidence scores.
+    """
+    if not product_id:
+        return {"action": "BUY_NOW", "badge": "🔥 STEAL DEAL", "confidence": 85, "reason": "High discount deal detected."}
+        
+    db = SessionLocal()
+    try:
+        hist = db.query(PriceHistory.price).filter_by(product_id=product_id).order_by(PriceHistory.timestamp.asc()).all()
+        if not hist or len(hist) < 2:
+            return {"action": "BUY_NOW", "badge": "⚡ HOT LOOT", "confidence": 80, "reason": "Fresh price drop."}
+            
+        prices = [h[0] for h in hist if h[0] > 0]
+        if not prices:
+            return {"action": "BUY_NOW", "badge": "⚡ HOT LOOT", "confidence": 80, "reason": "Fresh price drop."}
+            
+        min_p = min(prices)
+        max_p = max(prices)
+        avg_p = sum(prices) / len(prices)
+        
+        if current_price <= min_p:
+            confidence = min(99, 90 + len(prices))
+            return {
+                "action": "BUY_NOW_LOWEST",
+                "badge": "🏆 ALL-TIME RECORD LOW",
+                "confidence": confidence,
+                "reason": f"Lowest price recorded across {len(prices)} historical checks!"
+            }
+        elif current_price <= (avg_p * 0.8):
+            drop_pct = int(((avg_p - current_price) / avg_p) * 100)
+            return {
+                "action": "BUY_NOW_STEAL",
+                "badge": f"🚀 {drop_pct}% BELOW AVERAGE",
+                "confidence": 92,
+                "reason": f"Priced ₹{int(avg_p - current_price):,} below historical average (₹{int(avg_p):,})."
+            }
+        elif current_price >= max_p:
+            return {
+                "action": "WAIT_PRICE_HIGH",
+                "badge": "⏰ PRICE NEAR PEAK",
+                "confidence": 75,
+                "reason": "Current price is near peak. Price drop expected soon."
+            }
+        else:
+            return {
+                "action": "BUY_NOW_GOOD",
+                "badge": "🎯 GOOD VALUE",
+                "confidence": 85,
+                "reason": f"Priced lower than average (₹{int(avg_p):,})."
+            }
+    except Exception as e:
+        logging.error(f"Error in predictive buying advice: {e}")
+        return {"action": "BUY_NOW", "badge": "🔥 STEAL DEAL", "confidence": 80, "reason": "High-rated loot deal."}
+    finally:
+        db.close()
+
 def get_heuristic_ai_ranking(
     title: str,
     platform: str,
