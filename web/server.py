@@ -606,6 +606,55 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(b"[]")
             finally:
                 db.close()
+                
+        elif self.path.startswith('/api/deals/public'):
+            # Public API for deal distribution (v3.2.0 milestone)
+            from urllib.parse import urlparse, parse_qs
+            parsed_url = urlparse(self.path)
+            params = parse_qs(parsed_url.query)
+            platform = params.get('platform', ['all'])[0]
+            min_score = int(params.get('min_score', [0])[0])
+            limit = min(50, int(params.get('limit', [15])[0]))
+            
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            db = SessionLocal()
+            try:
+                query = db.query(Product)
+                if platform != 'all':
+                    query = query.filter(Product.platform.ilike(f"%{platform}%"))
+                
+                products = query.all()
+                result_deals = []
+                for p in products:
+                    latest = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
+                    if latest:
+                        if latest.deal_score >= min_score:
+                            result_deals.append({
+                                "id": p.id,
+                                "platform": p.platform,
+                                "title": p.title,
+                                "image_url": p.image_url,
+                                "url": p.url,
+                                "price": latest.price,
+                                "mrp": latest.mrp,
+                                "discount": latest.discount,
+                                "deal_score": latest.deal_score,
+                                "is_verified_low": latest.is_verified_low,
+                                "timestamp": latest.timestamp
+                            })
+                # Sort by newest
+                result_deals.sort(key=lambda x: x['timestamp'], reverse=True)
+                self.wfile.write(json.dumps(result_deals[:limit]).encode('utf-8'))
+            except Exception as e:
+                logging.error(f"Public deals API error: {e}")
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            finally:
+                db.close()
+            return
+
         elif self.path.startswith('/go/'):
             # Cloaker URL redirect (Feature 13)
             parts = self.path.split('/')

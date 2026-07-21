@@ -25,4 +25,4 @@
 - [x] Automated Database Backup & Optimization Pipeline (scripts/backup_db.py + PM2 12h cron)
 - [x] Mobile app (PWA installable with WebPush & offline support)
 - [x] WebPush Notification Engine (/api/push/subscribe + ServiceWorker push handlers)
-- [ ] Public API for deal distribution (v3.2.0 milestone)
+- [x] Public API for deal distribution (v3.2.0 milestone)
