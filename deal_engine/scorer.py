@@ -28,7 +28,7 @@ class _LRUCache:
 
 _ai_score_cache = _LRUCache(maxsize=500)
 
-def get_gemini_ai_ranking(
+def get_heuristic_ai_ranking(
     title: str,
     platform: str,
     price: int,
@@ -38,9 +38,9 @@ def get_gemini_ai_ranking(
     product_id: str = None
 ) -> float:
     """
-    Calls the Gemini API to evaluate and rate the deal's quality/desirability.
-    Uses an in-memory cache to avoid duplicate API calls.
-    Returns a score from 0 to 100, or None if API call fails/is not configured.
+    Heuristic-based deal desirability scorer. Analyzes product category,
+    brand tier, price point, and discount to generate a score 0-100.
+    Replaces Gemini API — instant, free, always works.
     """
     if not title:
         return None
@@ -49,62 +49,112 @@ def get_gemini_ai_ranking(
     cached = _ai_score_cache.get(cache_key)
     if cached is not None:
         return cached
-        
-    settings = load_settings()
-    api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
-    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
-        return None
-        
-    try:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
-        
-        prompt = (
-            "You are an expert retail deal analyst. Evaluate this deal and return a desirability score between 0 and 100. "
-            "Consider consumer demand, brand value, real price value, and filter out low-value spam (like cheap phone cases, cables, local stickers).\n\n"
-            f"Product: {title}\n"
-            f"Platform: {platform.upper()}\n"
-            f"Loot Price: Rs. {price:,}\n"
-            f"Original MRP: Rs. {mrp:,}\n"
-            f"Discount: {discount:.0f}% OFF\n"
-            f"Verified Low Price: {'Yes' if is_verified_low else 'No'}\n\n"
-            "Return a JSON object matching this structure (no formatting or markdown wrappers, just raw JSON):\n"
-            '{"score": <integer 0-100>, "reason": "<brief justification>"}'
-        )
-        
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
-        }
-        
-        logging.info(f"[AI Ranker] Querying Gemini for: {title[:40]}... (Price: ₹{price})")
-        
-        res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
-        if res.status_code == 200:
-            data = res.json()
-            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            
-            # Clean JSON wrappers if present
-            if text.startswith("```"):
-                text = re.sub(r'^```(?:json)?\s*', '', text)
-                text = re.sub(r'\s*```$', '', text)
-                text = text.strip()
-                
-            result = json.loads(text)
-            ai_score = float(result.get("score", 50))
-            reason = result.get("reason", "")
-            
-            logging.info(f"[AI Ranker] Gemini Response -> Score: {ai_score}, Reason: {reason}")
-            
-            _ai_score_cache.set(cache_key, ai_score)
-            return ai_score
-        else:
-            logging.warning(f"[AI Ranker] Gemini API returned status {res.status_code}: {res.text}")
-            
-    except Exception as e:
-        logging.error(f"[AI Ranker] Failed to fetch Gemini AI ranking: {e}")
-        
-    return None
+    
+    title_lower = title.lower()
+    score = 50.0  # Base score
+    
+    # 1. Category desirability scoring
+    HIGH_VALUE_CATEGORIES = {
+        "laptop": 25, "smartphone": 22, "phone": 22, "iphone": 28, "macbook": 28,
+        "tablet": 20, "ipad": 25, "monitor": 18, "television": 18, "tv": 18,
+        "headphone": 15, "earphone": 12, "earbuds": 12, "airpods": 20,
+        "watch": 15, "smartwatch": 15, "camera": 20, "lens": 15,
+        "processor": 18, "gpu": 20, "graphics card": 22, "ssd": 14, "ram": 12,
+        "washing machine": 16, "refrigerator": 16, "air conditioner": 18, "ac": 18,
+        "microwave": 12, "vacuum": 14, "robot vacuum": 16,
+        "speaker": 12, "soundbar": 14, "projector": 16,
+        "console": 20, "playstation": 22, "xbox": 22, "nintendo": 20,
+        "trimmer": 8, "shaver": 8, "grooming": 6,
+        "shoe": 10, "sneaker": 12, "running shoe": 10,
+        "backpack": 6, "luggage": 8, "suitcase": 8,
+        "perfume": 8, "fragrance": 8,
+        "jacket": 8, "hoodie": 6, "jeans": 6, "shirt": 4, "t-shirt": 3,
+        "kurta": 4, "saree": 5, "dress": 6,
+    }
+    
+    LOW_VALUE_CATEGORIES = {
+        "cable": -15, "adapter": -12, "charger cable": -10, "otg": -15,
+        "case": -12, "cover": -12, "back cover": -15, "tempered glass": -15,
+        "screen protector": -15, "screen guard": -15, "protector": -12,
+        "keychain": -20, "sticker": -20, "decal": -20,
+        "holder": -12, "stand": -10, "mount": -8,
+        "pouch": -12, "strap": -12, "band": -8,
+        "pen": -10, "pencil": -10, "eraser": -15, "notebook": -8,
+        "socks": -10, "handkerchief": -15, "napkin": -15,
+    }
+    
+    category_bonus = 0
+    for keyword, bonus in HIGH_VALUE_CATEGORIES.items():
+        if keyword in title_lower:
+            category_bonus = max(category_bonus, bonus)
+    for keyword, penalty in LOW_VALUE_CATEGORIES.items():
+        if keyword in title_lower:
+            category_bonus = min(category_bonus, penalty)
+    score += category_bonus
+    
+    # 2. Brand tier scoring
+    PREMIUM_BRANDS = [
+        "apple", "samsung", "sony", "bose", "dyson", "lg", "oneplus",
+        "dell", "hp", "lenovo", "asus", "acer", "msi", "nothing",
+        "nike", "adidas", "puma", "reebok", "new balance", "asics",
+        "boat", "jbl", "sennheiser", "marshall",
+        "philips", "bosch", "whirlpool", "godrej", "havells",
+        "levi", "us polo", "tommy hilfiger", "calvin klein",
+    ]
+    BUDGET_BRANDS = [
+        "generic", "local", "unbranded", "no brand",
+    ]
+    
+    for brand in PREMIUM_BRANDS:
+        if brand in title_lower:
+            score += 8
+            break
+    for brand in BUDGET_BRANDS:
+        if brand in title_lower:
+            score -= 10
+            break
+    
+    # 3. Price sweet-spot scoring (most desirable: ₹500–₹5000)
+    if 500 <= price <= 5000:
+        score += 10  # Mass-market sweet spot
+    elif 5000 < price <= 15000:
+        score += 5   # Mid-range
+    elif price > 15000:
+        score += 3   # Aspirational but fewer buyers
+    elif price < 200:
+        score -= 10  # Too cheap = likely junk
+    
+    # 4. Discount magnitude bonus (on top of category)
+    if discount >= 80:
+        score += 15
+    elif discount >= 70:
+        score += 10
+    elif discount >= 60:
+        score += 5
+    elif discount >= 50:
+        score += 3
+    
+    # 5. Verified historical low bonus
+    if is_verified_low:
+        score += 10
+    
+    # 6. Absolute savings impact
+    savings = max(0, mrp - price)
+    if savings >= 5000:
+        score += 8
+    elif savings >= 2000:
+        score += 5
+    elif savings >= 1000:
+        score += 3
+    
+    # Clamp to 0-100
+    score = max(0.0, min(100.0, score))
+    
+    reason = f"Heuristic: cat={category_bonus:+d}, price_range={'sweet' if 500<=price<=5000 else 'other'}, disc={discount:.0f}%"
+    logging.info(f"[AI Ranker] Heuristic Score -> {score:.0f}, {reason} for: {title[:40]}...")
+    
+    _ai_score_cache.set(cache_key, score)
+    return score
 
 def calculate_deal_score(
     platform: str, 
@@ -175,8 +225,8 @@ def calculate_deal_score(
         finally:
             db.close()
 
-    # Query Gemini AI Ranking score
-    ai_score = get_gemini_ai_ranking(
+    # Query heuristic AI ranking score (no external API)
+    ai_score = get_heuristic_ai_ranking(
         title=title,
         platform=platform,
         price=price,
@@ -269,7 +319,8 @@ def calculate_deal_score(
 def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None, title: str = None) -> bool:
     """
     Checks if a deal is an extreme price glitch/error based on high discount thresholds,
-    sudden massive drops compared to tracked historical price averages, and AI validation.
+    sudden massive drops compared to tracked historical price averages, and
+    category-aware heuristics (no external API required).
     """
     # Heuristic 1: Extreme discount
     if discount >= 85.0:
@@ -291,40 +342,26 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
         finally:
             db.close()
             
-    # Heuristic 3: AI validation for high discounts (between 70% and 85%) (Feature 1)
+    # Heuristic 3: Category-aware glitch detection for high discounts (70-85%)
+    # High-value electronics at extreme discounts are almost always price errors
     if discount >= 70.0 and title:
-        settings = load_settings()
-        api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
-        if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
-            try:
-                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
-                prompt = (
-                    "You are a price error auditor for e-commerce sites (Amazon, Flipkart). "
-                    "Analyze if this discount looks like a merchant price error/glitch (e.g., brand-new laptop for Rs. 500, "
-                    "high-end smartphone for Rs. 2,000, or a coupon stack glitch) versus a normal clearance discount. "
-                    "Respond with a JSON object matching this structure (no markdown wrappers):\n"
-                    '{"is_glitch": <true/false>, "reason": "<brief justification>"}\n\n'
-                    f"Product: {title}\n"
-                    f"Price: Rs. {price:,}\n"
-                    f"MRP: Rs. {mrp:,}\n"
-                    f"Discount: {discount:.0f}% OFF"
-                )
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }]
-                }
-                res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
-                if res.status_code == 200:
-                    text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if text.startswith("```"):
-                        text = re.sub(r'^```(?:json)?\s*', '', text)
-                        text = re.sub(r'\s*```$', '', text)
-                        text = text.strip()
-                    result = json.loads(text)
-                    return bool(result.get("is_glitch", False))
-            except Exception as e:
-                logging.error(f"Failed to verify glitch via AI: {e}")
+        title_lower = title.lower()
+        HIGH_VALUE_ELECTRONICS = [
+            "laptop", "smartphone", "phone", "iphone", "macbook", "ipad",
+            "tablet", "monitor", "television", "tv", "processor", "gpu",
+            "graphics card", "console", "playstation", "xbox", "camera",
+            "air conditioner", "refrigerator", "washing machine",
+        ]
+        is_high_value = any(kw in title_lower for kw in HIGH_VALUE_ELECTRONICS)
+        
+        if is_high_value and price < 5000:
+            # A high-value item under ₹5000 with 70%+ discount is almost certainly a glitch
+            logging.info(f"[Glitch Detector] Category-heuristic glitch: {title[:40]}... at ₹{price} ({discount:.0f}% OFF)")
+            return True
+        elif is_high_value and price < 15000 and discount >= 75.0:
+            # High-value item at extreme discount range — likely glitch
+            logging.info(f"[Glitch Detector] Probable glitch: {title[:40]}... at ₹{price} ({discount:.0f}% OFF)")
+            return True
             
     return False
 

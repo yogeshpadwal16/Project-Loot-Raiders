@@ -21,87 +21,143 @@ def log_failure(component: str, context: str, err: Exception, severity: str = "E
         f"\n==========================================================================\n"
         f"ðŸš¨ FAILURE REPORTED:\n"
         f"ðŸ“… Timestamp: {timestamp}\n"
-        f"ðŸ”Œ Component: {component}\n"
-        f"ðŸ“ Context: {context}\n"
-        f"ðŸ” Root Cause: {type(err).__name__} - {str(err)}\n"
-        f"ðŸ”¥ Severity: {severity}\n"
-        f"ðŸ©¹ Recovery Status: {recovery_status}\n"
-        f"ðŸ’¡ Recommended Action: {recommended_action}\n"
+        f"🚨 FAILURE REPORTED:\n"
+        f"📅 Timestamp: {timestamp}\n"
+        f"🔌 Component: {component}\n"
+        f"🔍 Context: {context}\n"
+        f"⚡ Root Cause: {type(err).__name__} - {str(err)}\n"
+        f"🔥 Severity: {severity}\n"
+        f"🩹 Recovery Status: {recovery_status}\n"
+        f"💡 Recommended Action: {recommended_action}\n"
         f"=========================================================================="
     )
     logging.error(msg)
 
-def generate_gemini_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None,
+def generate_smart_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None,
                             bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A",
                             effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "") -> str:
-    settings = load_settings()
-    api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
-    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
-        return None
-        
-    try:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
-        
-        prompt = (
-            f"You are a professional, high-energy, witty shopping deal alert bot. Write a Telegram post in HTML formatting for this deal:\n\n"
-            f"Product: {title}\n"
-            f"Retailer: {platform.upper()}\n"
-            f"Loot Price: Rs. {price:,}\n"
-            f"Original MRP: Rs. {mrp:,}\n"
-            f"Discount: {discount:.0f}% OFF\n"
-            f"Verified 90-Day Low? {'Yes' if is_verified_low else 'No'}\n"
-            f"Deal Score: {deal_score:.0f}/100\n"
-            f"Affiliate Buy Link: {final_url}\n"
-        )
-        
-        if coupon_detail:
-            prompt += f"Coupon available: {coupon_detail}\n"
-        if bank_offers:
-            prompt += f"Bank Offers: {', '.join(bank_offers)}\n"
-        if review_grade and review_grade != "N/A":
-            prompt += f"Product Quality/Review Trust Grade: {review_grade}\n"
-        if effective_cashback:
-            prompt += f"Effective Price Calculation: {effective_cashback}\n"
-        if upi_offer:
-            prompt += f"UPI / RuPay specific offers: {upi_offer}\n"
-        if offline_compare:
-            prompt += f"Offline Price Comparison info: {offline_compare}\n"
-            
-        if price_stats:
-            prompt += (
-                f"\nLocal tracked historical price trends for this product (over past {price_stats['points_count']} price checks):\n"
-                f"- Lowest tracked price: Rs. {price_stats['lowest']:,}\n"
-                f"- Highest tracked price: Rs. {price_stats['highest']:,}\n"
-                f"- Average tracked price: Rs. {int(price_stats['average']):,}\n"
-            )
-            
-        if comparison:
-            prompt += f"\nPrice Comparison on other platforms:\n{comparison}\n"
-            
-        prompt += (
-            "\nFormatting Rules:\n"
-            "- Use bold <b>...</b>, italics <i>...</i>, strike <s>...</s> for MRP, and code <code>...</code> for prices.\n"
-            "- Include exact buy link in this HTML format: <a href='{final_url}'>ðŸ‘‰ CLICK HERE TO BUY NOW</a>\n"
-            "- Keep it exciting, short, and use engaging shopping/warning emojis.\n"
-            "- Write in clean, valid HTML tags that Telegram supports (only <b>, <i>, <s>, <u>, <code>, <pre>, <a>).\n"
-            "- Return ONLY the post text (no markdown ```html wrappers, no extra explanation text)."
-        )
-        
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
-        }
-        res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
-        if res.status_code == 200:
-            data = res.json()
-            text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if text.startswith("```"):
-                text = "\n".join(text.split("\n")[1:-1])
-            return text
-    except Exception as e:
-        logging.error(f"Gemini API caption failed: {e}")
-    return None
+    """
+    Smart template-based caption generator for Telegram deal posts.
+    Uses randomized headlines, emoji patterns, and urgency triggers
+    to create varied, engaging posts — no external API required.
+    """
+    import random
+    import hashlib
+    
+    savings = mrp - price
+    platform_upper = platform.upper()
+    
+    # Seed randomness per product for consistent but varied output
+    seed = int(hashlib.md5(f"{title}{price}".encode()).hexdigest()[:8], 16)
+    rng = random.Random(seed)
+    
+    # Platform-specific emoji
+    platform_emojis = {
+        "amazon": "🟠", "flipkart": "🔵", "myntra": "💗",
+        "ajio": "🟤", "meesho": "🟣", "tatacliq": "🔴", "jiomart": "🟢"
+    }
+    p_emoji = platform_emojis.get(platform.lower().split("_")[0], "✨")
+    
+    # Randomized urgency hooks
+    urgency_hooks = [
+        "⚡ <i>Price drops don't last — grab it before stock ends!</i>",
+        "🏃 <i>Limited stock alert! Order before it sells out!</i>",
+        "⏰ <i>Deal may expire any moment — don't miss this!</i>",
+        "🔥 <i>Lowest price we've tracked — act fast!</i>",
+        "💨 <i>Flying off shelves! Secure yours now!</i>",
+        "🚀 <i>This loot won't last long — hurry!</i>",
+    ]
+    
+    # Randomized call-to-action text
+    cta_texts = [
+        "👉 GRAB THIS DEAL NOW",
+        "🛒 BUY NOW BEFORE IT'S GONE",
+        "💎 CLAIM THIS LOOT",
+        "🔥 SNAG THIS DEAL",
+        "⚡ ORDER NOW — LIMITED STOCK",
+    ]
+    
+    # Randomized opening excitement lines
+    excitement_openers = [
+        f"🚨 <b>MASSIVE {discount:.0f}% OFF</b> on {platform_upper}! 🚨",
+        f"💥 <b>PRICE CRASH!</b> {discount:.0f}% discount spotted on {platform_upper}!",
+        f"🎯 <b>STEAL DEAL!</b> Save ₹{savings:,} on {platform_upper}!",
+        f"💣 <b>LOOT PRICE!</b> {platform_upper} deal at just ₹{price:,}!",
+        f"🔥 <b>{platform_upper} LOOT DROP!</b> {discount:.0f}% OFF detected!",
+    ]
+    
+    # Build the caption
+    parts = []
+    
+    # Excitement opener
+    parts.append(rng.choice(excitement_openers))
+    parts.append("")
+    
+    # Product title
+    clean_title = title.split('\n')[0].strip()
+    truncated = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
+    parts.append(f"🛍️ <b>{truncated}</b>")
+    parts.append("")
+    
+    # Verified badge
+    if is_verified_low:
+        parts.append("🏆 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
+    
+    # Price block
+    parts.append(f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>")
+    parts.append(f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>")
+    parts.append(f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>")
+    parts.append(f"💰 <b>You Save:</b>     <code>₹{savings:,}</code>")
+    parts.append("")
+    
+    # Effective cashback
+    if effective_cashback:
+        parts.append(f"🪙 <b>Effective:</b> {effective_cashback}")
+    
+    # UPI offer
+    if upi_offer:
+        parts.append(f"📱 <b>UPI Bonus:</b> {upi_offer}")
+    
+    # Offline comparison
+    if offline_compare:
+        parts.append(f"🏬 <b>Offline:</b> {offline_compare}")
+    
+    # Coupon & bank offers
+    if coupon_detail:
+        parts.append(f"🏷️ <b>Coupon:</b>      <code>{coupon_detail}</code>")
+    if bank_offers:
+        parts.append(f"💳 <b>Bank Offer:</b>  <code>{', '.join(bank_offers[:2])}</code>")
+    
+    # Review grade
+    if review_grade and review_grade != "N/A":
+        parts.append(f"⭐ <b>Review Trust:</b> <code>Grade {review_grade}</code>")
+    
+    # Price stats
+    if price_stats and price_stats.get("points_count", 0) >= 3:
+        parts.append(f"\n📊 <b>Price History</b> ({price_stats['points_count']} checks):")
+        parts.append(f"  📈 High: ₹{price_stats['highest']:,} → 📉 Low: ₹{price_stats['lowest']:,}")
+    
+    # Cross-platform comparison
+    if comparison:
+        parts.append(comparison)
+    
+    parts.append("")
+    
+    # Deal score
+    rating_score = deal_score / 10.0
+    stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
+    parts.append(f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})")
+    parts.append("")
+    
+    # Urgency hook
+    parts.append(rng.choice(urgency_hooks))
+    parts.append("")
+    
+    # CTA link
+    cta = rng.choice(cta_texts)
+    parts.append(f"<a href='{final_url}'>{cta}</a>")
+    
+    return "\n".join(parts)
 
 def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0) -> bool:
     try:
@@ -430,7 +486,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if bank_offers:
         for offer in bank_offers:
             if any(x in offer.lower() for x in ["rupay", "upi", "phonepe", "gpay", "paytm"]):
-                upi_matcher_text = f"ðŸ“± <b>UPI / RuPay Offer:</b> Extra UPI app discount detected at checkout!\n"
+                upi_matcher_text = f"📱 <b>UPI / RuPay Offer:</b> Extra UPI app discount detected at checkout!\n"
                 upi_matcher_prompt = "UPI / RuPay specific offers: Extra instant cashback is available for UPI payments."
                 break
                 
@@ -440,51 +496,20 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     offline_comparison_text = ""
     offline_comparison_prompt = ""
     if offline_savings > 100:
-        offline_comparison_text = f"ðŸ¬ <b>Offline Store Match:</b> Typical price <code>â‚¹{offline_retail_price:,}</code> in retail stores (Save <code>â‚¹{offline_savings:,}</code>!)\n"
+        offline_comparison_text = f"🛒 <b>Offline Store Match:</b> Typical price <code>₹{offline_retail_price:,}</code> in retail stores (Save <code>₹{offline_savings:,}</code>!)\n"
         offline_comparison_prompt = f"Offline retail comparison: Typical offline price is Rs. {offline_retail_price} (User saves Rs. {offline_savings} compared to local retail store)."
 
-    # Attempt Gemini generation
-    caption = generate_gemini_caption(truncated_title, price, mrp, discount, buy_url, is_verified_low, deal_score, platform, comparison_text, price_stats,
+    # Generate smart template caption (no API required)
+    caption = generate_smart_caption(truncated_title, price, mrp, discount, buy_url, is_verified_low, deal_score, platform, comparison_text, price_stats,
                                       bank_offers=bank_offers, coupon_detail=coupon_detail, review_grade=review_grade,
                                       effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt)
     
-    if caption:
-        # Prepend the official branded header so the platform is ALWAYS clear!
-        caption = f"{header}\n\n{caption}"
-    else:
-        verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
-        
-        # Build extra promotional/meta fields
-        promo_fields = ""
-        if coupon_detail:
-            promo_fields += f"ðŸ·ï¸ <b>Coupon:</b>        <code>{coupon_detail}</code>\n"
-        if bank_offers:
-            promo_fields += f"ðŸ’³ <b>Bank Offer:</b>    <code>{', '.join(bank_offers)}</code>\n"
-        if review_grade and review_grade != "N/A":
-            promo_fields += f"â­ <b>Review Trust:</b>  <code>Grade {review_grade}</code>\n"
-        if promo_fields:
-            promo_fields = f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{promo_fields}"
-            
-        caption = (
-            f"{header}\n"
-            f"ðŸ›ï¸ <b>{truncated_title}</b>\n\n"
-            f"{badge}"
-            f"ðŸ’µ <b>Loot Price:</b>  <code>â‚¹{price:,}</code>\n"
-            f"âŒ <b>Original MRP:</b> <s>â‚¹{mrp:,}</s>\n"
-            f"ðŸ“‰ <b>Discount:</b>     <b>{discount:.0f}% OFF</b>\n"
-            f"ðŸ’° <b>Total Savings:</b> <code>â‚¹{savings:,}</code>\n\n"
-            f"{effective_cashback_text}"
-            f"{upi_matcher_text}"
-            f"{offline_comparison_text}"
-            f"{promo_fields}"
-            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-            f"ðŸ’Ž <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})\n"
-            f"ðŸ›¡ï¸ <b>Verification:</b> <code>{verification_text}</code>"
-            f"{comparison_text}\n\n"
-            f"ðŸš€ <i>Price drops don't last! Grab it before stock ends!</i>\n"
-            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-            + (f"ðŸ“¢ <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more verified loot!</b>" if include_invite_link else "")
-        )
+    # Prepend the official branded header so the platform is ALWAYS clear
+    caption = f"{header}\n\n{caption}"
+    
+    # Append channel invite link
+    if include_invite_link:
+        caption += f"\n\n📢 <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more verified loot!</b>"
         
     # Guardrail: If caption exceeds 1000 chars, Telegram photo API fails.
     # Trim caption to a clean, high-impact format if it's too long.
