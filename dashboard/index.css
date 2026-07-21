@@ -66,6 +66,13 @@
     --cred-secondary: var(--loot-secondary);
     --cred-tertiary: var(--loot-tertiary);
     --cred-accent: var(--loot-accent);
+    
+    /* Spacing Scale System */
+    --loot-space-xs: 4px;
+    --loot-space-sm: 8px;
+    --loot-space-md: 16px;
+    --loot-space-lg: 24px;
+    --loot-space-xl: 32px;
 }
 
 /* ==========================================
