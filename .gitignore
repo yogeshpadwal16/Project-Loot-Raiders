@@ -27,6 +27,7 @@ ENV/
 # OS Files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Python cache
 .pytest_cache/
@@ -45,8 +46,11 @@ dist/
 # Runtime generated files
 execution.log
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
+scratch_page.html
 
 # Clicks tracking temporary outputs
 clicks_activity.json

@@ -1,12 +1,18 @@
-{
-  "name": "Loot Raiders Control Panel",
+<![CDATA[{
+  "name": "Loot Raiders — Deal Discovery Engine",
   "short_name": "Loot Raiders",
-  "description": "Real-time automated shopping deals scraper and broadcast matrix.",
+  "description": "Real-time AI-powered shopping deal discovery, scoring, and broadcast platform for Indian e-commerce.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0b0f19",
-  "theme_color": "#ff9900",
+  "background_color": "#030303",
+  "theme_color": "#00e676",
   "orientation": "portrait",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["shopping", "finance", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "icon-192.png",
@@ -20,5 +26,32 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Deals",
+      "short_name": "Deals",
+      "url": "/",
+      "description": "View the live broadcast feed of top deals",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Admin Panel",
+      "short_name": "Admin",
+      "url": "/admin.html",
+      "description": "Access the scraper control panel",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
+]]>
