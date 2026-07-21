@@ -5,20 +5,38 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "loot_raiders.db")
 
-# check_same_thread=False is required for sharing the SQLite connection across Selenium worker threads
-engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False, "timeout": 30})
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 
-from sqlalchemy import event
-@event.listens_for(engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    try:
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.close()
-    except Exception as e:
-        import logging
-        logging.warning(f"Failed to set SQLite PRAGMA journal_mode=WAL: {e}")
+if DATABASE_URL and (DATABASE_URL.startswith("postgresql://") or DATABASE_URL.startswith("postgres://")):
+    # Convert postgres:// to postgresql:// for SQLAlchemy 1.4+
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+        
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=3600
+    )
+else:
+    # Default to SQLite with WAL mode
+    engine = create_engine(
+        f"sqlite:///{DB_PATH}",
+        connect_args={"check_same_thread": False, "timeout": 30}
+    )
+    
+    from sqlalchemy import event
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        try:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.close()
+        except Exception as e:
+            import logging
+            logging.warning(f"Failed to set SQLite PRAGMA journal_mode=WAL: {e}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
