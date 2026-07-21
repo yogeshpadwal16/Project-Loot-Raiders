@@ -2198,15 +2198,17 @@ body::after {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 72px;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: rgba(8, 8, 10, 0.96);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
     z-index: 1000;
     justify-content: space-around;
     align-items: center;
-    padding: 0 12px;
+    padding-left: 12px;
+    padding-right: 12px;
     box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
 }
 
@@ -2222,6 +2224,7 @@ body::after {
     justify-content: center;
     gap: 4px;
     cursor: pointer;
+    touch-action: manipulation;
     transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
     flex: 1;
     height: 100%;
@@ -2257,9 +2260,9 @@ body::after {
         display: flex;
     }
     
-    /* Reserve space at the bottom for the navigation bar */
+    /* Reserve space at the bottom for the navigation bar including safe-area-inset */
     body {
-        padding-bottom: 84px !important;
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
     }
     
     /* Flat padding for app container */
