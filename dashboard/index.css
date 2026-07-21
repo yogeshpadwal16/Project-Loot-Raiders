@@ -2265,7 +2265,7 @@ body::after {
     color: var(--cred-primary);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
     /* Enable bottom nav */
     .mobile-bottom-nav {
         display: flex;

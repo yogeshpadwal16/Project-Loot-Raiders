@@ -2096,7 +2096,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Mobile Bottom Navigation Tab Switching Logic
+// Mobile Bottom Navigation Tab Switching Logic (Flawless 5-Tab PWA Mapping)
 document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.mobile-bottom-nav .nav-item');
     const dealsSection = document.querySelector('.deals-section');
@@ -2112,18 +2112,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const watchlistCard = document.querySelector('.watchlist-widget-card');
 
     function showMobileTab(tab) {
-        if (window.innerWidth > 600) {
-            // Restore desktop grid layout if resized above mobile breakpoint
+        // Desktop breakpoint check (innerWidth > 900px)
+        if (window.innerWidth > 900) {
+            // Restore desktop grid layout
             if (dealsSection) dealsSection.style.display = 'block';
             if (controlSection) controlSection.style.display = 'block';
             if (statsGrid) statsGrid.style.display = 'grid';
             
-            if (spotlightCard) spotlightCard.style.display = '';
-            if (healthCard) healthCard.style.display = '';
-            if (whatsappCard) whatsappCard.style.display = '';
-            if (scratchCard) scratchCard.style.display = '';
-            if (mapCard) mapCard.style.display = '';
-            if (watchlistCard) watchlistCard.style.display = '';
+            if (spotlightCard) {
+                if (controlSection) controlSection.appendChild(spotlightCard);
+                spotlightCard.style.display = 'block';
+            }
+            if (healthCard) healthCard.style.display = 'block';
+            if (whatsappCard) whatsappCard.style.display = 'block';
+            if (scratchCard) scratchCard.style.display = 'block';
+            if (mapCard) mapCard.style.display = 'block';
+            if (watchlistCard) watchlistCard.style.display = 'block';
             return;
         }
 
@@ -2140,83 +2144,48 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mapCard) mapCard.style.display = 'none';
         if (watchlistCard) watchlistCard.style.display = 'none';
 
-        let settingsPanel = document.getElementById('mobile-settings-panel');
-        if (settingsPanel) settingsPanel.style.display = 'none';
-
-        if (tab === 'deals') {
-            if (dealsSection) dealsSection.style.display = 'block';
-        } else if (tab === 'analytics') {
-            if (statsGrid) statsGrid.style.display = 'grid';
-            if (controlSection) controlSection.style.display = 'block';
-            if (spotlightCard) spotlightCard.style.display = 'block';
-            if (healthCard) healthCard.style.display = 'block';
-            if (watchlistCard) watchlistCard.style.display = 'block';
-            if (mapCard) mapCard.style.display = 'block';
-        } else if (tab === 'community') {
-            if (controlSection) controlSection.style.display = 'block';
-            if (whatsappCard) whatsappCard.style.display = 'block';
-            if (scratchCard) scratchCard.style.display = 'block';
-        } else if (tab === 'settings') {
-            if (controlSection) controlSection.style.display = 'block';
-            
-            // Create a custom settings panel for system operations
-            if (!settingsPanel) {
-                settingsPanel = document.createElement('div');
-                settingsPanel.id = 'mobile-settings-panel';
-                settingsPanel.className = 'selector-card';
-                settingsPanel.style.padding = '20px';
-                settingsPanel.style.marginTop = '10px';
-                settingsPanel.style.borderRadius = '24px';
-                settingsPanel.style.background = 'var(--md-sys-color-surface-container)';
-                settingsPanel.style.border = '1px solid var(--md-sys-color-outline-variant)';
-                settingsPanel.innerHTML = `
-                    <div class="selector-header" style="margin-bottom: 15px; display:flex; justify-content:space-between; align-items:center;">
-                        <h3 style="margin:0;"><i class="fa-solid fa-gear text-primary"></i> System Settings</h3>
-                    </div>
-                    <div class="selector-body" style="display: flex; flex-direction: column; gap: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>Dark Mode</span>
-                            <button id="mobile-theme-btn" class="btn" style="padding: 8px 16px; border-radius: 20px; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-background); cursor: pointer;"><i class="fa-solid fa-moon"></i> Toggle</button>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span>Operator Identity</span>
-                            <input type="text" id="mobile-operator-input" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); color: white; width: 120px; font-size: 0.85rem;" value="${localStorage.getItem('operator_identity') || 'Operator'}">
-                        </div>
-                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px; font-size: 0.8rem; opacity: 0.7;">
-                            <div>Engine Version: v3.1.2</div>
-                            <div>Playwright Workers: 3 instances max</div>
-                            <div>Last Restart: Today, 4:00 AM</div>
-                        </div>
-                    </div>
-                `;
-                controlSection.appendChild(settingsPanel);
-                
-                // Wire up actions
-                const themeBtn = document.getElementById('mobile-theme-btn');
-                if (themeBtn) {
-                    themeBtn.addEventListener('click', () => {
-                        const originalBtn = document.getElementById('theme-toggle-btn');
-                        if (originalBtn) originalBtn.click();
-                    });
-                }
-                const opInput = document.getElementById('mobile-operator-input');
-                if (opInput) {
-                    opInput.addEventListener('change', (e) => {
-                        localStorage.setItem('operator_identity', e.target.value);
-                        const originalInput = document.getElementById('operator-identity-input');
-                        if (originalInput) originalInput.value = e.target.value;
-                    });
+        // Dynamic Spotlight card shifting on mobile (Prepend to feed in Home tab)
+        if (tab === 'home') {
+            if (dealsSection) {
+                dealsSection.style.display = 'block';
+                if (spotlightCard) {
+                    dealsSection.insertBefore(spotlightCard, dealsSection.firstChild);
+                    spotlightCard.style.display = 'block';
                 }
             }
-            settingsPanel.style.display = 'block';
+        } else if (tab === 'search') {
+            if (dealsSection) {
+                dealsSection.style.display = 'block';
+                // Focus the search box for faster user entry
+                const searchInput = document.getElementById('feed-search');
+                if (searchInput) searchInput.focus();
+            }
+        } else if (tab === 'watchlist') {
+            if (controlSection) {
+                controlSection.style.display = 'block';
+                if (watchlistCard) watchlistCard.style.display = 'block';
+            }
+        } else if (tab === 'vault') {
+            if (controlSection) {
+                controlSection.style.display = 'block';
+                if (scratchCard) scratchCard.style.display = 'block';
+                if (whatsappCard) whatsappCard.style.display = 'block';
+            }
+        } else if (tab === 'stats') {
+            if (statsGrid) statsGrid.style.display = 'grid';
+            if (controlSection) {
+                controlSection.style.display = 'block';
+                if (healthCard) healthCard.style.display = 'block';
+                if (mapCard) mapCard.style.display = 'block';
+            }
         }
     }
 
     if (navItems.length > 0) {
-        // Initial setup
-        if (window.innerWidth <= 600) {
-            showMobileTab('deals');
-        }
+        // Initial setup on page load
+        const activeTab = document.querySelector('.mobile-bottom-nav .nav-item.active');
+        const defaultTab = activeTab ? activeTab.getAttribute('data-tab') : 'home';
+        showMobileTab(defaultTab);
 
         navItems.forEach(item => {
             item.addEventListener('click', () => {
@@ -2232,7 +2201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle resizing window dynamically
     window.addEventListener('resize', () => {
         const activeTab = document.querySelector('.mobile-bottom-nav .nav-item.active');
-        const currentTab = activeTab ? activeTab.getAttribute('data-tab') : 'deals';
+        const currentTab = activeTab ? activeTab.getAttribute('data-tab') : 'home';
         showMobileTab(currentTab);
     });
 });
