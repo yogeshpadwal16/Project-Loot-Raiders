@@ -1121,43 +1121,43 @@ body::after {
 
 /* Light Theme Variables */
 .light-mode {
-    --md-sys-color-background: #121214;
-    --md-sys-color-on-background: #ffffff;
+    --md-sys-color-background: #f8f9fc;
+    --md-sys-color-on-background: #15181e;
     
-    --md-sys-color-surface: #1e1e22;
-    --md-sys-color-surface-dim: #18181c;
-    --md-sys-color-surface-container: #1e1e22;
-    --md-sys-color-surface-container-low: #141416;
-    --md-sys-color-surface-container-high: #26262b;
-    --md-sys-color-surface-container-highest: #2e2e34;
+    --md-sys-color-surface: #ffffff;
+    --md-sys-color-surface-dim: #f3f5f8;
+    --md-sys-color-surface-container: #ffffff;
+    --md-sys-color-surface-container-low: #f1f3f7;
+    --md-sys-color-surface-container-high: #eef1f6;
+    --md-sys-color-surface-container-highest: #e2e6f0;
     
-    --md-sys-color-primary: #00e676;
-    --md-sys-color-on-primary: #000000;
-    --md-sys-color-primary-container: #003311;
-    --md-sys-color-on-primary-container: #a6ffd5;
+    --md-sys-color-primary: #ff2a5f;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #ffe5eb;
+    --md-sys-color-on-primary-container: #ff2a5f;
     
-    --md-sys-color-secondary: #00bcd4;
-    --md-sys-color-on-secondary: #000000;
-    --md-sys-color-secondary-container: #003c44;
-    --md-sys-color-on-secondary-container: #b2ebf2;
+    --md-sys-color-secondary: #2ecc71;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #e6f9ed;
+    --md-sys-color-on-secondary-container: #2ecc71;
     
-    --md-sys-color-tertiary: #ffd600;
+    --md-sys-color-tertiary: #ffb300;
     --md-sys-color-on-tertiary: #000000;
-    --md-sys-color-tertiary-container: #332a00;
-    --md-sys-color-on-tertiary-container: #fff4b3;
+    --md-sys-color-tertiary-container: #fff8e1;
+    --md-sys-color-on-tertiary-container: #b37d00;
     
     --md-sys-color-error: #ff1744;
     --md-sys-color-on-error: #ffffff;
-    --md-sys-color-error-container: #4a000c;
-    --md-sys-color-on-error-container: #ffdad6;
+    --md-sys-color-error-container: #ffebee;
+    --md-sys-color-on-error-container: #ff1744;
     
-    --md-sys-color-outline: #5c6f84;
+    --md-sys-color-outline: #cbd5e1;
     --md-sys-color-outline-variant: #e2e8f0;
     
-    --md-sys-color-success-container: #c6ffd9;
-    --md-sys-color-on-success-container: #002112;
-    --md-sys-color-warning-container: #ffe08b;
-    --md-sys-color-on-warning-container: #241a00;
+    --md-sys-color-success-container: #e6f9ed;
+    --md-sys-color-on-success-container: #2ecc71;
+    --md-sys-color-warning-container: #fff8e1;
+    --md-sys-color-on-warning-container: #b37d00;
 }
 
 /* Light mode specifics overrides */
@@ -1178,11 +1178,9 @@ body::after {
 .light-mode .deals-section,
 .light-mode .console-card,
 .light-mode .selector-card {
-    background: #1e1e22 !important;
-    border: 1px solid #2d2d34 !important;
-    box-shadow: 
-        inset 0 1px 0px 0 rgba(255, 255, 255, 0.05),
-        0 16px 40px 0 rgba(0, 0, 0, 0.4) !important;
+    background: var(--md-sys-color-surface) !important;
+    border: 1px solid var(--md-sys-color-outline-variant) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04) !important;
 }
 
 .light-mode .title-meta h1 {
@@ -1218,20 +1216,13 @@ body::after {
 
 .light-mode .tab-btn.active {
     background-color: var(--md-sys-color-primary-container) !important;
-    color: #4a2700 !important;
+    color: var(--md-sys-color-primary) !important;
 }
 
 .light-mode .stat-card:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(242, 235, 244, 0.2) 100%) !important;
+    background: #ffffff !important;
     border-color: var(--md-sys-color-primary) !important;
-    box-shadow: 
-        inset 0 1px 2px 0 rgba(255, 255, 255, 0.9),
-        0 16px 36px 0 rgba(121, 66, 165, 0.12) !important;
-}
-
-.light-mode .console-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(244, 245, 248, 0.2) 100%) !important;
-    border-color: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 10px 25px rgba(255, 42, 95, 0.05) !important;
 }
 
 .light-mode .console-body {
@@ -1248,18 +1239,31 @@ body::after {
 .light-mode .system-line { color: #5f6368; }
 
 .light-mode .deal-img-wrapper {
-    background: #161619 !important;
-    border: 1px solid #2d2d35 !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
 }
 
-/* Light mode specific deal item visibility override */
 .light-mode .deal-item {
-    background: #1e1e22 !important;
-    border: 1px solid #2d2d34 !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
 }
 .light-mode .deal-item:hover {
-    background: #25252b !important;
-    border-color: var(--cred-primary) !important;
+    background: #f8fafc !important;
+    border-color: var(--md-sys-color-primary) !important;
+    box-shadow: 0 8px 24px rgba(255, 42, 95, 0.08) !important;
+}
+
+.light-mode .deal-title {
+    color: #1e293b !important;
+}
+
+.light-mode .current-price {
+    color: #0f172a !important;
+}
+
+.light-mode .mrp-price {
+    color: #64748b !important;
 }
 
 /* Protocol warning banner style */
@@ -2211,10 +2215,10 @@ body::after {
     right: 0;
     height: calc(64px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: rgba(8, 8, 10, 0.96);
+    background: var(--md-sys-color-surface);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--md-sys-color-outline-variant);
     z-index: 1000;
     justify-content: space-around;
     align-items: center;
@@ -2476,5 +2480,213 @@ body::after {
     
     .control-section {
         display: none;
+    }
+}
+
+/* ==============================================================================
+   📍 MAGICPIN LOCATION & ACCESSIBILITY ACCENTS
+   ============================================================================== */
+.location-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 15px;
+    padding-left: 15px;
+    border-left: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.location-icon-container {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 42, 95, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--md-sys-color-primary);
+    font-size: 0.95rem;
+}
+
+.location-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.location-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--md-sys-color-on-background);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.location-subtitle {
+    font-size: 0.7rem;
+    color: var(--md-sys-color-outline);
+    margin-top: -1px;
+}
+
+/* Header Circular Actions */
+.header-action-btn {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    color: var(--md-sys-color-on-background);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+    transform: scale(1.05);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-primary);
+}
+
+.cart-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: var(--md-sys-color-primary);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 10px;
+    line-height: 1;
+}
+
+@media (max-width: 900px) {
+    .title-meta {
+        display: none !important;
+    }
+    .location-picker {
+        border-left: none;
+        margin-left: 0;
+        padding-left: 0;
+    }
+    .btn-telegram-header {
+        display: none !important;
+    }
+    .system-status-indicator {
+        margin-left: auto;
+    }
+}
+
+/* Category Pills Styling */
+.pill-btn {
+    padding: 8px 16px;
+    border-radius: 100px;
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-background);
+    font-weight: 600;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    font-size: 0.8rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.pill-btn.active {
+    background: var(--loot-primary) !important;
+    color: white !important;
+    font-weight: 700;
+    border-color: var(--loot-primary) !important;
+}
+
+.pill-btn:hover {
+    transform: scale(1.02);
+}
+
+/* magicpin rewards floating banner */
+.magicpin-rewards-banner {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    right: 20px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 20px;
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    z-index: 999;
+    animation: slideUp 0.4s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.banner-left-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.banner-gift-icon {
+    font-size: 1.4rem;
+    color: #6366f1;
+}
+
+.banner-text-content {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.banner-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #1e1b4b;
+}
+
+.banner-subtitle {
+    font-size: 0.72rem;
+    color: #4f46e5;
+}
+
+.banner-claim-btn {
+    background: #6366f1 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    padding: 8px 18px !important;
+    border-radius: 100px !important;
+    border: none !important;
+    font-size: 0.75rem !important;
+    cursor: pointer;
+}
+
+.banner-close-btn {
+    background: transparent;
+    border: none;
+    color: #6366f1;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px;
+}
+
+@media (min-width: 901px) {
+    .magicpin-rewards-banner {
+        width: 380px;
+        left: auto;
+        right: 20px;
+        bottom: 20px;
     }
 }
