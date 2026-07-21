@@ -1,4 +1,4 @@
-import re
+﻿import re
 import time
 import logging
 from typing import List, Dict, Any
@@ -64,7 +64,7 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
                             title = title_el.get_attribute("textContent").strip()
                         if title:
                             title = re.sub(r'\s+', ' ', title)
-                    except:
+                    except Exception:
                         pass
                         
                     if not title or len(title) < 5:
@@ -79,7 +79,7 @@ class AmazonRetailerPlugin(BaseRetailerPlugin):
                             if val and "http" in val and "base64" not in val:
                                 img_url = val
                                 break
-                    except:
+                    except Exception:
                         pass
                         
                     # 4. Extract pricing

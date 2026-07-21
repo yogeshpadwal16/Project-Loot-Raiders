@@ -1,4 +1,4 @@
-import re
+﻿import re
 import time
 import logging
 import json
@@ -31,7 +31,7 @@ def auto_heal_with_gemini(driver, platform_id: str, config: dict, settings: dict
         html = driver.page_source
         clean_html = clean_and_truncate_html(html)
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
         
         prompt = (
             f"You are a web scraping expert. Analyze the clean HTML structure of the {platform_id.upper()} e-commerce product feed page below "
@@ -56,7 +56,7 @@ def auto_heal_with_gemini(driver, platform_id: str, config: dict, settings: dict
                 "parts": [{"text": prompt}]
             }]
         }
-        res = requests.post(url, json=payload, timeout=25)
+        res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
         if res.status_code == 200:
             data = res.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -216,7 +216,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 parent_href = parent_a.get_attribute("href")
                                 if parent_href and "/search" not in parent_href and "/s/" not in parent_href and "/c/" not in parent_href and "/pr?" not in parent_href and "/all-" not in parent_href:
                                     raw_url = parent_href
-                            except:
+                            except Exception:
                                 pass
                             
                     if not raw_url:
@@ -226,7 +226,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             try:
                                 parent_container = card.find_element(By.XPATH, "./parent::div[@data-product-slug]")
                                 slug = parent_container.get_attribute("data-product-slug")
-                            except:
+                            except Exception:
                                 pass
                         
                         if slug:
@@ -235,7 +235,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 try:
                                     gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
                                     prod_id = gtm_el.get_attribute("data-id")
-                                except:
+                                except Exception:
                                     pass
                             
                             if not prod_id:
@@ -248,7 +248,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
                                 v = gtm_el.get_attribute("data-vertical")
                                 if v: vertical = v.lower()
-                            except:
+                            except Exception:
                                 pass
                                 
                             # Clean slug of merchant suffix (e.g. -mmdlqy-74442527)
@@ -281,7 +281,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     try:
                         title_el = card.find_element(By.CSS_SELECTOR, config['title_selector'])
                         title = title_el.get_attribute("title") or title_el.get_attribute("textContent").strip()
-                    except:
+                    except Exception:
                         pass
                         
                     if not title and card.text:
@@ -289,7 +289,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         lines = [l.strip() for l in card.text.split("\n") if l.strip()]
                         for l in lines:
                             if (len(l) > 12 
-                                and not l.startswith("₹") 
+                                and not l.startswith("â‚¹") 
                                 and "OFF" not in l 
                                 and "%" not in l):
                                 title = l
@@ -353,7 +353,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                             continue
                                         img_url = url_candidate
                                         break
-                        except:
+                        except Exception:
                             pass
                         
                     # 4. Extract pricing and discount
@@ -456,7 +456,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         discount_str = discount_str.replace("% off", "").strip()
                         try:
                             discount = float(discount_str)
-                        except:
+                        except Exception:
                             pass
                             
                     if mrp > price and not discount:

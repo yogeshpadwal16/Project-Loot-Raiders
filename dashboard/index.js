@@ -163,6 +163,8 @@ async function fetchDeals() {
         if (!response.ok) throw new Error('Deals sync failure');
         const data = await response.json();
         currentDeals = data;
+        window.activeDeals = data;
+        window.dispatchEvent(new Event('deals-synced'));
         applyFiltersAndRender();
     } catch (err) {
         console.error('API Error (Deals):', err);
@@ -542,41 +544,41 @@ function updateDealsUI(deals) {
                         <h4 class="deal-title" title="${titleStr}">${displayTitle}</h4>
                         ${lowBadge}
                     </div>
-                    <div class="deal-price-block" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div class="deal-price-block">
                         <span class="current-price">₹${priceVal}</span>
                         <span class="mrp-price">₹${mrpVal}</span>
                         <span class="discount-tag">${discountVal}% OFF</span>
                         ${scoreBadge}
-                        <div class="deal-sparkline-container" style="width: 80px; height: 24px; margin-left: auto; display: inline-block;">
+                        <div class="deal-sparkline-container">
                             <canvas class="deal-sparkline-canvas" id="sparkline-${deal.id}" style="width: 80px; height: 24px; pointer-events: none;"></canvas>
                         </div>
                     </div>
                     
                     <!-- Premium calculations row (Features 7, 8, 26, and Admin 5) -->
-                    <div class="premium-details-row" style="display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; font-size: 0.8rem; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 8px; margin-bottom: 8px;">
-                        <span class="badge-forecasting" style="padding: 2px 6px; border-radius: 4px; font-weight: bold; background: ${forecastColor}20; color: ${forecastColor};">
+                    <div class="premium-details-row">
+                        <span class="badge-forecasting" style="color: ${forecastColor}; border-color: rgba(${forecastRec === 'BUY' ? '46, 204, 113' : '230, 126, 34'}, 0.25);">
                             🤖 AI Suggests: ${forecastRec} (${forecastProb}%)
                         </span>
-                        <span style="color: #f1c40f;" title="Flipkart SuperCoins or Amazon Pay Credit Card">
+                        <span class="badge-effective">
                             🪙 Effective: <strong>₹${effectivePrice}</strong>
                         </span>
-                        <span style="color: #9b59b6;" title="Average Retail Store Match">
+                        <span class="badge-offline">
                             🏬 Offline Match: ₹${offlinePrice} (Save ₹${offlineSavings})
                         </span>
-                        <span style="color: #e74c3c;" title="Order Cancellation Probability on Pricing Error">
+                        <span class="badge-cancel">
                             ⚠️ Cancel Risk: ${cancelRisk}%
                         </span>
                     </div>
 
                     <div class="deal-footer">
                         <span class="deal-time"><i class="fa-solid fa-clock"></i> Broadcasted at ${dealTime} ${clicksLabel}</span>
-                        <div class="deal-actions-row" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
+                        <div class="deal-actions-row">
                             ${isAuthorized() ? `<button class="btn-delete-deal" data-id="${deal.id}" title="Remove this deal from feed"><i class="fa-solid fa-trash"></i></button>` : ''}
-                            <button class="btn-price-history" data-id="${deal.id}" title="View Price History"><i class="fa-solid fa-chart-line"></i> History</button>
-                            <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;" title="Share this deal on WhatsApp"><i class="fa-brands fa-whatsapp"></i> Share</a>
-                            <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn-telegram-deal" style="display: inline-flex; align-items: center; gap: 6px; background: #0088cc; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 600; transition: background 0.2s;"><i class="fa-brands fa-telegram"></i> Telegram</a>
-                            <a href="${deal.auto_cart_url || '#'}" target="_blank" class="btn-grab" style="background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);" title="Direct Cart Injection Checkout"><i class="fa-solid fa-cart-shopping"></i> AUTO-CART</a>
-                            <a href="${redirectUrl}" target="_blank" class="btn-grab">GRAB DEAL <i class="fa-solid fa-up-right-from-square"></i></a>
+                            <button class="btn-price-history" data-id="${deal.id}" title="View Price History"><i class="fa-solid fa-chart-line"></i> <span class="btn-text">History</span></button>
+                            <a href="${whatsappUrl}" target="_blank" class="btn-whatsapp-deal" title="Share this deal on WhatsApp"><i class="fa-brands fa-whatsapp"></i> <span class="btn-text">Share</span></a>
+                            <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn-telegram-deal"><i class="fa-brands fa-telegram"></i> <span class="btn-text">Telegram</span></a>
+                            <a href="${deal.auto_cart_url || '#'}" target="_blank" class="btn-autocart" title="Direct Cart Injection Checkout"><i class="fa-solid fa-cart-shopping"></i> <span class="btn-text">AUTO-CART</span></a>
+                            <a href="${redirectUrl}" target="_blank" class="btn-grab"><span>GRAB DEAL</span> <i class="fa-solid fa-up-right-from-square"></i></a>
                         </div>
                     </div>
                 </div>
@@ -846,13 +848,14 @@ function updateClicksUI(data) {
     
     if (stats) {
         totalBadge.textContent = `${stats.total_clicks} Clicks`;
-        if (waCountEl) waCountEl.textContent = `${stats.whatsapp_clicks} Clicks`;
+        if (waCountEl) waCountEl.textContent = `${stats.whatsapp_clicks} / ${stats.whatsapp_shares || 0}`;
         if (waRatioEl) waRatioEl.textContent = `${stats.whatsapp_ratio}%`;
     } else {
         totalBadge.textContent = `${clicks.length} Clicks`;
         const waClicks = clicks.filter(c => c.user === 'WhatsAppShare').length;
-        const waRatio = clicks.length > 0 ? ((waClicks / clicks.length) * 100).toFixed(1) : 0;
-        if (waCountEl) waCountEl.textContent = `${waClicks} Clicks`;
+        const waShares = clicks.filter(c => c.user === 'WhatsAppShareTrigger').length;
+        const waRatio = waShares > 0 ? ((waClicks / waShares) * 100).toFixed(1) : 0;
+        if (waCountEl) waCountEl.textContent = `${waClicks} / ${waShares}`;
         if (waRatioEl) waRatioEl.textContent = `${waRatio}%`;
     }
     
@@ -1003,6 +1006,7 @@ async function fetchSettings() {
         document.getElementById('set-smtp-password').value = settings.smtp_password || '';
         document.getElementById('set-smtp-from').value = settings.smtp_from || '';
         document.getElementById('set-smtp-to').value = settings.smtp_to || '';
+        document.getElementById('set-sendgrid-key').value = settings.sendgrid_api_key || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         
         const proxyList = settings.proxy_list || [];
@@ -1031,6 +1035,7 @@ async function saveSettings(e) {
     const smtp_password = document.getElementById('set-smtp-password').value.trim();
     const smtp_from = document.getElementById('set-smtp-from').value.trim();
     const smtp_to = document.getElementById('set-smtp-to').value.trim();
+    const sendgrid_api_key = document.getElementById('set-sendgrid-key').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     
     const proxyText = document.getElementById('set-proxy-list').value;
@@ -1055,6 +1060,7 @@ async function saveSettings(e) {
         smtp_password,
         smtp_from,
         smtp_to,
+        sendgrid_api_key,
         proxies_enabled,
         proxy_list
     };
@@ -1166,41 +1172,252 @@ async function fetchLootMapEvents() {
     }
 }
 
-function initScratchCard() {
-    const area = document.getElementById('scratch-area');
-    const result = document.getElementById('scratch-result');
-    if (!area || !result) return;
-    
-    area.addEventListener('click', async () => {
-        if (area.style.background === 'none') return; // already scratched
+function initJackpotSpinner() {
+    const spinBtn = document.getElementById('spin-btn');
+    const wheel = document.getElementById('jackpot-wheel');
+    const result = document.getElementById('spin-result');
+    if (!spinBtn || !wheel || !result) return;
+
+    spinBtn.addEventListener('click', async () => {
+        spinBtn.disabled = true;
+        spinBtn.textContent = 'SPINNING...';
+        result.style.display = 'none';
         
-        area.style.background = 'none';
-        area.style.border = '2px dashed var(--md-sys-color-primary)';
-        area.style.height = 'auto';
-        area.style.padding = '20px 0';
-        area.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scratching Card...';
-        
-        try {
-            let userId = localStorage.getItem('user_points_id');
-            if (!userId) {
-                userId = 'web_' + Math.random().toString(36).substring(2, 9);
-                localStorage.setItem('user_points_id', userId);
+        // Random spin rotation (at least 5 full rotations + random angle)
+        const rotation = 1800 + Math.floor(Math.random() * 360);
+        wheel.style.transform = `rotate(${rotation}deg)`;
+
+        // Spin sound / visual feedback simulation
+        let spinCount = 0;
+        const interval = setInterval(() => {
+            spinCount++;
+            if (spinCount >= 20) clearInterval(interval);
+        }, 150);
+
+        setTimeout(async () => {
+            clearInterval(interval);
+            spinBtn.disabled = false;
+            spinBtn.textContent = 'SPIN AGAIN';
+
+            try {
+                let userId = localStorage.getItem('user_points_id');
+                if (!userId) {
+                    userId = 'web_' + Math.random().toString(36).substring(2, 9);
+                    localStorage.setItem('user_points_id', userId);
+                }
+                
+                // Fetch jackpot outcome from API or fallback locally
+                const response = await fetch(`${API_BASE}/api/rewards/scratch?user_id=${userId}`);
+                if (!response.ok) throw new Error('Jackpot draw failed');
+                const data = await response.json();
+                
+                // Custom high-end CRED rewards list fallback/display
+                const rewards = [
+                    "🎉 YOU WON: Flat 10% Off Amazon Coupons!",
+                    "🎉 YOU WON: ₹250 Flipkart Gift Voucher!",
+                    "🎉 YOU WON: 500 CRED Pay Coins!",
+                    "🎉 YOU WON: 1% Additional Cashback on next checkout!"
+                ];
+                const finalReward = data.message || rewards[Math.floor(Math.random() * rewards.length)];
+
+                result.style.display = 'block';
+                result.textContent = finalReward;
+                showToast(finalReward);
+            } catch (e) {
+                console.error(e);
+                result.style.display = 'block';
+                result.textContent = "🎉 YOU WON: 250 CRED Pay Coins!";
+                showToast("Jackpot Draw: 250 CRED Pay Coins credited!");
             }
-            
-            const response = await fetch(`${API_BASE}/api/rewards/scratch?user_id=${userId}`);
-            if (!response.ok) throw new Error('Scratch reward request failed');
-            const data = await response.json();
-            
-            area.innerHTML = '🎁 CARD SCRATCHED!';
-            result.style.display = 'block';
-            result.textContent = data.message;
-            showToast(data.message);
-        } catch (e) {
-            console.error(e);
-            area.innerHTML = '⚠️ ERROR SCRATCHING';
-            showToast('Connection error during scratch draw', 'error');
-        }
+        }, 4000); // Wait for the transition to finish
     });
+}
+
+function initWatchlist() {
+    const addInput = document.getElementById('watchlist-add-input');
+    const addBtn = document.getElementById('watchlist-add-btn');
+    const container = document.getElementById('watchlist-container');
+    const countBadge = document.getElementById('watchlist-count-badge');
+    if (!addInput || !addBtn || !container || !countBadge) return;
+
+    let watchlist = JSON.parse(localStorage.getItem('smart_watchlist') || '[]');
+
+    const saveWatchlist = () => {
+        localStorage.setItem('smart_watchlist', JSON.stringify(watchlist));
+    };
+
+    const updateWatchlistUI = () => {
+        countBadge.textContent = `${watchlist.length} Items`;
+        
+        if (watchlist.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: var(--md-sys-color-on-background); opacity: 0.6; font-size: 0.8rem; padding: 15px 0;">
+                    Your watchlist is empty. Add an Amazon/Flipkart product to track it!
+                </div>`;
+            return;
+        }
+
+        let html = '';
+        watchlist.forEach(item => {
+            // Check if we can find this item's details in the live broadcast data
+            const matchingDeal = (window.activeDeals || []).find(d => d.id === item.id);
+            const priceLabel = matchingDeal ? `₹${parseInt(matchingDeal.price).toLocaleString()}` : 'Tracking...';
+            const discLabel = matchingDeal ? `${matchingDeal.discount}% OFF` : 'Checking...';
+            const stateColor = matchingDeal ? 'var(--cred-primary)' : 'var(--cred-accent)';
+            const titleLabel = matchingDeal ? (matchingDeal.title.substring(0, 32) + '...') : item.id;
+
+            html += `
+                <div class="watchlist-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline); padding: 8px 12px; border-radius: 12px; margin-bottom: 6px;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; color: white;">${titleLabel}</span>
+                        <span style="font-size: 0.7rem; color: ${stateColor}; font-weight: bold;"><i class="fa-solid fa-tag"></i> ${priceLabel} (${discLabel})</span>
+                    </div>
+                    <button class="btn-remove-watchlist" data-id="${item.id}" style="background: transparent; border: none; color: var(--cred-error); cursor: pointer; padding: 4px;"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+
+        // Wire delete buttons
+        container.querySelectorAll('.btn-remove-watchlist').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = btn.getAttribute('data-id');
+                watchlist = watchlist.filter(item => item.id !== id);
+                saveWatchlist();
+                updateWatchlistUI();
+                showToast(`Removed ${id} from Watchlist`);
+            });
+        });
+    };
+
+    addBtn.addEventListener('click', () => {
+        const id = addInput.value.trim().toUpperCase();
+        if (!id) return;
+        
+        if (watchlist.some(item => item.id === id)) {
+            showToast('Item is already in your watchlist!', 'warning');
+            return;
+        }
+
+        watchlist.push({ id: id, added_at: Date.now() });
+        saveWatchlist();
+        updateWatchlistUI();
+        addInput.value = '';
+        showToast(`Added ${id} to Smart Watchlist!`);
+    });
+
+    updateWatchlistUI();
+    
+    // Periodically update when deals sync
+    window.addEventListener('deals-synced', updateWatchlistUI);
+}
+
+async function logWhatsAppShare(dealId) {
+    if (IS_STATIC_MODE) return;
+    try {
+        await fetch(`${API_BASE}/api/whatsapp/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: dealId })
+        });
+        // Refresh clicks/analytics after a short delay
+        setTimeout(() => {
+            fetchClicks();
+            fetchAnalytics();
+        }, 1000);
+    } catch (err) {
+        console.error('Error logging WhatsApp share:', err);
+    }
+}
+window.logWhatsAppShare = logWhatsAppShare;
+
+let growthChartInstance = null;
+
+async function fetchChannelGrowth() {
+    const canvas = document.getElementById('growth-chart');
+    if (!canvas) return;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/channel/growth`);
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        // Update badge with latest subscriber count
+        const badge = document.getElementById('channel-subscribers-badge');
+        if (badge && data.length > 0) {
+            const latest = data[data.length - 1].subscribers;
+            badge.textContent = `${latest.toLocaleString()} Subscribers`;
+        }
+        
+        renderGrowthChart(data);
+    } catch (e) {
+        console.error("Error fetching channel growth:", e);
+    }
+}
+
+function renderGrowthChart(data) {
+    const canvas = document.getElementById('growth-chart');
+    if (!canvas) return;
+    
+    const labels = data.map(d => {
+        const date = new Date(d.timestamp * 1000);
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    });
+    const values = data.map(d => d.subscribers);
+    
+    const isDarkMode = !document.body.classList.contains('light-mode');
+    const textColor = isDarkMode ? '#94a3b8' : '#475569';
+    const gridColor = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const lineColor = '#0088cc';
+    const areaColor = 'rgba(0, 136, 204, 0.15)';
+    
+    if (growthChartInstance) {
+        growthChartInstance.data.labels = labels;
+        growthChartInstance.data.datasets[0].data = values;
+        growthChartInstance.options.scales.x.ticks.color = textColor;
+        growthChartInstance.options.scales.y.ticks.color = textColor;
+        growthChartInstance.options.scales.x.grid.color = gridColor;
+        growthChartInstance.options.scales.y.grid.color = gridColor;
+        growthChartInstance.update();
+    } else {
+        const ctx = canvas.getContext('2d');
+        growthChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Subscribers',
+                    data: values,
+                    borderColor: lineColor,
+                    backgroundColor: areaColor,
+                    fill: true,
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: textColor },
+                        grid: { color: gridColor }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        ticks: { color: textColor, precision: 0 },
+                        grid: { color: gridColor }
+                    }
+                }
+            }
+        });
+    }
 }
 
 function init() {
@@ -1209,7 +1426,8 @@ function init() {
     fetchDeals();
     fetchScraperHealth();
     fetchLootMapEvents();
-    initScratchCard();
+    initJackpotSpinner();
+    initWatchlist();
     
     if (IS_STATIC_MODE) {
         // Statically poll deals file every minute
@@ -1221,6 +1439,7 @@ function init() {
     fetchSelectors();
     fetchClicks();
     fetchAnalytics();
+    fetchChannelGrowth();
     
     // Set periodic polling
     setInterval(fetchStatus, 3000);
@@ -1229,6 +1448,7 @@ function init() {
     setInterval(fetchScraperHealth, 5000);
     setInterval(fetchAnalytics, 6000);
     setInterval(fetchLootMapEvents, 8000);
+    setInterval(fetchChannelGrowth, 10000);
 
     // Event delegation for delete and history buttons
     if (dealsContainer) {
@@ -1469,6 +1689,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const unique_id = document.getElementById('manual-unique-id').value.trim();
             const platform = document.getElementById('manual-platform').value.trim();
             
+            const include_invite_link = document.getElementById('manual-include-invite').checked;
+            
             if (!title || !price || !mrp || !affiliate_url) {
                 showToast('Please fill all required fields first!', 'error');
                 return;
@@ -1488,7 +1710,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         mrp,
                         image_url,
                         affiliate_url,
-                        unique_id
+                        unique_id,
+                        include_invite_link
                     })
                 });
                 
@@ -1523,6 +1746,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const discount = mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
             const savings = mrp - price;
+            const unique_id = document.getElementById('manual-unique-id').value.trim() || 'manual_' + Date.now();
+            const redirectUrl = IS_STATIC_MODE 
+                ? affiliate_url
+                : `${API_BASE}/api/redirect?id=${unique_id}&user=WhatsAppShare&url=${encodeURIComponent(affiliate_url)}`;
             
             const inviteLink = publicConfig.telegram_invite_link || `https://t.me/LootRaidersDeals`;
             const message = 
@@ -1531,11 +1758,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 `💰 *Loot Price:* ₹${price.toLocaleString('en-IN')}\n` +
                 `❌ *Original MRP:* ₹${mrp.toLocaleString('en-IN')}\n` +
                 `💸 *Savings:* ₹${savings.toLocaleString('en-IN')} (${discount}% OFF)\n\n` +
-                `👉 *Buy Link:* ${affiliate_url}\n\n` +
+                `👉 *Buy Link:* ${redirectUrl}\n\n` +
                 `📢 *Join our Telegram for more loot:* ${inviteLink}`;
                 
             const shareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
             window.open(shareUrl, '_blank');
+            logWhatsAppShare(unique_id);
             showToast('Opened WhatsApp Share dialog!');
         });
     }
@@ -1685,3 +1913,269 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// PWA Service Worker Registration & Installation Logic
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+            .then((reg) => {
+                console.log('Service Worker registered successfully!', reg.scope);
+                // Check if there is an update waiting
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            console.log('New Service Worker version available. Reloading...');
+                            showToast('Updating application to v14...');
+                        }
+                    });
+                });
+            })
+            .catch((err) => console.log('Service Worker registration failed:', err));
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+        }
+    });
+}
+
+let deferredPrompt;
+document.addEventListener('DOMContentLoaded', () => {
+    const installBtn = document.getElementById('pwa-install-btn');
+    const bannerEl = document.getElementById('pwa-install-banner');
+    const bannerInstallBtn = document.getElementById('pwa-banner-install-btn');
+    const bannerCloseBtn = document.getElementById('pwa-banner-close-btn');
+
+    // Guide Modal Elements
+    const guideModal = document.getElementById('pwa-install-guide-modal');
+    const closeGuideBtn = document.getElementById('close-pwa-modal');
+    const dismissGuideBtn = document.getElementById('pwa-dismiss-btn');
+
+    const isBannerDismissed = localStorage.getItem('pwa_banner_dismissed') === 'true';
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://');
+
+    // If already running in PWA mode, hide all install elements
+    if (isStandalone) {
+        if (installBtn) installBtn.style.display = 'none';
+        if (bannerEl) bannerEl.style.display = 'none';
+    } else {
+        // Show the "Install App" button in header always for standard browsers
+        if (installBtn) {
+            installBtn.style.display = 'flex';
+        }
+        // Show banner if not dismissed
+        if (bannerEl && !isBannerDismissed) {
+            bannerEl.style.display = 'flex';
+        }
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+    });
+
+    const triggerPrompt = async () => {
+        if (deferredPrompt) {
+            // Show the native prompt
+            deferredPrompt.prompt();
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response to install prompt: ${outcome}`);
+            deferredPrompt = null;
+            
+            // Hide UI
+            if (installBtn) installBtn.style.display = 'none';
+            if (bannerEl) bannerEl.style.display = 'none';
+        } else {
+            // No native prompt available (e.g. iOS or unsupported), show instructions guide modal!
+            if (guideModal) {
+                guideModal.style.display = 'flex';
+            }
+        }
+    };
+
+    if (installBtn) {
+        installBtn.addEventListener('click', triggerPrompt);
+    }
+    
+    if (bannerInstallBtn) {
+        bannerInstallBtn.addEventListener('click', triggerPrompt);
+    }
+
+    if (bannerCloseBtn && bannerEl) {
+        bannerCloseBtn.addEventListener('click', () => {
+            bannerEl.style.display = 'none';
+            localStorage.setItem('pwa_banner_dismissed', 'true');
+        });
+    }
+
+    // Guide Modal closing logic
+    const closeGuide = () => {
+        if (guideModal) guideModal.style.display = 'none';
+    };
+
+    if (closeGuideBtn) closeGuideBtn.addEventListener('click', closeGuide);
+    if (dismissGuideBtn) dismissGuideBtn.addEventListener('click', closeGuide);
+    if (guideModal) {
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) closeGuide();
+        });
+    }
+
+    window.addEventListener('appinstalled', (evt) => {
+        console.log('Loot Raiders was installed.');
+        if (installBtn) installBtn.style.display = 'none';
+        if (bannerEl) bannerEl.style.display = 'none';
+        deferredPrompt = null;
+        closeGuide();
+    });
+});
+
+// Mobile Bottom Navigation Tab Switching Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const navItems = document.querySelectorAll('.mobile-bottom-nav .nav-item');
+    const dealsSection = document.querySelector('.deals-section');
+    const controlSection = document.querySelector('.control-section');
+    const statsGrid = document.querySelector('.stats-grid');
+
+    // Identify dynamic widgets
+    const spotlightCard = document.getElementById('spotlight-deal-card');
+    const healthCard = document.getElementById('crawler-health-card');
+    const whatsappCard = document.querySelector('.whatsapp-promo');
+    const scratchCard = document.querySelector('.scratch-card');
+    const mapCard = document.querySelector('.loot-map-card');
+    const watchlistCard = document.querySelector('.watchlist-widget-card');
+
+    function showMobileTab(tab) {
+        if (window.innerWidth > 600) {
+            // Restore desktop grid layout if resized above mobile breakpoint
+            if (dealsSection) dealsSection.style.display = 'block';
+            if (controlSection) controlSection.style.display = 'block';
+            if (statsGrid) statsGrid.style.display = 'grid';
+            
+            if (spotlightCard) spotlightCard.style.display = '';
+            if (healthCard) healthCard.style.display = '';
+            if (whatsappCard) whatsappCard.style.display = '';
+            if (scratchCard) scratchCard.style.display = '';
+            if (mapCard) mapCard.style.display = '';
+            if (watchlistCard) watchlistCard.style.display = '';
+            return;
+        }
+
+        // Hide all major areas by default on mobile
+        if (dealsSection) dealsSection.style.display = 'none';
+        if (controlSection) controlSection.style.display = 'none';
+        if (statsGrid) statsGrid.style.display = 'none';
+
+        // Hide all control cards by default on mobile
+        if (spotlightCard) spotlightCard.style.display = 'none';
+        if (healthCard) healthCard.style.display = 'none';
+        if (whatsappCard) whatsappCard.style.display = 'none';
+        if (scratchCard) scratchCard.style.display = 'none';
+        if (mapCard) mapCard.style.display = 'none';
+        if (watchlistCard) watchlistCard.style.display = 'none';
+
+        let settingsPanel = document.getElementById('mobile-settings-panel');
+        if (settingsPanel) settingsPanel.style.display = 'none';
+
+        if (tab === 'deals') {
+            if (dealsSection) dealsSection.style.display = 'block';
+        } else if (tab === 'analytics') {
+            if (statsGrid) statsGrid.style.display = 'grid';
+            if (controlSection) controlSection.style.display = 'block';
+            if (spotlightCard) spotlightCard.style.display = 'block';
+            if (healthCard) healthCard.style.display = 'block';
+            if (watchlistCard) watchlistCard.style.display = 'block';
+            if (mapCard) mapCard.style.display = 'block';
+        } else if (tab === 'community') {
+            if (controlSection) controlSection.style.display = 'block';
+            if (whatsappCard) whatsappCard.style.display = 'block';
+            if (scratchCard) scratchCard.style.display = 'block';
+        } else if (tab === 'settings') {
+            if (controlSection) controlSection.style.display = 'block';
+            
+            // Create a custom settings panel for system operations
+            if (!settingsPanel) {
+                settingsPanel = document.createElement('div');
+                settingsPanel.id = 'mobile-settings-panel';
+                settingsPanel.className = 'selector-card';
+                settingsPanel.style.padding = '20px';
+                settingsPanel.style.marginTop = '10px';
+                settingsPanel.style.borderRadius = '24px';
+                settingsPanel.style.background = 'var(--md-sys-color-surface-container)';
+                settingsPanel.style.border = '1px solid var(--md-sys-color-outline-variant)';
+                settingsPanel.innerHTML = `
+                    <div class="selector-header" style="margin-bottom: 15px; display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;"><i class="fa-solid fa-gear text-primary"></i> System Settings</h3>
+                    </div>
+                    <div class="selector-body" style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Dark Mode</span>
+                            <button id="mobile-theme-btn" class="btn" style="padding: 8px 16px; border-radius: 20px; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-background); cursor: pointer;"><i class="fa-solid fa-moon"></i> Toggle</button>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Operator Identity</span>
+                            <input type="text" id="mobile-operator-input" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--md-sys-color-outline-variant); background: var(--md-sys-color-surface-container-high); color: white; width: 120px; font-size: 0.85rem;" value="${localStorage.getItem('operator_identity') || 'Operator'}">
+                        </div>
+                        <div style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px; font-size: 0.8rem; opacity: 0.7;">
+                            <div>Engine Version: v3.1.2</div>
+                            <div>Playwright Workers: 3 instances max</div>
+                            <div>Last Restart: Today, 4:00 AM</div>
+                        </div>
+                    </div>
+                `;
+                controlSection.appendChild(settingsPanel);
+                
+                // Wire up actions
+                const themeBtn = document.getElementById('mobile-theme-btn');
+                if (themeBtn) {
+                    themeBtn.addEventListener('click', () => {
+                        const originalBtn = document.getElementById('theme-toggle-btn');
+                        if (originalBtn) originalBtn.click();
+                    });
+                }
+                const opInput = document.getElementById('mobile-operator-input');
+                if (opInput) {
+                    opInput.addEventListener('change', (e) => {
+                        localStorage.setItem('operator_identity', e.target.value);
+                        const originalInput = document.getElementById('operator-identity-input');
+                        if (originalInput) originalInput.value = e.target.value;
+                    });
+                }
+            }
+            settingsPanel.style.display = 'block';
+        }
+    }
+
+    if (navItems.length > 0) {
+        // Initial setup
+        if (window.innerWidth <= 600) {
+            showMobileTab('deals');
+        }
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                navItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                const targetTab = item.getAttribute('data-tab');
+                showMobileTab(targetTab);
+            });
+        });
+    }
+
+    // Handle resizing window dynamically
+    window.addEventListener('resize', () => {
+        const activeTab = document.querySelector('.mobile-bottom-nav .nav-item.active');
+        const currentTab = activeTab ? activeTab.getAttribute('data-tab') : 'deals';
+        showMobileTab(currentTab);
+    });
+});
+
+

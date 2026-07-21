@@ -12,6 +12,16 @@ from config.settings import load_settings
 active_client = None
 should_terminate = False
 
+# Bounded concurrency control to prevent OOM errors on VPS by limiting parallel browser runs (Feature 2)
+process_semaphore = threading.Semaphore(3)
+
+def process_deal_url_sem(url: str, platform_hint: str = None):
+    with process_semaphore:
+        try:
+            process_deal_url(url, platform_hint)
+        except Exception as e:
+            logging.error(f"[Channel Mirror] Error processing deal URL {url}: {e}")
+
 def start_channel_mirror():
     """Spawns the Telegram Client mirror listener in a separate daemon thread."""
     thread = threading.Thread(target=run_mirror_loop, daemon=True)
@@ -58,8 +68,12 @@ def run_mirror_loop():
 async def mirror_main():
     global active_client
     # Load API credentials from environment
-    api_id_str = os.environ.get("TELEGRAM_API_ID", "39413198").strip()
-    api_hash = os.environ.get("TELEGRAM_API_HASH", "d648fd457db96dffa53ae18d3d1869d8").strip()
+    api_id_str = os.environ.get("TELEGRAM_API_ID", "").strip()
+    api_hash = os.environ.get("TELEGRAM_API_HASH", "").strip()
+    
+    if not api_id_str or not api_hash:
+        logging.error("[Channel Mirror] TELEGRAM_API_ID and TELEGRAM_API_HASH environment variables are required. Listener halted.")
+        return
     
     try:
         api_id = int(api_id_str)
@@ -74,8 +88,8 @@ async def mirror_main():
     logging.info("[Channel Mirror] Preparing Telethon Client setup...")
     # Authentication warning on startup
     logging.info("==========================================================================")
-    logging.info("🌟 [Channel Mirror] REAL-TIME TELEGRAM MONITOR INITIATING 🌟")
-    logging.info("👉 Note: If this is your first run, check your terminal/console! ")
+    logging.info("ðŸŒŸ [Channel Mirror] REAL-TIME TELEGRAM MONITOR INITIATING ðŸŒŸ")
+    logging.info("ðŸ‘‰ Note: If this is your first run, check your terminal/console! ")
     logging.info("   You will be prompted to enter your phone number and login code.")
     logging.info("==========================================================================")
     
@@ -186,7 +200,7 @@ async def mirror_main():
             for url in urls:
                 clean_url = url.rstrip('.,;()[]{}*#"\'')
                 logging.info(f"[Channel Mirror] Extracted raw link: {clean_url}")
-                t = threading.Thread(target=process_deal_url, args=(clean_url,), daemon=True)
+                t = threading.Thread(target=process_deal_url_sem, args=(clean_url,), daemon=True)
                 t.start()
                 
         # Register handler dynamically
@@ -206,7 +220,7 @@ async def mirror_main():
                         for url in urls:
                             clean_url = url.rstrip('.,;()[]{}*#"\'')
                             logging.info(f"[Channel Mirror] Sweeping link: {clean_url}")
-                            t = threading.Thread(target=process_deal_url, args=(clean_url,), daemon=True)
+                            t = threading.Thread(target=process_deal_url_sem, args=(clean_url,), daemon=True)
                             t.start()
             except Exception as sweep_err:
                 logging.warning(f"[Channel Mirror] Failed to sweep history for channel: {sweep_err}")
@@ -237,8 +251,12 @@ def run_mirror_single_run():
         loop.close()
 
 async def mirror_single_run_async():
-    api_id_str = os.environ.get("TELEGRAM_API_ID", "39413198").strip()
-    api_hash = os.environ.get("TELEGRAM_API_HASH", "d648fd457db96dffa53ae18d3d1869d8").strip()
+    api_id_str = os.environ.get("TELEGRAM_API_ID", "").strip()
+    api_hash = os.environ.get("TELEGRAM_API_HASH", "").strip()
+    
+    if not api_id_str or not api_hash:
+        logging.error("[Channel Mirror Single-Run] TELEGRAM_API_ID and TELEGRAM_API_HASH environment variables are required.")
+        return
     try:
         api_id = int(api_id_str)
     except ValueError:
@@ -297,7 +315,7 @@ async def mirror_single_run_async():
                                 if hasattr(invite_info, "chat"):
                                     entity = await client.get_input_entity(invite_info.chat)
                                     resolved_chats.append((entity, invite_hash))
-                            except: pass
+                            except Exception: pass
                         else:
                             logging.warning(f"[Channel Mirror Single-Run] Error joining invite {invite_hash}: {invite_err}")
                 else:
@@ -306,7 +324,7 @@ async def mirror_single_run_async():
                     resolved_chats.append((entity, clean_username))
                     try:
                         await client(JoinChannelRequest(entity))
-                    except: pass
+                    except Exception: pass
             except Exception as resolve_err:
                 logging.error(f"[Channel Mirror Single-Run] Error resolving {chat_clean}: {resolve_err}")
 
@@ -324,7 +342,7 @@ async def mirror_single_run_async():
                         try:
                             # Process deal URL in a separate thread to bypass Playwright asyncio constraints
                             import threading
-                            t = threading.Thread(target=process_deal_url, args=(clean_url,))
+                            t = threading.Thread(target=process_deal_url_sem, args=(clean_url,))
                             t.start()
                             t.join()
                         except Exception as proc_err:
@@ -332,7 +350,12 @@ async def mirror_single_run_async():
             except Exception as scan_err:
                 logging.error(f"[Channel Mirror Single-Run] Error scanning channel {name}: {scan_err}")
                 
-        await client.disconnect()
         logging.info("[Channel Mirror Single-Run] One-time mirror scan finished.")
     except Exception as e:
         logging.error(f"[Channel Mirror Single-Run] Encountered fatal error: {e}")
+    finally:
+        try:
+            if client.is_connected():
+                await client.disconnect()
+        except Exception:
+            pass

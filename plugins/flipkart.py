@@ -68,17 +68,17 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                             title = title_el.get_attribute("textContent").strip()
                         if title:
                             title = re.sub(r'\s+', ' ', title)
-                    except:
+                    except Exception:
                         pass
                         
-                    if not title or title.endswith("...") or title.endswith(""):
+                    if not title or title.endswith("..."):
                         try:
                             for a_el in card.find_elements(By.TAG_NAME, "a"):
                                 t_attr = a_el.get_attribute("title")
                                 if t_attr and len(t_attr) > len(title) and not (t_attr.endswith("...") or t_attr.endswith("")):
                                     title = re.sub(r'\s+', ' ', t_attr).strip()
                                     break
-                        except:
+                        except Exception:
                             pass
                             
                     if not title:
@@ -87,13 +87,13 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                             for text_segment in card.text.split("\n"):
                                 seg = text_segment.strip()
                                 if (len(seg) > 15 
-                                    and not seg.startswith("₹") 
+                                    and not seg.startswith("â‚¹") 
                                     and "OFF" not in seg 
                                     and "%" not in seg
                                     and not any(b in seg.lower() for b in blacklist)):
                                     title = seg
                                     break
-                        except:
+                        except Exception:
                             pass
                             
                     if not title or len(title) < 5:
@@ -108,7 +108,7 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                             if val and "http" in val and "base64" not in val:
                                 img_url = val
                                 break
-                    except:
+                    except Exception:
                         pass
                         
                     # 4. Extract pricing

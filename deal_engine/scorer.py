@@ -7,7 +7,26 @@ from config.settings import load_settings
 from database.db_session import SessionLocal
 from knowledge_base.models import ClickLog, Product, PriceHistory
 
-_ai_score_cache = {}
+from collections import OrderedDict
+
+class _LRUCache:
+    """Simple LRU cache with max size to prevent unbounded memory growth."""
+    def __init__(self, maxsize=500):
+        self._cache = OrderedDict()
+        self._maxsize = maxsize
+    def get(self, key):
+        if key in self._cache:
+            self._cache.move_to_end(key)
+            return self._cache[key]
+        return None
+    def set(self, key, value):
+        if key in self._cache:
+            self._cache.move_to_end(key)
+        self._cache[key] = value
+        if len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+
+_ai_score_cache = _LRUCache(maxsize=500)
 
 def get_gemini_ai_ranking(
     title: str,
@@ -27,8 +46,9 @@ def get_gemini_ai_ranking(
         return None
         
     cache_key = (product_id, price) if product_id else (title, price)
-    if cache_key in _ai_score_cache:
-        return _ai_score_cache[cache_key]
+    cached = _ai_score_cache.get(cache_key)
+    if cached is not None:
+        return cached
         
     settings = load_settings()
     api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
@@ -36,7 +56,7 @@ def get_gemini_ai_ranking(
         return None
         
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
         
         prompt = (
             "You are an expert retail deal analyst. Evaluate this deal and return a desirability score between 0 and 100. "
@@ -59,7 +79,7 @@ def get_gemini_ai_ranking(
         
         logging.info(f"[AI Ranker] Querying Gemini for: {title[:40]}... (Price: ₹{price})")
         
-        res = requests.post(url, json=payload, timeout=25)
+        res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
         if res.status_code == 200:
             data = res.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -76,7 +96,7 @@ def get_gemini_ai_ranking(
             
             logging.info(f"[AI Ranker] Gemini Response -> Score: {ai_score}, Reason: {reason}")
             
-            _ai_score_cache[cache_key] = ai_score
+            _ai_score_cache.set(cache_key, ai_score)
             return ai_score
         else:
             logging.warning(f"[AI Ranker] Gemini API returned status {res.status_code}: {res.text}")
@@ -277,7 +297,7 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
         api_key = os.environ.get("GEMINI_API_KEY") or settings.get("gemini_api_key")
         if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
+                url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent"
                 prompt = (
                     "You are a price error auditor for e-commerce sites (Amazon, Flipkart). "
                     "Analyze if this discount looks like a merchant price error/glitch (e.g., brand-new laptop for Rs. 500, "
@@ -294,7 +314,7 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
                         "parts": [{"text": prompt}]
                     }]
                 }
-                res = requests.post(url, json=payload, timeout=25)
+                res = requests.post(url, json=payload, headers={"x-goog-api-key": api_key}, timeout=25)
                 if res.status_code == 200:
                     text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
                     if text.startswith("```"):

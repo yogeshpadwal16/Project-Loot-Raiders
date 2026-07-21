@@ -35,7 +35,7 @@ def get_db():
 
 def init_db():
     # Import inside function to prevent circular imports
-    from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix, DealVote, UserWalletCard, UserScore, ReferralLog
+    from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix, DealVote, UserWalletCard, UserScore, ReferralLog, ChannelGrowthLog
     Base.metadata.create_all(bind=engine)
     
     # Run migration queries to add new columns to products table if they do not exist

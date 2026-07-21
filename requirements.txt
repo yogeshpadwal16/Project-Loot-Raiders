@@ -73,3 +73,5 @@ yarl==1.24.2
 telethon==1.44.0
 Pillow==10.4.0
 curl-cffi==0.15.0
+psutil==5.9.8
+

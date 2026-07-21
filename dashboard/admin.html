@@ -20,6 +20,21 @@
     <div class="stars"></div>
     <div class="twinkling"></div>
 
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner" style="display: none;">
+        <div class="pwa-banner-content">
+            <i class="fa-solid fa-mobile-screen-button pwa-banner-icon"></i>
+            <div class="pwa-banner-text">
+                <strong>Install Loot Raiders App</strong>
+                <span>Add to Home screen for real-time alerts & light speed updates.</span>
+            </div>
+        </div>
+        <div class="pwa-banner-actions">
+            <button id="pwa-banner-install-btn" class="btn btn-pwa-banner-install">Install</button>
+            <button id="pwa-banner-close-btn" class="pwa-banner-close" title="Dismiss"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
     <div class="app-container">
         <!-- HEADER -->
         <header class="main-header">
@@ -56,6 +71,9 @@
                     <span class="status-text">INITIALIZING</span>
                 </div>
                 <div class="header-actions">
+                    <button id="pwa-install-btn" class="btn btn-primary btn-pwa-install" style="display: none; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px; border-radius: 8px; background: var(--md-sys-color-primary); border: none; color: white; cursor: pointer;">
+                        <i class="fa-solid fa-download"></i> Install App
+                    </button>
                     <div class="user-identity-box" id="user-identity-box" title="Authenticated Operator">
                         <i class="fa-solid fa-user-shield"></i>
                         <span id="user-display-name">Operator: Anonymous</span>
@@ -182,8 +200,8 @@
                             <span class="summary-val" id="top-clicked-deal" title="None">None</span>
                         </div>
                         <div class="clicks-summary-item" style="flex: 1; min-width: 100px;">
-                            <span class="summary-label">WhatsApp Clicks:</span>
-                            <span class="summary-val text-green" id="whatsapp-clicks-count">0 Clicks</span>
+                            <span class="summary-label">WhatsApp Clicks / Shares:</span>
+                            <span class="summary-val text-green" id="whatsapp-clicks-count">0 / 0</span>
                         </div>
                         <div class="clicks-summary-item" style="flex: 1; min-width: 100px;">
                             <span class="summary-label">WhatsApp Loop CTR:</span>
@@ -232,6 +250,19 @@
                     </div>
                 </div>
 
+                <!-- TELEGRAM CHANNEL GROWTH ANALYTICS -->
+                <div class="console-card growth-analytics-card" style="margin-top: 20px; margin-bottom: 20px; border-left: 4px solid #0088cc;">
+                    <div class="console-header" style="padding-bottom: 12px; border-bottom: 1px solid var(--md-sys-color-outline-variant); margin-bottom: 16px;">
+                        <h3><i class="fa-brands fa-telegram text-blue" style="font-size: 1.2rem; vertical-align: middle;"></i> Channel Growth Telemetry</h3>
+                        <span class="badge" id="channel-subscribers-badge" style="background: rgba(0, 136, 204, 0.15); color: #0088cc; font-weight: bold; font-size: 0.7rem;">0 Subscribers</span>
+                    </div>
+                    <div class="console-body" style="padding: 10px;">
+                        <div class="analytics-chart-container" style="padding: 10px 15px; height: 180px; position: relative;">
+                            <canvas id="growth-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- MANUAL DEAL PUBLISHER -->
                 <div class="selector-card manual-post-card" style="margin-top: 0px; margin-bottom: 20px;">
                     <div class="selector-header">
@@ -268,6 +299,11 @@
                                 <label for="manual-affiliate-url">Generated Affiliate URL</label>
                                 <input type="text" id="manual-affiliate-url" readonly style="background: rgba(0,0,0,0.3); color: var(--accent-blue);">
                             </div>
+                            <div class="input-group-checkbox" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; margin-top: 10px;">
+                                <input type="checkbox" id="manual-include-invite" checked style="width: auto; cursor: pointer; height: auto;">
+                                <label for="manual-include-invite" style="cursor: pointer; font-weight: 600; margin: 0; font-size: 0.85rem;">Include Telegram Invite Link in Post</label>
+                            </div>
+                            
                             <input type="hidden" id="manual-unique-id">
                             <input type="hidden" id="manual-platform">
                             
@@ -414,6 +450,10 @@
                                      <label for="set-smtp-to">Recipient Email(s) (Comma-separated)</label>
                                      <input type="text" id="set-smtp-to" placeholder="user1@gmail.com, user2@gmail.com">
                                  </div>
+                             </div>
+                             <div class="input-group" style="margin-bottom: 15px;">
+                                 <label for="set-sendgrid-key">SendGrid API Key (Optional REST API Alerting)</label>
+                                 <input type="password" id="set-sendgrid-key" placeholder="SG.xxx...">
                              </div>
                              
                              <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>

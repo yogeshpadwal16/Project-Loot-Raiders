@@ -1,4 +1,4 @@
-import time
+﻿import time
 import logging
 import threading
 import requests
@@ -86,7 +86,7 @@ def bot_listener_loop():
                     res_me = requests.get(f"https://api.telegram.org/bot{bot_token}/getMe", timeout=10)
                     if res_me.status_code == 200:
                         bot_username = res_me.json().get("result", {}).get("username", bot_username)
-                except:
+                except Exception:
                     pass
 
                 # Handle /start or /help
@@ -117,11 +117,11 @@ def bot_listener_loop():
                                     award_points(db, referred_id, user.get("username"), 10, "vote")
                                     
                                     # Notify referrer
-                                    send_bot_message(bot_token, referrer_id, f"🎉 *Awesome!* Your friend @{ref_username} joined using your invite link. You earned *50 points*!")
+                                    send_bot_message(bot_token, referrer_id, f"ðŸŽ‰ *Awesome!* Your friend @{ref_username} joined using your invite link. You earned *50 points*!")
                                     
                                     welcome = (
-                                        f"🍊💣 *Welcome to Loot Raiders!* 💣🍊\n\n"
-                                        f"You successfully joined via referral link. You have been awarded *10 welcome points*! 🎁\n\n"
+                                        f"ðŸŠðŸ’£ *Welcome to Loot Raiders!* ðŸ’£ðŸŠ\n\n"
+                                        f"You successfully joined via referral link. You have been awarded *10 welcome points*! ðŸŽ\n\n"
                                         "I can track Amazon & Flipkart items and message you *instantly* the second their price drops below your target!\n\n"
                                         "Type `/help` to see all commands."
                                     )
@@ -133,26 +133,26 @@ def bot_listener_loop():
                                 db.close()
 
                     welcome = (
-                        "🍊💣 *Welcome to Loot Raiders Price Alert Bot!* 💣🍊\n\n"
+                        "ðŸŠðŸ’£ *Welcome to Loot Raiders Price Alert Bot!* ðŸ’£ðŸŠ\n\n"
                         "I can track Amazon & Flipkart items and message you *instantly* the second their price drops below your target!\n\n"
-                        "👉 *How to set an alert:*\n"
+                        "ðŸ‘‰ *How to set an alert:*\n"
                         "Send me the product link and your target price in Indian Rupees.\n"
                         "Example:\n"
                         "`https://www.amazon.in/dp/B0CX1G2Y4C 499` or `/track https://www.amazon.in/dp/B0CX1G2Y4C 499`\n\n"
-                        "👉 *Manage your watchlists:*\n"
-                        "• `/watchlist` or `/list` - View your active price alerts\n"
-                        "• `/untrack <product_id>` - Stop tracking a specific product\n\n"
-                        "👉 *Manage your credit card wallet (Wallet Optimizer):*\n"
-                        "• `/wallet` - View your saved cards\n"
-                        "• `/wallet add <card>` - Add card (e.g. `sbi`, `hdfc`, `icici`, `axis`)\n"
-                        "• `/wallet remove <card>` - Remove card\n\n"
-                        "👉 *Rewards & Gamification:*\n"
-                        "• `/points` or `/score` - View your profile and points\n"
-                        "• `/leaderboard` or `/top` - View top 10 deal finders\n"
-                        "• `/invite` or `/share` - Get your invite link to share on WhatsApp\n"
-                        "• `/raffle` - Enter daily voucher giveaways\n\n"
+                        "ðŸ‘‰ *Manage your watchlists:*\n"
+                        "â€¢ `/watchlist` or `/list` - View your active price alerts\n"
+                        "â€¢ `/untrack <product_id>` - Stop tracking a specific product\n\n"
+                        "ðŸ‘‰ *Manage your credit card wallet (Wallet Optimizer):*\n"
+                        "â€¢ `/wallet` - View your saved cards\n"
+                        "â€¢ `/wallet add <card>` - Add card (e.g. `sbi`, `hdfc`, `icici`, `axis`)\n"
+                        "â€¢ `/wallet remove <card>` - Remove card\n\n"
+                        "ðŸ‘‰ *Rewards & Gamification:*\n"
+                        "â€¢ `/points` or `/score` - View your profile and points\n"
+                        "â€¢ `/leaderboard` or `/top` - View top 10 deal finders\n"
+                        "â€¢ `/invite` or `/share` - Get your invite link to share on WhatsApp\n"
+                        "â€¢ `/raffle` - Enter daily voucher giveaways\n\n"
                         "--- \n"
-                        "⚠️ *Requirement:* You must be a joined subscriber of our main channel @LootRaidersDeals to use this free bot!"
+                        "âš ï¸ *Requirement:* You must be a joined subscriber of our main channel @LootRaidersDeals to use this free bot!"
                     )
                     send_bot_message(bot_token, chat_id_user, welcome)
                     continue
@@ -199,7 +199,7 @@ def bot_listener_loop():
                 # Parse message for link and target price
                 urls = re.findall(r'(https?://[^\s]+)', text)
                 if not urls:
-                    reply = "❌ *Error:* Please send a valid product link followed by your target price (e.g. `https://amazon.in/dp/B0CX1G2Y4C 499`)."
+                    reply = "âŒ *Error:* Please send a valid product link followed by your target price (e.g. `https://amazon.in/dp/B0CX1G2Y4C 499`)."
                     send_bot_message(bot_token, chat_id_user, reply)
                     continue
                     
@@ -209,7 +209,7 @@ def bot_listener_loop():
                 digits = re.findall(r'\b[0-9]+\b', text_no_url)
                 
                 if not digits:
-                    reply = "❌ *Error:* Please specify a target price in rupees (e.g. `[link] 499`)."
+                    reply = "âŒ *Error:* Please specify a target price in rupees (e.g. `[link] 499`)."
                     send_bot_message(bot_token, chat_id_user, reply)
                     continue
                     
@@ -219,9 +219,9 @@ def bot_listener_loop():
                 is_member = check_channel_membership(bot_token, chat_id, user_id)
                 if not is_member:
                     join_req = (
-                        "❌ *Access Denied!*\n\n"
+                        "âŒ *Access Denied!*\n\n"
                         "To activate free personal price alerts, you must first join our main Loot Alerts channel: @LootRaidersDeals.\n\n"
-                        "👉 [Click here to join @LootRaidersDeals](https://t.me/LootRaidersDeals)\n\n"
+                        "ðŸ‘‰ [Click here to join @LootRaidersDeals](https://t.me/LootRaidersDeals)\n\n"
                         "After joining, send me the product link and price again!"
                     )
                     send_bot_message(bot_token, chat_id_user, join_req)
@@ -239,7 +239,7 @@ def bot_listener_loop():
                     platform = "flipkart"
                     
                 if not product_id:
-                    reply = "❌ *Error:* Could not recognize a valid Amazon ASIN or Flipkart PID in that link. Make sure it is a standard product page."
+                    reply = "âŒ *Error:* Could not recognize a valid Amazon ASIN or Flipkart PID in that link. Make sure it is a standard product page."
                     send_bot_message(bot_token, chat_id_user, reply)
                     continue
                     
@@ -261,15 +261,15 @@ def bot_listener_loop():
                     db.commit()
                     
                     ok_msg = (
-                        f"✅ *Price Alert Activated!* \n\n"
-                        f"📦 *Product ID:* `{product_id}`\n"
-                        f"📈 *Target Price:* Under ₹{target_price:,}\n\n"
-                        f"I am monitoring this item. The second it falls to or below ₹{target_price:,}, I will DM you here! Thank you for subscribing."
+                        f"âœ… *Price Alert Activated!* \n\n"
+                        f"ðŸ“¦ *Product ID:* `{product_id}`\n"
+                        f"ðŸ“ˆ *Target Price:* Under â‚¹{target_price:,}\n\n"
+                        f"I am monitoring this item. The second it falls to or below â‚¹{target_price:,}, I will DM you here! Thank you for subscribing."
                     )
                     send_bot_message(bot_token, chat_id_user, ok_msg)
                 except Exception as db_err:
                     db.rollback()
-                    send_bot_message(bot_token, chat_id_user, "❌ Failed to save alert subscription due to database error.")
+                    send_bot_message(bot_token, chat_id_user, "âŒ Failed to save alert subscription due to database error.")
                 finally:
                     db.close()
                     
@@ -385,7 +385,7 @@ def handle_callback_query(bot_token: str, callback_query: dict):
                 "show_alert": False
             }
             requests.post(url, json=payload, timeout=10)
-        except:
+        except Exception:
             pass
     finally:
         db.close()
@@ -398,16 +398,16 @@ def handle_watchlist_command(bot_token: str, chat_id_user: int, user_id: int):
     try:
         subs = db.query(AlertSubscription).filter_by(user_chat_id=str(chat_id_user)).all()
         if not subs:
-            reply = "📦 *You are not tracking any products right now.*\n\nSend a link followed by a target price to start tracking!"
+            reply = "ðŸ“¦ *You are not tracking any products right now.*\n\nSend a link followed by a target price to start tracking!"
         else:
             sub_list = []
             for i, sub in enumerate(subs, 1):
-                sub_list.append(f"{i}. *{sub.platform.upper()} ID:* `{sub.product_id}` | Target: *₹{sub.target_price:,}*")
-            reply = "📦 *Your Active Price Watchlist:*\n\n" + "\n".join(sub_list) + "\n\n👉 *To untrack:* `/untrack <product_id>`"
+                sub_list.append(f"{i}. *{sub.platform.upper()} ID:* `{sub.product_id}` | Target: *â‚¹{sub.target_price:,}*")
+            reply = "ðŸ“¦ *Your Active Price Watchlist:*\n\n" + "\n".join(sub_list) + "\n\nðŸ‘‰ *To untrack:* `/untrack <product_id>`"
         send_bot_message(bot_token, chat_id_user, reply)
     except Exception as db_err:
         logging.error(f"Error listing watchlist: {db_err}")
-        send_bot_message(bot_token, chat_id_user, "❌ Database error reading watchlist.")
+        send_bot_message(bot_token, chat_id_user, "âŒ Database error reading watchlist.")
     finally:
         db.close()
 
@@ -417,7 +417,7 @@ def handle_untrack_command(bot_token: str, chat_id_user: int, user_id: int, text
     
     parts = text.split()
     if len(parts) < 2:
-        send_bot_message(bot_token, chat_id_user, "❌ *Error:* Please specify a product ID (e.g. `/untrack B0CX1G2Y4C`).")
+        send_bot_message(bot_token, chat_id_user, "âŒ *Error:* Please specify a product ID (e.g. `/untrack B0CX1G2Y4C`).")
         return
         
     product_id = parts[1].strip()
@@ -425,16 +425,16 @@ def handle_untrack_command(bot_token: str, chat_id_user: int, user_id: int, text
     try:
         sub = db.query(AlertSubscription).filter_by(user_chat_id=str(chat_id_user), product_id=product_id).first()
         if not sub:
-            reply = f"❌ *Error:* Product ID `{product_id}` was not found in your watchlist."
+            reply = f"âŒ *Error:* Product ID `{product_id}` was not found in your watchlist."
         else:
             db.delete(sub)
             db.commit()
-            reply = f"✅ Stopped tracking Product ID `{product_id}`."
+            reply = f"âœ… Stopped tracking Product ID `{product_id}`."
         send_bot_message(bot_token, chat_id_user, reply)
     except Exception as db_err:
         db.rollback()
         logging.error(f"Error untracking product: {db_err}")
-        send_bot_message(bot_token, chat_id_user, "❌ Failed to untrack product from database.")
+        send_bot_message(bot_token, chat_id_user, "âŒ Failed to untrack product from database.")
     finally:
         db.close()
 
@@ -452,27 +452,27 @@ def handle_wallet_command(bot_token: str, chat_id_user: int, user_id: int, text:
             cards = db.query(UserWalletCard).filter_by(user_id=str(user_id)).all()
             if not cards:
                 reply = (
-                    "💳 *Your Credit Card Wallet is empty!*\n\n"
+                    "ðŸ’³ *Your Credit Card Wallet is empty!*\n\n"
                     "I can suggest the best card to use for discounts when matching alerts.\n\n"
-                    "👉 *Add cards using:*\n"
+                    "ðŸ‘‰ *Add cards using:*\n"
                     "`/wallet add <card_name>` (e.g. `sbi`, `hdfc`, `icici`, `axis`, `onecard`)\n\n"
                     "Example:\n"
                     "`/wallet add SBI`"
                 )
             else:
-                card_list = "\n".join([f"• 💳 *{c.card_name.upper()}*" for c in cards])
+                card_list = "\n".join([f"â€¢ ðŸ’³ *{c.card_name.upper()}*" for c in cards])
                 reply = (
-                    "💳 *Your Tracked Credit Cards:*\n\n"
+                    "ðŸ’³ *Your Tracked Credit Cards:*\n\n"
                     f"{card_list}\n\n"
-                    "👉 *To add another card:*\n"
+                    "ðŸ‘‰ *To add another card:*\n"
                     "`/wallet add <card_name>`\n\n"
-                    "👉 *To remove a card:*\n"
+                    "ðŸ‘‰ *To remove a card:*\n"
                     "`/wallet remove <card_name>`"
                 )
             send_bot_message(bot_token, chat_id_user, reply)
         except Exception as db_err:
             logging.error(f"Error querying user wallet: {db_err}")
-            send_bot_message(bot_token, chat_id_user, "❌ Database error reading wallet.")
+            send_bot_message(bot_token, chat_id_user, "âŒ Database error reading wallet.")
         finally:
             db.close()
             
@@ -480,7 +480,7 @@ def handle_wallet_command(bot_token: str, chat_id_user: int, user_id: int, text:
         card_name = parts[2].lower().strip()
         valid_cards = ["sbi", "hdfc", "icici", "axis", "onecard", "federal", "hsbc", "citi", "yesbank", "kotak", "rbl", "bob", "amex", "indusind"]
         if card_name not in valid_cards:
-            reply = f"❌ *Error:* Unsupported card. Supported cards are: {', '.join([c.upper() for c in valid_cards])}."
+            reply = f"âŒ *Error:* Unsupported card. Supported cards are: {', '.join([c.upper() for c in valid_cards])}."
             send_bot_message(bot_token, chat_id_user, reply)
             return
             
@@ -488,7 +488,7 @@ def handle_wallet_command(bot_token: str, chat_id_user: int, user_id: int, text:
         try:
             existing = db.query(UserWalletCard).filter_by(user_id=str(user_id), card_name=card_name).first()
             if existing:
-                reply = f"💳 *{card_name.upper()}* is already in your wallet!"
+                reply = f"ðŸ’³ *{card_name.upper()}* is already in your wallet!"
             else:
                 new_card = UserWalletCard(
                     user_id=str(user_id),
@@ -496,12 +496,12 @@ def handle_wallet_command(bot_token: str, chat_id_user: int, user_id: int, text:
                 )
                 db.add(new_card)
                 db.commit()
-                reply = f"✅ Added *{card_name.upper()}* credit card to your wallet successfully!"
+                reply = f"âœ… Added *{card_name.upper()}* credit card to your wallet successfully!"
             send_bot_message(bot_token, chat_id_user, reply)
         except Exception as db_err:
             db.rollback()
             logging.error(f"Error adding wallet card: {db_err}")
-            send_bot_message(bot_token, chat_id_user, "❌ Failed to add card to database.")
+            send_bot_message(bot_token, chat_id_user, "âŒ Failed to add card to database.")
         finally:
             db.close()
             
@@ -511,21 +511,21 @@ def handle_wallet_command(bot_token: str, chat_id_user: int, user_id: int, text:
         try:
             existing = db.query(UserWalletCard).filter_by(user_id=str(user_id), card_name=card_name).first()
             if not existing:
-                reply = f"❌ *Error:* Card *{card_name.upper()}* not found in your wallet."
+                reply = f"âŒ *Error:* Card *{card_name.upper()}* not found in your wallet."
             else:
                 db.delete(existing)
                 db.commit()
-                reply = f"✅ Removed *{card_name.upper()}* card from your wallet."
+                reply = f"âœ… Removed *{card_name.upper()}* card from your wallet."
             send_bot_message(bot_token, chat_id_user, reply)
         except Exception as db_err:
             db.rollback()
             logging.error(f"Error removing wallet card: {db_err}")
-            send_bot_message(bot_token, chat_id_user, "❌ Failed to remove card from database.")
+            send_bot_message(bot_token, chat_id_user, "âŒ Failed to remove card from database.")
         finally:
             db.close()
             
     else:
-        reply = "❌ *Error:* Unknown command format. Use `/wallet`, `/wallet add <card>`, or `/wallet remove <card>`."
+        reply = "âŒ *Error:* Unknown command format. Use `/wallet`, `/wallet add <card>`, or `/wallet remove <card>`."
         send_bot_message(bot_token, chat_id_user, reply)
 
 def get_matching_wallet_offers(user_id: str, bank_offers: list) -> str:
@@ -546,18 +546,18 @@ def get_matching_wallet_offers(user_id: str, bank_offers: list) -> str:
         db.close()
         
     if not user_cards:
-        return "💡 _Add your credit cards using `/wallet add <card>` (e.g. sbi, hdfc, icici) to get matching wallet suggestions!_"
+        return "ðŸ’¡ _Add your credit cards using `/wallet add <card>` (e.g. sbi, hdfc, icici) to get matching wallet suggestions!_"
         
     matched = []
     for offer in (bank_offers or []):
         for card in user_cards:
             if card in offer.lower():
-                matched.append(f"💳 *{card.upper()}:* {offer}")
+                matched.append(f"ðŸ’³ *{card.upper()}:* {offer}")
                 
     if matched:
-        return "💡 *Best Wallet Card to Use:*\n" + "\n".join(matched)
+        return "ðŸ’¡ *Best Wallet Card to Use:*\n" + "\n".join(matched)
     else:
-        return "💡 _None of your wallet cards match the current bank promotions._"
+        return "ðŸ’¡ _None of your wallet cards match the current bank promotions._"
 
 def check_and_dispatch_personal_alerts(product_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, bank_offers: list = None):
     """
@@ -579,13 +579,13 @@ def check_and_dispatch_personal_alerts(product_id: str, platform: str, title: st
         for sub in subs:
             wallet_recommendation = get_matching_wallet_offers(sub.user_chat_id, bank_offers or [])
             alert_copy = (
-                f"🚨 *PRICE ALERT MATCHED!* 🚨\n\n"
-                f"📦 *{title[:80]}...*\n\n"
-                f"💰 *Current Price:* ₹{price:,} (MRP: ₹{mrp:,})\n"
-                f"📈 *Your Target:* Under ₹{sub.target_price:,}\n"
-                f"📉 *Discount:* {discount:.0f}% OFF\n\n"
+                f"ðŸš¨ *PRICE ALERT MATCHED!* ðŸš¨\n\n"
+                f"ðŸ“¦ *{title[:80]}...*\n\n"
+                f"ðŸ’° *Current Price:* â‚¹{price:,} (MRP: â‚¹{mrp:,})\n"
+                f"ðŸ“ˆ *Your Target:* Under â‚¹{sub.target_price:,}\n"
+                f"ðŸ“‰ *Discount:* {discount:.0f}% OFF\n\n"
                 f"{wallet_recommendation}\n\n"
-                f"👉 [GRAB YOUR LOOT DEAL NOW]({final_url})"
+                f"ðŸ‘‰ [GRAB YOUR LOOT DEAL NOW]({final_url})"
             )
             # Send DM
             send_bot_message(bot_token, sub.user_chat_id, alert_copy)
@@ -627,18 +627,18 @@ def handle_leaderboard_command(bot_token: str, chat_id: str, user_id: str):
                 user_pts = u.points
                 break
                 
-        text = "🏆 *LOOT RAIDERS LEADERBOARD* 🏆\n"
-        text += "━━━━━━━━━━━━━━━━━━━━━━\n"
+        text = "ðŸ† *LOOT RAIDERS LEADERBOARD* ðŸ†\n"
+        text += "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         
-        icons = ["🥇", "🥈", "🥉"] + ["👤"] * 7
+        icons = ["ðŸ¥‡", "ðŸ¥ˆ", "ðŸ¥‰"] + ["ðŸ‘¤"] * 7
         for idx, u in enumerate(top_users):
-            icon = icons[idx] if idx < len(icons) else "👤"
+            icon = icons[idx] if idx < len(icons) else "ðŸ‘¤"
             uname = f"@{u.username}" if u.username else f"User {u.user_id[:5]}..."
-            text += f"{icon} *{idx+1}.* {uname} — `{u.points:,} pts` (Votes: {u.voted_count}, Refs: {u.referrals_count})\n"
+            text += f"{icon} *{idx+1}.* {uname} â€” `{u.points:,} pts` (Votes: {u.voted_count}, Refs: {u.referrals_count})\n"
             
-        text += "━━━━━━━━━━━━━━━━━━━━━━\n"
-        text += f"🎯 *Your Rank:* `{user_rank}` (Points: `{user_pts:,} pts`)\n"
-        text += "\nInvite friends with `/invite` to climb the ranks! 🚀"
+        text += "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+        text += f"ðŸŽ¯ *Your Rank:* `{user_rank}` (Points: `{user_pts:,} pts`)\n"
+        text += "\nInvite friends with `/invite` to climb the ranks! ðŸš€"
         send_bot_message(bot_token, chat_id, text)
     except Exception as e:
         logging.error(f"Error serving leaderboard: {e}")
@@ -651,16 +651,16 @@ def handle_points_command(bot_token: str, chat_id: str, user_id: str):
     try:
         u = db.query(UserScore).filter_by(user_id=str(user_id)).first()
         if not u:
-            text = "ℹ️ *You don't have any points yet!* Start voting on deals or invite friends using `/invite` to earn points."
+            text = "â„¹ï¸ *You don't have any points yet!* Start voting on deals or invite friends using `/invite` to earn points."
         else:
             text = (
-                f"👤 *Your Loot Raiders Profile* 👤\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🪙 *Loot Points:* `{u.points:,} pts`\n"
-                f"🗳️ *Total Votes cast:* `{u.voted_count}`\n"
-                f"👥 *Total Referrals:* `{u.referrals_count}`\n"
-                f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"Keep voting and inviting to earn more points! 🚀"
+                f"ðŸ‘¤ *Your Loot Raiders Profile* ðŸ‘¤\n"
+                f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+                f"ðŸª™ *Loot Points:* `{u.points:,} pts`\n"
+                f"ðŸ—³ï¸ *Total Votes cast:* `{u.voted_count}`\n"
+                f"ðŸ‘¥ *Total Referrals:* `{u.referrals_count}`\n"
+                f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+                f"Keep voting and inviting to earn more points! ðŸš€"
             )
         send_bot_message(bot_token, chat_id, text)
     except Exception as e:
@@ -677,15 +677,15 @@ def handle_invite_command(bot_token: str, chat_id: str, user_id: str, bot_userna
     whatsapp_share_url = f"https://api.whatsapp.com/send?text={whatsapp_text}"
     
     text = (
-        f"👥 *Loot Raiders Referrals* 👥\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"ðŸ‘¥ *Loot Raiders Referrals* ðŸ‘¥\n"
+        f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         f"Invite your friends to Loot Raiders and earn rewards:\n"
-        f"• *+50 Points* per friend referred (when they start the bot).\n"
-        f"• *+10 Points* welcome bonus for your friend.\n\n"
-        f"🔗 *Your Invite Link:*\n"
+        f"â€¢ *+50 Points* per friend referred (when they start the bot).\n"
+        f"â€¢ *+10 Points* welcome bonus for your friend.\n\n"
+        f"ðŸ”— *Your Invite Link:*\n"
         f"`{ref_link}`\n\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📲 *Share directly on WhatsApp:*\n"
+        f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+        f"ðŸ“² *Share directly on WhatsApp:*\n"
         f"[Click here to Share on WhatsApp]({whatsapp_share_url})"
     )
     send_bot_message(bot_token, chat_id, text)
@@ -702,18 +702,18 @@ def handle_raffle_command(bot_token: str, chat_id: str, user_id: str, text: str,
             from knowledge_base.models import UserScore
             u = db.query(UserScore).filter_by(user_id=str(user_id)).first()
             if not u or (u.voted_count == 0 and u.referrals_count == 0):
-                reply = "❌ *Entry Denied:* You must vote on at least 1 deal or invite 1 friend to enter the daily raffle! Go vote on deals in the channel."
+                reply = "âŒ *Entry Denied:* You must vote on at least 1 deal or invite 1 friend to enter the daily raffle! Go vote on deals in the channel."
                 send_bot_message(bot_token, chat_id, reply)
                 return
                 
             user_str = str(user_id)
             if user_str in raffle_entries:
-                reply = "ℹ️ *You are already entered* in today's Daily Loot Raffle!"
+                reply = "â„¹ï¸ *You are already entered* in today's Daily Loot Raffle!"
             else:
                 raffle_entries.append(user_str)
                 settings["raffle_entries"] = raffle_entries
                 save_settings(settings)
-                reply = "🎉 *Congratulations!* You have been entered into today's Daily Loot Raffle. Win up to ₹500 voucher!"
+                reply = "ðŸŽ‰ *Congratulations!* You have been entered into today's Daily Loot Raffle. Win up to â‚¹500 voucher!"
             send_bot_message(bot_token, chat_id, reply)
         except Exception as e:
             logging.error(f"Error entering raffle: {e}")
@@ -722,11 +722,11 @@ def handle_raffle_command(bot_token: str, chat_id: str, user_id: str, text: str,
             
     elif len(parts) >= 2 and parts[1].lower() == "draw":
         if not check_is_admin(bot_token, chat_id_channel, user_id):
-            send_bot_message(bot_token, chat_id, "❌ *Access Denied:* Only channel administrators can draw the raffle.")
+            send_bot_message(bot_token, chat_id, "âŒ *Access Denied:* Only channel administrators can draw the raffle.")
             return
             
         if not raffle_entries:
-            send_bot_message(bot_token, chat_id, "❌ *Error:* No entries found in the daily raffle.")
+            send_bot_message(bot_token, chat_id, "âŒ *Error:* No entries found in the daily raffle.")
             return
             
         winner_id = random.choice(raffle_entries)
@@ -744,12 +744,12 @@ def handle_raffle_command(bot_token: str, chat_id: str, user_id: str, text: str,
             
         # Announce Winner
         announcement = (
-            f"🎉🎁 <b>DAILY LOOT RAFFLE DRAW</b> 🎁🎉\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"And the lucky winner of today's <b>₹500 Amazon Gift Card</b> is...\n\n"
-            f"🏆 <b>Winner:</b> {winner_name} (ID: <code>{winner_id}</code>)\n\n"
-            f"Congratulations! Admins will contact you shortly to transfer your prize. 🚀\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"ðŸŽ‰ðŸŽ <b>DAILY LOOT RAFFLE DRAW</b> ðŸŽðŸŽ‰\n"
+            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            f"And the lucky winner of today's <b>â‚¹500 Amazon Gift Card</b> is...\n\n"
+            f"ðŸ† <b>Winner:</b> {winner_name} (ID: <code>{winner_id}</code>)\n\n"
+            f"Congratulations! Admins will contact you shortly to transfer your prize. ðŸš€\n"
+            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"Everyone else, stay tuned! Next raffle draw starts tomorrow!"
         )
         
@@ -763,16 +763,16 @@ def handle_raffle_command(bot_token: str, chat_id: str, user_id: str, text: str,
         save_settings(settings)
         
         # Notify the sender
-        send_bot_message(bot_token, chat_id, f"🎉 Drawn winner successfully: {winner_name}")
+        send_bot_message(bot_token, chat_id, f"ðŸŽ‰ Drawn winner successfully: {winner_name}")
         
     else:
         entry_count = len(raffle_entries)
         reply = (
-            f"🎁 *Daily Loot Raffle* 🎁\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"🎁 *Today's Prize:* ₹500 Amazon Gift Card\n"
-            f"🎟️ *Total Entries today:* `{entry_count}`\n\n"
-            f"👉 *How to enter:*\n"
+            f"ðŸŽ *Daily Loot Raffle* ðŸŽ\n"
+            f"â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            f"ðŸŽ *Today's Prize:* â‚¹500 Amazon Gift Card\n"
+            f"ðŸŽŸï¸ *Total Entries today:* `{entry_count}`\n\n"
+            f"ðŸ‘‰ *How to enter:*\n"
             f"Type `/raffle enter` to submit your entry. "
             f"_(Requires at least 1 vote or 1 referral today)_"
         )

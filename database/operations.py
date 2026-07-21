@@ -216,18 +216,18 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
             driver.get(tracker_query_url)
             time.sleep(1.5)
             page_text = driver.find_element(By.TAG_NAME, "body").text.replace(',', '')
-            historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|₹)\s*([0-9]+)', page_text)]
-        except:
+            historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|â‚¹)\s*([0-9]+)', page_text)]
+        except Exception:
             historical_prices = []
             
         driver.close()
         driver.switch_to.window(driver.window_handles[0])
-    except:
+    except Exception:
         try:
             if len(driver.window_handles) > 1:
                 driver.close()
                 driver.switch_to.window(driver.window_handles[0])
-        except:
+        except Exception:
             pass
 
     # If external tracker succeeded, use its data
@@ -297,7 +297,7 @@ def update_selector_in_db_and_json(platform: str, card_selector=None, title_sele
             try:
                 with open(selectors_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-            except:
+            except Exception:
                 pass
                 
         if platform not in data:

@@ -1,4 +1,4 @@
-import re
+﻿import re
 import urllib.parse
 
 def extract_amazon_asin(url: str) -> str:
@@ -32,11 +32,11 @@ def calculate_true_discount(text_content: str):
     
     # 4. Strip ratings/reviews and other common non-price metrics
     # e.g. "4.2", "28007 Reviews", "1.2L", "50W", "100 pcs", "pack of 2"
-    clean_text = re.sub(r'\b[0-9]+(?:\.[0-9]+)?\s*(?:rating|review|bought|sold|view|people|size|pack|pcs|item|qty|ml|l|w|v|ah|mah|gb|tb|mb|kb|hz|khz|mhz|cm|m|inch|in|ft|yd|g|kg|mg|oz|lbs|delivery|shipping|day|hour|min|sec|wk|yr)\w*\b', ' ', clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r'\b[0-9]+(?:\.[0-9]+)?\s*(?:rating|review|bought|sold|view|people|size|pack|pcs|item|qty|ml|l|w|v|ah|mah|gb|tb|mb|kb|hz|khz|mhz|cm|m|inch|in|ft|yd|g|kg|mg|oz|lbs|delivery|shipping|day|hour|min|sec|wk|yr)s?\b', ' ', clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r'\b[0-9]+(?:\.[0-9]+)?\s*(?:\*|star|stars)\b', ' ', clean_text, flags=re.IGNORECASE)
     
-    # 5. Extract currency-prefixed numbers first (₹ or Rs.)
-    currency_numbers = [int(n) for n in re.findall(r'(?:₹|Rs\.?)\s*([0-9]+)', clean_text, flags=re.IGNORECASE)]
+    # 5. Extract currency-prefixed numbers first (â‚¹ or Rs.)
+    currency_numbers = [int(n) for n in re.findall(r'(?:â‚¹|Rs\.?)\s*([0-9]+)', clean_text, flags=re.IGNORECASE)]
     
     # If we have 2 or more currency numbers, use them!
     if len(currency_numbers) >= 2:
@@ -92,13 +92,13 @@ def extract_rating_and_reviews(text_content: str):
     reviews = None
     
     # 1. Parse Rating (float between 1.0 and 5.0)
-    rating_match = re.search(r'\b([1-5]\.[0-9])\s*(?:out of 5|star|stars|★)?\b', text_content, flags=re.IGNORECASE)
+    rating_match = re.search(r'\b([1-5]\.[0-9])\s*(?:out of 5|star|stars|â˜…)?\b', text_content, flags=re.IGNORECASE)
     if rating_match:
         try:
             val = float(rating_match.group(1))
             if 1.0 <= val <= 5.0:
                 rating = val
-        except:
+        except Exception:
             pass
             
     # 2. Parse Reviews / Ratings count
@@ -126,7 +126,7 @@ def extract_rating_and_reviews(text_content: str):
                 reviews = int(float(count_str) * multiplier)
             else:
                 reviews = int(float(count_str))
-        except:
+        except Exception:
             pass
             
     return rating, reviews

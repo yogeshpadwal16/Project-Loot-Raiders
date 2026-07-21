@@ -236,7 +236,7 @@ def scrape_platform(platform: str, config: dict, history: set):
                     from utils.affiliate import generate_auto_cart_url
                     settings = load_settings()
                     auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
-                except:
+                except Exception:
                     pass
                     
                 enqueue_alert(
@@ -368,7 +368,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 nums = re.findall(r'\d+', txt)
                 if nums:
                     return int(nums[0])
-            except:
+            except Exception:
                 pass
             return 0
 
@@ -414,9 +414,9 @@ def scrape_product_details(url: str, driver=None) -> dict:
                                 mrp_val = offers.get("priceSpecification", {}).get("price") or offers.get("highPrice")
                                 if mrp_val and not mrp:
                                     mrp = clean_number(str(mrp_val))
-                except:
+                except Exception:
                     pass
-        except:
+        except Exception:
             pass
 
         # 2. Try Open Graph & Twitter meta tags fallback
@@ -440,7 +440,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
                         price = clean_number(p_val)
                         if price: break
                     except: pass
-        except:
+        except Exception:
             pass
 
         # 3. Platform-specific CSS Selector Fallbacks
@@ -581,7 +581,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
         body_text = ""
         try:
             body_text = driver.find_element(By.TAG_NAME, "body").text
-        except:
+        except Exception:
             pass
             
         from utils.parser import extract_rating_and_reviews, detect_bank_offers

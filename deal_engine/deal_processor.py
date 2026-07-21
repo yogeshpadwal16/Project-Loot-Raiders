@@ -191,8 +191,9 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
         finally:
             db.close()
             
-        # 4. Scrape full details using selenium driver helper in loot_scraper
-        from loot_scraper import scrape_product_details, verify_historical_low, save_deal_to_db
+        # 4. Scrape full details using selenium driver helper directly from core/database modules
+        from core.engine import scrape_product_details
+        from database.operations import verify_historical_low, save_deal_to_db
         
         try:
             scraped = scrape_product_details(expanded_url)
