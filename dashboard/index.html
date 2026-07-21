@@ -70,6 +70,16 @@
                     <h1>Loot Raiders</h1>
                     <span class="sub-title">Automated Deal Matrix Engine</span>
                 </div>
+                
+                <div class="location-picker">
+                    <div class="location-icon-container">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div class="location-text">
+                        <span class="location-title">Loot Raiders Vault <i class="fa-solid fa-chevron-down" style="font-size: 0.65rem; margin-left: 2px;"></i></span>
+                        <span class="location-subtitle">Insuli Ghat</span>
+                    </div>
+                </div>
             </div>
             
             <div class="system-status-indicator">
@@ -78,10 +88,14 @@
                     <span class="status-text">INITIALIZING</span>
                 </div>
                 <div class="header-actions">
+                    <button class="header-action-btn search-trigger-btn" onclick="document.querySelector('[data-tab=search]').click()" title="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <button class="header-action-btn cart-trigger-btn" onclick="document.querySelector('[data-tab=vault]').click()" title="Vault Rewards"><i class="fa-solid fa-cart-shopping"></i><span class="cart-badge">1</span></button>
+                    <button class="header-action-btn notification-trigger-btn" onclick="alert('Notification System: No new alerts.')" title="Notifications"><i class="fa-solid fa-bell"></i></button>
+                    
                     <button id="pwa-install-btn" class="btn btn-primary btn-pwa-install" style="display: none; align-items: center; gap: 8px; font-weight: 600; padding: 10px 18px; border-radius: 8px; background: var(--md-sys-color-primary); border: none; color: white; cursor: pointer;">
                         <i class="fa-solid fa-download"></i> Install App
                     </button>
-                    <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; padding: 10px 18px; border-radius: 8px; background: #0088cc; border: none; color: white;">
+                    <a href="https://t.me/LootRaidersDeals" target="_blank" class="btn btn-primary btn-telegram-header" style="display: flex; align-items: center; gap: 8px; font-weight: 600; text-decoration: none; padding: 10px 18px; border-radius: 8px; background: #0088cc; border: none; color: white;">
                         <i class="fa-brands fa-telegram" style="font-size: 1.1rem;"></i> JOIN TELEGRAM
                     </a>
                     <button class="btn-theme-toggle" id="theme-toggle-btn" title="Toggle Light/Dark Mode">
@@ -132,16 +146,15 @@
                     <h2><i class="fa-solid fa-bolt text-gold"></i> Live Broadcast Feed</h2>
                     <span class="badge" id="deals-count">0 Deals</span>
                 </div>
-
                 <!-- CATEGORY PILL NAVIGATION BAR -->
                 <div class="category-pill-bar" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; scrollbar-width: none; -ms-overflow-style: none;">
-                    <button class="pill-btn active" data-category="all" style="padding: 8px 16px; border-radius: 100px; background: var(--loot-primary); color: #000; font-weight: 700; border: none; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🔥 All Deals</button>
-                    <button class="pill-btn" data-category="flash" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">⚡ Flash Drops</button>
-                    <button class="pill-btn" data-category="amazon" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🟠 Amazon</button>
-                    <button class="pill-btn" data-category="flipkart" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🔵 Flipkart</button>
-                    <button class="pill-btn" data-category="verified_low" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">🏆 Record Lows</button>
-                    <button class="pill-btn" data-category="electronics" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">💻 Tech & Gadgets</button>
-                    <button class="pill-btn" data-category="fashion" style="padding: 8px 16px; border-radius: 100px; background: rgba(255,255,255,0.05); color: #fff; font-weight: 600; border: 1px solid var(--md-sys-color-outline); font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">👗 Fashion</button>
+                    <button class="pill-btn active" data-category="all">🔥 All Deals</button>
+                    <button class="pill-btn" data-category="flash">⚡ Flash Drops</button>
+                    <button class="pill-btn" data-category="amazon">🟠 Amazon</button>
+                    <button class="pill-btn" data-category="flipkart">Flipkart</button>
+                    <button class="pill-btn" data-category="verified_low">🏆 Record Lows</button>
+                    <button class="pill-btn" data-category="electronics">💻 Tech & Gadgets</button>
+                    <button class="pill-btn" data-category="fashion">👗 Fashion</button>
                 </div>
 
                 <!-- Live Search, Filtering and Sorting Panel -->
@@ -369,6 +382,19 @@
                 <button class="btn btn-primary btn-pwa-install-dismiss" id="pwa-dismiss-btn" style="width: 100%; padding: 12px; margin-top: 15px; border-radius: 12px; font-weight: 600; cursor: pointer; border: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);">Got It</button>
             </div>
         </div>
+    </div>
+
+    <!-- REWARDS EXPIRED FLOATING BANNER (MAGICPIN STYLE) -->
+    <div id="rewards-promo-banner" class="magicpin-rewards-banner">
+        <div class="banner-left-content">
+            <div class="banner-gift-icon"><i class="fa-solid fa-gift"></i></div>
+            <div class="banner-text-content">
+                <span class="banner-title">24 Pending Rewards</span>
+                <span class="banner-subtitle">Your scratch cards are expiring soon.</span>
+            </div>
+        </div>
+        <button class="btn banner-claim-btn" onclick="document.querySelector('[data-tab=vault]').click()">Claim Now</button>
+        <button class="banner-close-btn" onclick="document.getElementById('rewards-promo-banner').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <!-- MOBILE BOTTOM NAVIGATION -->
