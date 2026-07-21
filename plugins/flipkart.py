@@ -53,7 +53,12 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                         pid = str(hash(card.text[:40]))
                         
                     # Preserving the original SEO-rich product URL and appending the affiliate tracking tag
-                    if "affid=" not in raw_url:
+                    # Ensure URL is absolute (Selenium can sometimes return relative paths)
+                    if raw_url and not raw_url.startswith("http"):
+                        raw_url = f"https://www.flipkart.com{raw_url}" if raw_url.startswith("/") else f"https://www.flipkart.com/{raw_url}"
+                    
+                    # Only append affiliate ID if it's a real one (not a placeholder)
+                    if flipkart_affid and flipkart_affid != "YOUR_FLIPKART_AFFILIATE_ID" and "affid=" not in raw_url:
                         sep = "&" if "?" in raw_url else "?"
                         final_url = f"{raw_url}{sep}affid={flipkart_affid}"
                     else:

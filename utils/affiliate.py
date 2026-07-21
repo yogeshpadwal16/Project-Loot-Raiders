@@ -64,10 +64,14 @@ def get_best_affiliate_url(expanded_url: str, platform: str, settings: dict) -> 
         if asin:
             return f"https://www.amazon.in/dp/{asin}?tag={amazon_tag}"
     elif platform_lower == "flipkart":
-        pid = extract_flipkart_pid(expanded_url)
-        if pid:
-            return f"https://www.flipkart.com/product/p/itm?pid={pid}&affid=lootraiders"
+        # No valid affiliate ID — return the original URL as-is (must be absolute)
+        if not expanded_url.startswith("http"):
+            expanded_url = f"https://www.flipkart.com{expanded_url}" if expanded_url.startswith("/") else f"https://www.flipkart.com/{expanded_url}"
+        return expanded_url
             
+    # Final safety: ensure returned URL is always absolute
+    if not expanded_url.startswith("http"):
+        return f"https://{expanded_url}" if "." in expanded_url else expanded_url
     return expanded_url
 
 def generate_auto_cart_url(expanded_url: str, platform: str, settings: dict) -> str:

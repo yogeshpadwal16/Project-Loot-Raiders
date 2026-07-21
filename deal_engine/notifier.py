@@ -1,4 +1,4 @@
-﻿import os
+import os
 import queue
 import threading
 import time
@@ -533,15 +533,28 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         db.close()
 
     import json
+    
+    # Safety: Telegram requires absolute URLs for inline keyboard buttons
+    if buy_url and not buy_url.startswith("http"):
+        logging.warning(f"[Notifier] Fixing relative buy_url for {unique_id}: {buy_url[:80]}")
+        if "flipkart" in platform.lower():
+            buy_url = f"https://www.flipkart.com{buy_url}" if buy_url.startswith("/") else f"https://www.flipkart.com/{buy_url}"
+        elif "amazon" in platform.lower():
+            buy_url = f"https://www.amazon.in{buy_url}" if buy_url.startswith("/") else f"https://www.amazon.in/{buy_url}"
+        else:
+            buy_url = f"https://{buy_url}"
+    if auto_cart_url and not auto_cart_url.startswith("http"):
+        auto_cart_url = None  # Drop invalid auto-cart URL rather than crash
+    
     row_1 = [
         {
-            "text": "ðŸ›ï¸ BUY NOW ðŸ›ï¸",
+            "text": "🛍️ BUY NOW 🛍️",
             "url": buy_url
         }
     ]
     if auto_cart_url:
         row_1.append({
-            "text": "ðŸ›’ AUTO-CART ðŸ›’",
+            "text": "🛒 AUTO-CART 🛒",
             "url": auto_cart_url
         })
         
