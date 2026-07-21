@@ -2178,4 +2178,61 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// ==============================================================================
+// 📱 PWA Mobile App Installation & WebPush Engine
+// ==============================================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    console.log('[PWA] Deferred beforeinstallprompt event captured');
+    
+    const installBanner = document.getElementById('pwa-install-banner');
+    if (installBanner) {
+        installBanner.style.display = 'flex';
+    }
+});
+
+function triggerPWAInstall() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('[PWA] User accepted install prompt');
+            }
+            deferredInstallPrompt = null;
+            const installBanner = document.getElementById('pwa-install-banner');
+            if (installBanner) installBanner.style.display = 'none';
+        });
+    }
+}
+
+async function requestPushNotificationPermission() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('[PWA] Push messaging is not supported in this browser');
+        return;
+    }
+    
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: null
+            });
+            
+            await fetch(`${API_BASE}/api/push/subscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sub)
+            });
+            console.log('[PWA] Successfully subscribed to WebPush notifications!');
+        }
+    } catch (err) {
+        console.error('[PWA] WebPush subscription error:', err);
+    }
+}
+
 
