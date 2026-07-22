@@ -1,8 +1,8 @@
-﻿import time
+import time
 import logging
 import random
 import threading
-from playwright.sync_api import sync_playwright
+from rebrowser_playwright.sync_api import sync_playwright
 
 playwright_lock = threading.Lock()
 

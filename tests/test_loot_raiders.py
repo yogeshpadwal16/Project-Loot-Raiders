@@ -417,5 +417,23 @@ class TestSemanticDeduplication(unittest.TestCase):
         self.assertIsNone(match)
 
 
+class TestScrapyCrawler(unittest.TestCase):
+    """Tests for asynchronous high-concurrency Scrapy crawler integration"""
+    
+    def test_scrapy_spider_import_and_init(self):
+        from utils.scrapy_crawler import LootSpider
+        configs = [{
+            "platform": "test_platform",
+            "url": "http://localhost:5555",
+            "card_selector": ".card",
+            "title_selector": ".title",
+            "link_selector": "a",
+            "image_selector": "img"
+        }]
+        spider = LootSpider(platform_configs=configs)
+        self.assertEqual(spider.name, "loot_spider")
+        self.assertEqual(spider.platform_configs, configs)
+
+
 if __name__ == "__main__":
     unittest.main()
