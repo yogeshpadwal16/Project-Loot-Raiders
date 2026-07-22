@@ -15,6 +15,32 @@ from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 
 notification_queue = queue.Queue()
 
+def get_short_deal_link(long_url: str, unique_id: str) -> str:
+    """
+    Interfaces with Shlink to generate a trackable redirect link.
+    Falls back to local cloaker /go/<unique_id> link if Shlink is not configured.
+    """
+    settings = load_settings()
+    shlink_url = settings.get("shlink_api_url", "").strip()
+    shlink_key = settings.get("shlink_api_key", "").strip()
+    
+    if shlink_url and shlink_key and "YOUR_SHLINK" not in shlink_key and shlink_url != "":
+        try:
+            from utils.shlink import ShlinkClient
+            client = ShlinkClient(shlink_url, shlink_key)
+            return client.shorten_url(long_url, custom_slug=unique_id, tags=["scraped_deal"])
+        except Exception as e:
+            logging.error(f"Shlink URL shortening failed: {e}")
+            
+    # Fallback to local redirection URL
+    cloaker_domain = settings.get("cloaker_domain", "").strip()
+    if cloaker_domain:
+        if not cloaker_domain.startswith("http"):
+            cloaker_domain = "https://" + cloaker_domain
+        return f"{cloaker_domain.rstrip('/')}/go/{unique_id}"
+        
+    return long_url
+
 def log_failure(component: str, context: str, err: Exception, severity: str = "ERROR", recovery_status: str = "Unresolved", recommended_action: str = ""):
     timestamp = datetime.now().isoformat()
     msg = (
@@ -385,13 +411,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
-    cloaker_domain = settings.get("cloaker_domain", "").strip()
-    if cloaker_domain:
-        if not cloaker_domain.startswith("http"):
-            cloaker_domain = "https://" + cloaker_domain
-        buy_url = f"{cloaker_domain.rstrip('/')}/go/{unique_id}"
-    else:
-        buy_url = final_url
+    buy_url = get_short_deal_link(final_url, unique_id)
         
     is_amazon = "amazon" in platform.lower()
     from deal_engine.scorer import check_if_glitch
@@ -1050,6 +1070,9 @@ def notifier_worker():
         is_verified_low = job.get("is_verified_low")
         deal_score = job.get("deal_score")
         unique_id = job.get("unique_id")
+        
+        # Resolve short deal link (via Shlink API or local fallback redirection)
+        short_url = get_short_deal_link(final_url, unique_id)
         bank_offers = job.get("bank_offers", [])
         coupon_detail = job.get("coupon_detail", "")
         review_grade = job.get("review_grade", "N/A")
@@ -1077,7 +1100,7 @@ def notifier_worker():
         
         # A. Dispatch personal direct message alerts first
         try:
-            check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, final_url, bank_offers)
+            check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, short_url, bank_offers)
         except Exception as alerts_err:
             log_failure(
                 component="Personal Alerts Dispatcher",
@@ -1149,7 +1172,7 @@ def notifier_worker():
                         f"❌ **Original MRP:** ~~₹{mrp:,}~~\n"
                         f"📉 **Discount:**     **{discount:.0f}% OFF**\n"
                         f"💰 **You Save:**     `₹{savings:,}`\n\n"
-                        f"🔗 [Buy Link]({final_url})"
+                        f"🔗 [Buy Link]({short_url})"
                     )
                     
                     apprise_ok = apobj.notify(
@@ -1173,7 +1196,7 @@ def notifier_worker():
             # Legacy fallbacks
             if has_discord:
                 try:
-                    discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                    discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
                 except Exception as disc_err:
                     log_failure(
                         component="Discord Webhook Notifier",
@@ -1186,7 +1209,7 @@ def notifier_worker():
                     discord_ok = False
                 
             try:
-                send_whatsapp_alert(title, price, mrp, discount, final_url, is_verified_low, deal_score)
+                send_whatsapp_alert(title, price, mrp, discount, short_url, is_verified_low, deal_score)
             except Exception as wa_err:
                 log_failure(
                     component="WhatsApp Notifier",
@@ -1199,7 +1222,7 @@ def notifier_worker():
                 
             if has_email:
                 try:
-                    email_ok = send_email_alert(title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                    email_ok = send_email_alert(title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
                 except Exception as mail_err:
                     log_failure(
                         component="Email Alert Notifier",

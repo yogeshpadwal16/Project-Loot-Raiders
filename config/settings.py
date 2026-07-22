@@ -46,6 +46,8 @@ def load_settings() -> dict:
         "discord_webhook_url": "",
         "sendgrid_api_key": "",
         "notification_uris": [],
+        "shlink_api_url": "",
+        "shlink_api_key": "",
         "external_price_tracker_enabled": False,
         "min_discount": 30.0,
         "min_deal_price": 299,
@@ -125,6 +127,12 @@ def load_settings() -> dict:
     env_sendgrid = os.environ.get("SENDGRID_API_KEY")
     if env_sendgrid:
         saved["sendgrid_api_key"] = env_sendgrid
+    env_shlink_url = os.environ.get("SHLINK_API_URL")
+    if env_shlink_url:
+        saved["shlink_api_url"] = env_shlink_url
+    env_shlink_key = os.environ.get("SHLINK_API_KEY")
+    if env_shlink_key:
+        saved["shlink_api_key"] = env_shlink_key
         
     # SMTP email configuration overrides
     env_smtp_server = os.environ.get("SMTP_SERVER")
@@ -219,6 +227,8 @@ def save_settings(settings: dict):
             ("SMTP_FROM", "smtp_from"),
             ("SMTP_TO", "smtp_to"),
             ("NOTIFICATION_URIS", "notification_uris"),
+            ("SHLINK_API_URL", "shlink_api_url"),
+            ("SHLINK_API_KEY", "shlink_api_key"),
         ]:
             if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):
                 to_save[setting_key] = f"YOUR_{env_key}"
