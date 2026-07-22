@@ -47,6 +47,7 @@
   "proxy_list": [],
   "proxies_enabled": false,
   "external_price_tracker_enabled": false,
+  "notification_uris": [],
   "scraper_concurrency": 1,
   "scoring_rules": {
     "min_publish_score": 45.0,

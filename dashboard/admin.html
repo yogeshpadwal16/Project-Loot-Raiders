@@ -419,6 +419,14 @@
                              
                              <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
                              
+                             <h4 style="margin: 0 0 10px 0; color: var(--accent-blue); font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-bell"></i> Apprise Unified Alerting Services</h4>
+                             <div class="input-group" style="margin-bottom: 15px;">
+                                 <label for="set-notification-uris">Unified Notification URIs (One per line: e.g. <code>tgram://bot_token/chat_id</code> or <code>discord://id/token</code>)</label>
+                                 <textarea id="set-notification-uris" rows="4" placeholder="tgram://bot_token/chat_id&#10;discord://webhook_id/webhook_token&#10;mailt://user:pass@smtp.gmail.com:587?to=recipient@gmail.com" style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-background); font-family: 'Fira Code', monospace; font-size: 0.8rem; padding: 8px; resize: vertical; box-sizing: border-box;"></textarea>
+                             </div>
+                             
+                             <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
+                             
                              <h4 style="margin: 0 0 10px 0; color: var(--accent-orange); font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-envelope"></i> SMTP Email Alerts Configuration (Optional)</h4>
                              
                              <div class="input-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px;">

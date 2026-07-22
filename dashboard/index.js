@@ -1069,6 +1069,9 @@ async function fetchSettings() {
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         document.getElementById('set-external-price-tracker-enabled').checked = settings.external_price_tracker_enabled || false;
         
+        const notificationUris = settings.notification_uris || [];
+        document.getElementById('set-notification-uris').value = notificationUris.join('\n');
+        
         const proxyList = settings.proxy_list || [];
         document.getElementById('set-proxy-list').value = proxyList.join('\n');
     } catch (err) {
@@ -1099,6 +1102,11 @@ async function saveSettings(e) {
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     const external_price_tracker_enabled = document.getElementById('set-external-price-tracker-enabled').checked;
     
+    const notificationUrisText = document.getElementById('set-notification-uris').value;
+    const notification_uris = notificationUrisText.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+    
     const proxyText = document.getElementById('set-proxy-list').value;
     const proxy_list = proxyText.split('\n')
         .map(line => line.trim())
@@ -1124,6 +1132,7 @@ async function saveSettings(e) {
         sendgrid_api_key,
         proxies_enabled,
         external_price_tracker_enabled,
+        notification_uris,
         proxy_list
     };
     

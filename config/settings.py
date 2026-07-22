@@ -45,6 +45,7 @@ def load_settings() -> dict:
         "earnkaro_pub_id": "",
         "discord_webhook_url": "",
         "sendgrid_api_key": "",
+        "notification_uris": [],
         "external_price_tracker_enabled": False,
         "min_discount": 30.0,
         "min_deal_price": 299,
@@ -145,6 +146,52 @@ def load_settings() -> dict:
     env_smtp_to = os.environ.get("SMTP_TO")
     if env_smtp_to:
         saved["smtp_to"] = env_smtp_to
+        
+    # Dynamic environmental overrides for notification URIs
+    env_uris = os.environ.get("NOTIFICATION_URIS")
+    if env_uris:
+        try:
+            import json as _json
+            saved["notification_uris"] = _json.loads(env_uris)
+        except Exception:
+            saved["notification_uris"] = [u.strip() for u in env_uris.split(",") if u.strip()]
+            
+    # Backward compatibility conversion: translate legacy fields to Apprise format if URIs not configured
+    if not saved.get("notification_uris"):
+        uris = []
+        # Telegram
+        tg_token = saved.get("telegram_bot_token")
+        tg_chat = saved.get("telegram_chat_id")
+        if tg_token and tg_chat and "YOUR_TELEGRAM" not in tg_token and tg_token.strip() != "" and tg_chat.strip() != "":
+            # Normalize chat ID for Apprise: must start with @ or be numeric
+            uris.append(f"tgram://{tg_token.strip()}/{tg_chat.strip()}")
+            
+        # Discord
+        discord_url = saved.get("discord_webhook_url")
+        if discord_url and "discord.com" in discord_url.lower():
+            parts = discord_url.split('/api/webhooks/')
+            if len(parts) > 1:
+                webhook_parts = parts[1].split('?')[0].split('/')
+                if len(webhook_parts) >= 2:
+                    uris.append(f"discord://{webhook_parts[0]}/{webhook_parts[1]}")
+                    
+        # SMTP
+        smtp_srv = saved.get("smtp_server")
+        smtp_u = saved.get("smtp_username")
+        smtp_p = saved.get("smtp_password")
+        smtp_f = saved.get("smtp_from")
+        smtp_t = saved.get("smtp_to")
+        if smtp_srv and smtp_u and smtp_p and smtp_f and smtp_t:
+            import urllib.parse
+            srv_esc = urllib.parse.quote(smtp_srv)
+            u_esc = urllib.parse.quote(smtp_u)
+            p_esc = urllib.parse.quote(smtp_p)
+            f_esc = urllib.parse.quote(smtp_f)
+            t_esc = urllib.parse.quote(smtp_t)
+            port = saved.get("smtp_port", 587)
+            uris.append(f"mailt://{u_esc}:{p_esc}@{srv_esc}:{port}?from={f_esc}&to={t_esc}")
+            
+        saved["notification_uris"] = uris
     
     _settings_cache = saved.copy()
     _settings_cache_time = _time.time()
@@ -171,6 +218,7 @@ def save_settings(settings: dict):
             ("SMTP_PASSWORD", "smtp_password"),
             ("SMTP_FROM", "smtp_from"),
             ("SMTP_TO", "smtp_to"),
+            ("NOTIFICATION_URIS", "notification_uris"),
         ]:
             if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):
                 to_save[setting_key] = f"YOUR_{env_key}"
