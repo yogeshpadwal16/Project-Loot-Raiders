@@ -68,3 +68,6 @@ scratch/
 /deals_history.json
 omega_history.json
 TELEGRAM_STRING_SESSION.txt
+
+# Vector database storage
+database/chroma_db/

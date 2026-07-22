@@ -211,8 +211,8 @@ def scrape_platform(platform: str, config: dict, history: set):
                 has_bank_offer=has_bank_offer
             )
             
-            # Persist inside Knowledge Base database
-            save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
+            # Persist inside Knowledge Base database and get resolved semantic ID
+            unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
             history.add(unique_id)
             
             # Dispatch notifications if score is above the configured threshold and it's a price drop (or new product)
