@@ -45,6 +45,7 @@ def load_settings() -> dict:
         "earnkaro_pub_id": "",
         "discord_webhook_url": "",
         "sendgrid_api_key": "",
+        "external_price_tracker_enabled": False,
         "min_discount": 30.0,
         "min_deal_price": 299,
         "min_deal_savings": 250,

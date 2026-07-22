@@ -62,7 +62,10 @@ def get_best_affiliate_url(expanded_url: str, platform: str, settings: dict) -> 
     if platform_lower == "amazon":
         asin = extract_amazon_asin(expanded_url)
         if asin:
-            return f"https://www.amazon.in/dp/{asin}?tag={amazon_tag}"
+            if amazon_tag and amazon_tag != "YOUR_AMAZON_TAG" and amazon_tag != "":
+                return f"https://www.amazon.in/dp/{asin}?tag={amazon_tag}"
+            else:
+                return f"https://www.amazon.in/dp/{asin}"
     elif platform_lower == "flipkart":
         # No valid affiliate ID — return the original URL as-is (must be absolute)
         if not expanded_url.startswith("http"):

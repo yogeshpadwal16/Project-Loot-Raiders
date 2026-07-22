@@ -199,54 +199,56 @@ def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: st
         db.close()
 
 def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
-    # If the platform is not Amazon or Flipkart, we cannot query buyhatke, so we default to True
+    settings = load_settings()
+    external_enabled = settings.get("external_price_tracker_enabled", False)
+    
+    # If the platform is not Amazon or Flipkart, we cannot query buyhatke
     is_supported = any(r in product_url.lower() for r in ["amazon", "flipkart"])
-    if not is_supported:
-        return True
-        
+    
     historical_prices = []
-    try:
-        encoded_url = urllib.parse.quote_plus(product_url)
-        tracker_query_url = f"https://price.buyhatke.com/products.php?url={encoded_url}"
-        
-        driver.execute_script("window.open('');")
-        driver.switch_to.window(driver.window_handles[1])
-        driver.set_page_load_timeout(5)
+    if external_enabled and is_supported:
         try:
-            driver.get(tracker_query_url)
-            time.sleep(1.5)
-            page_text = driver.find_element(By.TAG_NAME, "body").text.replace(',', '')
-            historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|â‚¹)\s*([0-9]+)', page_text)]
-        except Exception:
-            historical_prices = []
+            encoded_url = urllib.parse.quote_plus(product_url)
+            tracker_query_url = f"https://price.buyhatke.com/products.php?url={encoded_url}"
             
-        driver.close()
-        driver.switch_to.window(driver.window_handles[0])
-    except Exception:
-        try:
-            if len(driver.window_handles) > 1:
-                driver.close()
-                driver.switch_to.window(driver.window_handles[0])
-        except Exception:
-            pass
-
-    # If external tracker succeeded, use its data
-    if historical_prices:
-        lowest_ever = min(historical_prices)
-        highest_ever = max(historical_prices)
-        
-        is_near_low = current_price <= (lowest_ever * 1.05)
-        has_real_drop = False
-        if highest_ever > current_price:
-            drop_from_peak = ((highest_ever - current_price) / highest_ever) * 100
-            if drop_from_peak >= 15.0:
-                has_real_drop = True
+            driver.execute_script("window.open('');")
+            driver.switch_to.window(driver.window_handles[1])
+            driver.set_page_load_timeout(5)
+            try:
+                driver.get(tracker_query_url)
+                time.sleep(1.5)
+                page_text = driver.find_element(By.TAG_NAME, "body").text.replace(',', '')
+                historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|â‚¹)\s*([0-9]+)', page_text)]
+            except Exception:
+                historical_prices = []
                 
-        if is_near_low and has_real_drop:
-            return True
-        return False
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+        except Exception:
+            try:
+                if len(driver.window_handles) > 1:
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[0])
+            except Exception:
+                pass
+
+        # If external tracker succeeded, use its data
+        if historical_prices:
+            lowest_ever = min(historical_prices)
+            highest_ever = max(historical_prices)
+            
+            is_near_low = current_price <= (lowest_ever * 1.05)
+            has_real_drop = False
+            if highest_ever > current_price:
+                drop_from_peak = ((highest_ever - current_price) / highest_ever) * 100
+                if drop_from_peak >= 15.0:
+                    has_real_drop = True
+                    
+            if is_near_low and has_real_drop:
+                return True
+            return False
         
-    # Fallback 1: Compare against our local historical deals database
+    # Fallback: Compare against our local historical deals database
     if unique_id:
         db = SessionLocal()
         try:
@@ -263,8 +265,9 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
                     if drop_from_peak >= 15.0:
                         has_real_drop = True
                         
-                if is_near_low and has_real_drop:
+                if is_near_low and (has_real_drop or len(prices_list) < 3):
                     return True
+                return False
         except Exception as e:
             logging.error(f"Local price check failed: {e}")
         finally:

@@ -33,10 +33,11 @@ else:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
         except Exception as e:
             import logging
-            logging.warning(f"Failed to set SQLite PRAGMA journal_mode=WAL: {e}")
+            logging.warning(f"Failed to set SQLite PRAGMAs: {e}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

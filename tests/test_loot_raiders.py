@@ -290,5 +290,26 @@ class TestServiceWorkerAssets(unittest.TestCase):
         self.assertGreaterEqual(len(manifest['shortcuts']), 2)
 
 
+class TestSettingsAndIntegrity(unittest.TestCase):
+    """Tests for recent system optimizations, default settings, and database integrity"""
+    
+    def test_external_price_tracker_default(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        self.assertIn('external_price_tracker_enabled', settings)
+        self.assertFalse(settings['external_price_tracker_enabled'], "Default external price tracker should be disabled")
+        
+    def test_sqlite_foreign_keys_are_on(self):
+        from database.db_session import SessionLocal
+        db = SessionLocal()
+        try:
+            cursor = db.connection().connection.cursor()
+            cursor.execute("PRAGMA foreign_keys")
+            fk_status = cursor.fetchone()[0]
+            self.assertEqual(fk_status, 1, "SQLite foreign keys must be active (1)")
+        finally:
+            db.close()
+
+
 if __name__ == "__main__":
     unittest.main()

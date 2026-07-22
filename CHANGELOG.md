@@ -1,4 +1,4 @@
-<![CDATA[# 📋 Changelog
+# 📋 Changelog
 
 All notable changes to Project Loot Raiders are documented here.
 
@@ -167,4 +167,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Click tracking system
 - JSON-based deal history storage
 - Configurable CSS selectors via `selectors.json`
-]]>
