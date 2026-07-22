@@ -1,9 +1,10 @@
-const CACHE_NAME = 'loot-raiders-v15';
+const CACHE_NAME = 'loot-raiders-v16';
 const ASSETS = [
   '/',
   '/index.html',
   '/index.css',
   '/index.js',
+  '/offline.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
@@ -54,8 +55,8 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   
-  // Network-first strategy for index.html / root to guarantee cache-busting changes are loaded immediately
-  if (url.pathname === '/' || url.pathname === '/index.html') {
+  // Network-first strategy for index.html / root / navigation to guarantee freshness and serve offline page fallback
+  if (url.pathname === '/' || url.pathname === '/index.html' || e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).then((networkResponse) => {
         if (networkResponse.status === 200) {
@@ -63,8 +64,10 @@ self.addEventListener('fetch', (e) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
         }
         return networkResponse;
-      }).catch(() => {
-        return caches.match(e.request);
+      }).catch(async () => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        return caches.match('/offline.html');
       })
     );
     return;
