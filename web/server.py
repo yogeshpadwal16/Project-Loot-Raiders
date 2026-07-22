@@ -385,7 +385,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     "status": "success",
                     "points_won": points_won,
                     "new_total": user_score.points,
-                    "message": f"ðŸŽ‰ Congratulations! You scratched and won {points_won} Loot Points!"
+                    "message": f"🎉 Congratulations! You scratched and won {points_won} Loot Points!"
                 }
                 self.wfile.write(json.dumps(res_data).encode('utf-8'))
             except Exception as e:
@@ -622,31 +622,38 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             
             db = SessionLocal()
             try:
-                query = db.query(Product)
-                if platform != 'all':
-                    query = query.filter(Product.platform.ilike(f"%{platform}%"))
+                from sqlalchemy import func
+                from sqlalchemy.orm import joinedload
                 
-                products = query.all()
+                # Fetch latest price history ID for each product first
+                latest_ph_ids = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
+                
+                query = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(PriceHistory.id.in_(latest_ph_ids))
+                
+                if platform != 'all':
+                    query = query.join(Product, PriceHistory.product_id == Product.id).filter(Product.platform.ilike(f"%{platform}%"))
+                
+                price_histories = query.order_by(PriceHistory.timestamp.desc()).all()
+                
                 result_deals = []
-                for p in products:
-                    latest = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
-                    if latest:
-                        if latest.deal_score >= min_score:
-                            result_deals.append({
-                                "id": p.id,
-                                "platform": p.platform,
-                                "title": p.title,
-                                "image_url": p.image_url,
-                                "url": p.url,
-                                "price": latest.price,
-                                "mrp": latest.mrp,
-                                "discount": latest.discount,
-                                "deal_score": latest.deal_score,
-                                "is_verified_low": latest.is_verified_low,
-                                "timestamp": latest.timestamp
-                            })
-                # Sort by newest
-                result_deals.sort(key=lambda x: x['timestamp'], reverse=True)
+                for ph in price_histories:
+                    p = ph.product
+                    if not p:
+                        continue
+                    if ph.deal_score >= min_score:
+                        result_deals.append({
+                            "id": p.id,
+                            "platform": p.platform,
+                            "title": p.title,
+                            "image_url": p.image_url,
+                            "url": p.url,
+                            "price": ph.price,
+                            "mrp": ph.mrp,
+                            "discount": ph.discount,
+                            "deal_score": ph.deal_score,
+                            "is_verified_low": ph.is_verified_low,
+                            "timestamp": ph.timestamp
+                        })
                 self.wfile.write(json.dumps(result_deals[:limit]).encode('utf-8'))
             except Exception as e:
                 logging.error(f"Public deals API error: {e}")

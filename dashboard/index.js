@@ -1067,6 +1067,7 @@ async function fetchSettings() {
         document.getElementById('set-smtp-to').value = settings.smtp_to || '';
         document.getElementById('set-sendgrid-key').value = settings.sendgrid_api_key || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
+        document.getElementById('set-external-price-tracker-enabled').checked = settings.external_price_tracker_enabled || false;
         
         const proxyList = settings.proxy_list || [];
         document.getElementById('set-proxy-list').value = proxyList.join('\n');
@@ -1096,6 +1097,7 @@ async function saveSettings(e) {
     const smtp_to = document.getElementById('set-smtp-to').value.trim();
     const sendgrid_api_key = document.getElementById('set-sendgrid-key').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
+    const external_price_tracker_enabled = document.getElementById('set-external-price-tracker-enabled').checked;
     
     const proxyText = document.getElementById('set-proxy-list').value;
     const proxy_list = proxyText.split('\n')
@@ -1121,6 +1123,7 @@ async function saveSettings(e) {
         smtp_to,
         sendgrid_api_key,
         proxies_enabled,
+        external_price_tracker_enabled,
         proxy_list
     };
     

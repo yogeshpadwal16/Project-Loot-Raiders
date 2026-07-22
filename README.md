@@ -1,4 +1,4 @@
-<![CDATA[# 🏴‍☠️ Project Loot Raiders
+# 🏴‍☠️ Project Loot Raiders
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
@@ -300,4 +300,3 @@ GitHub: [yogeshpadwal16](https://github.com/yogeshpadwal16)
 ---
 
 ⭐ If you find this project useful, consider giving it a Star!
-]]>

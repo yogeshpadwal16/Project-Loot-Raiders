@@ -279,48 +279,80 @@ def scrape_platform(platform: str, config: dict, history: set):
 def sync_database_to_json():
     db = SessionLocal()
     try:
-        products = db.query(Product).all()
+        from sqlalchemy import func
+        from sqlalchemy.orm import joinedload
+        
+        # Get the latest price history record ID for each product
+        latest_ph_ids_query = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
+        
+        # Get the top 300 price histories (which represent the latest state of the top 300 products) sorted by timestamp desc
+        price_histories = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(
+            PriceHistory.id.in_(latest_ph_ids_query)
+        ).order_by(PriceHistory.timestamp.desc()).limit(300).all()
+        
+        product_ids = [ph.product_id for ph in price_histories if ph.product]
+        
+        # Fetch click counts in a single query
+        click_data = db.query(ClickLog.product_id, func.count(ClickLog.id)).filter(
+            ClickLog.product_id.in_(product_ids)
+        ).group_by(ClickLog.product_id).all()
+        click_map = {pid: count for pid, count in click_data}
+        
+        # Fetch price history (last 15 points) for only these 300 product IDs
+        history_records = db.query(PriceHistory).filter(
+            PriceHistory.product_id.in_(product_ids)
+        ).order_by(PriceHistory.product_id, PriceHistory.timestamp.desc()).all()
+        
+        history_map = {}
+        for hr in history_records:
+            pid = hr.product_id
+            if pid not in history_map:
+                history_map[pid] = []
+            if len(history_map[pid]) < 15:
+                history_map[pid].append({"price": hr.price, "timestamp": hr.timestamp})
+        
+        # Reverse each list so it's in chronological order
+        for pid in history_map:
+            history_map[pid].reverse()
+            
         deals = []
-        for p in products:
-            latest_price = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
-            if not latest_price:
+        for ph in price_histories:
+            p = ph.product
+            if not p:
                 continue
             
-            click_count = db.query(ClickLog).filter_by(product_id=p.id).count()
-            
-            # Fetch recent price history points for client-side Chart rendering
-            history_query = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).limit(15).all()
-            history_query.reverse()
-            price_history = [{"price": h.price, "timestamp": h.timestamp} for h in history_query]
+            click_count = click_map.get(p.id, 0)
+            price_history = history_map.get(p.id, [])
             
             deals.append({
                 "id": p.id,
                 "platform": p.platform,
                 "title": p.title,
-                "price": latest_price.price,
-                "mrp": latest_price.mrp,
-                "discount": latest_price.discount,
+                "price": ph.price,
+                "mrp": ph.mrp,
+                "discount": ph.discount,
                 "image_url": p.image_url,
                 "url": p.url,
-                "is_verified_low": latest_price.is_verified_low,
-                "deal_score": latest_price.deal_score,
-                "timestamp": latest_price.timestamp,
+                "is_verified_low": ph.is_verified_low,
+                "deal_score": ph.deal_score,
+                "timestamp": ph.timestamp,
                 "clicks": click_count,
                 "price_history": price_history
             })
-        deals.sort(key=lambda x: x["timestamp"], reverse=True)
-        deals = deals[:300]
         
+        # Already ordered by timestamp desc from the DB query
         deals_file = os.path.join(DASHBOARD_DIR, "deals_history.json")
         with open(deals_file, 'w', encoding='utf-8') as f:
             json.dump(deals, f, indent=2)
             
-        omega = {p.id: time.time() for p in products}
+        # Get all product IDs in a single column query to write omega_history.json
+        product_ids_all = db.query(Product.id).all()
+        omega = {pid[0]: time.time() for pid in product_ids_all}
         history_file = os.path.join(BASE_DIR, "omega_history.json")
         with open(history_file, 'w', encoding='utf-8') as f:
             json.dump(omega, f, indent=2)
             
-        logging.info("SQLite database synchronized to static JSON files successfully.")
+        logging.info("SQLite database synchronized to static JSON files successfully (Highly Optimized).")
     except Exception as e:
         logging.error(f"Failed to sync database to JSON exports: {e}")
     finally:

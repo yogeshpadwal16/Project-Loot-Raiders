@@ -219,8 +219,8 @@ async def mirror_main():
     logging.info("[Channel Mirror] Preparing Telethon Client setup...")
     # Authentication warning on startup
     logging.info("==========================================================================")
-    logging.info("ðŸŒŸ [Channel Mirror] REAL-TIME TELEGRAM MONITOR INITIATING ðŸŒŸ")
-    logging.info("ðŸ‘‰ Note: If this is your first run, check your terminal/console! ")
+    logging.info("🌟 [Channel Mirror] REAL-TIME TELEGRAM MONITOR INITIATING 🌟")
+    logging.info("👉 Note: If this is your first run, check your terminal/console! ")
     logging.info("   You will be prompted to enter your phone number and login code.")
     logging.info("==========================================================================")
     
