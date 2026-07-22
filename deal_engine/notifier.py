@@ -1126,50 +1126,93 @@ def notifier_worker():
                 )
                 telegram_ok = False
             
-        if has_discord:
+        apprise_ok = True
+        apprise_uris = settings.get("notification_uris", [])
+        if apprise_uris:
             try:
-                discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
-            except Exception as disc_err:
+                import apprise
+                apobj = apprise.Apprise()
+                for uri in apprise_uris:
+                    # Skip primary Telegram URI to prevent double-posting
+                    if has_telegram and "tgram://" in uri and bot_token in uri and (chat_id in uri or chat_id.lstrip('@') in uri):
+                        continue
+                    apobj.add(uri)
+                
+                if len(apobj) > 0:
+                    savings = mrp - price
+                    title_clean = title.split('\n')[0].strip()
+                    subject = f"🔥 LOOT DROP: {discount:.0f}% OFF - {title_clean[:50]}..."
+                    
+                    body_md = (
+                        f"🛍️ **{title_clean}**\n\n"
+                        f"💵 **Loot Price:**  `₹{price:,}`\n"
+                        f"❌ **Original MRP:** ~~₹{mrp:,}~~\n"
+                        f"📉 **Discount:**     **{discount:.0f}% OFF**\n"
+                        f"💰 **You Save:**     `₹{savings:,}`\n\n"
+                        f"🔗 [Buy Link]({final_url})"
+                    )
+                    
+                    apprise_ok = apobj.notify(
+                        body=body_md,
+                        title=subject,
+                        body_format=apprise.NotifyFormat.MARKDOWN
+                    )
+                    if not apprise_ok:
+                        logging.warning("Apprise notification failed for one or more endpoints.")
+            except Exception as apprise_err:
                 log_failure(
-                    component="Discord Webhook Notifier",
-                    context=f"Failed to dispatch webhook alert for deal '{title[:30]}'",
-                    err=disc_err,
+                    component="Apprise Alerting Engine",
+                    context=f"Failed to dispatch unified alert for deal '{title[:30]}'",
+                    err=apprise_err,
                     severity="ERROR",
-                    recovery_status="Retrying" if retries < 3 else "Failed",
-                    recommended_action="Check validity of the Discord Webhook URL."
+                    recovery_status="Ignored",
+                    recommended_action="Validate your Apprise URI formats in Settings Panel."
                 )
-                discord_ok = False
-            
-        # C. Dispatch WhatsApp alerts (Optional, conditional on Twilio settings in .env)
-        try:
-            send_whatsapp_alert(title, price, mrp, discount, final_url, is_verified_low, deal_score)
-        except Exception as wa_err:
-            log_failure(
-                component="WhatsApp Notifier",
-                context=f"Failed to send Twilio alert for deal '{title[:30]}'",
-                err=wa_err,
-                severity="WARNING",
-                recovery_status="Ignored",
-                recommended_action="Verify Twilio Account SID, Auth Token, and phone numbers in local environment."
-            )
-            
-        # D. Dispatch Email alerts (Optional, conditional on SMTP settings)
-        if has_email:
+                apprise_ok = False
+        else:
+            # Legacy fallbacks
+            if has_discord:
+                try:
+                    discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                except Exception as disc_err:
+                    log_failure(
+                        component="Discord Webhook Notifier",
+                        context=f"Failed to dispatch webhook alert for deal '{title[:30]}'",
+                        err=disc_err,
+                        severity="ERROR",
+                        recovery_status="Retrying" if retries < 3 else "Failed",
+                        recommended_action="Check validity of the Discord Webhook URL."
+                    )
+                    discord_ok = False
+                
             try:
-                email_ok = send_email_alert(title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
-            except Exception as mail_err:
+                send_whatsapp_alert(title, price, mrp, discount, final_url, is_verified_low, deal_score)
+            except Exception as wa_err:
                 log_failure(
-                    component="Email Alert Notifier",
-                    context=f"Failed to dispatch deal '{title[:30]}' to recipient list",
-                    err=mail_err,
-                    severity="ERROR",
-                    recovery_status="Retrying" if retries < 3 else "Failed",
-                    recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
+                    component="WhatsApp Notifier",
+                    context=f"Failed to send Twilio alert for deal '{title[:30]}'",
+                    err=wa_err,
+                    severity="WARNING",
+                    recovery_status="Ignored",
+                    recommended_action="Verify Twilio Account SID, Auth Token, and phone numbers in local environment."
                 )
-                email_ok = False
+                
+            if has_email:
+                try:
+                    email_ok = send_email_alert(title, price, mrp, discount, img_url, final_url, is_verified_low, deal_score)
+                except Exception as mail_err:
+                    log_failure(
+                        component="Email Alert Notifier",
+                        context=f"Failed to dispatch deal '{title[:30]}' to recipient list",
+                        err=mail_err,
+                        severity="ERROR",
+                        recovery_status="Retrying" if retries < 3 else "Failed",
+                        recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
+                    )
+                    email_ok = False
             
         # Retry with exponential backoff on failure
-        if (has_telegram and not telegram_ok) or (has_discord and not discord_ok) or (has_email and not email_ok):
+        if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):
             if retries < 3:
                 job["retries"] = retries + 1
                 backoff = (2 ** retries) * 5

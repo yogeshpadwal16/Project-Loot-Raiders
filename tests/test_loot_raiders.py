@@ -311,5 +311,20 @@ class TestSettingsAndIntegrity(unittest.TestCase):
             db.close()
 
 
+class TestAppriseAlerting(unittest.TestCase):
+    """Tests for Apprise notification framework integration"""
+    
+    def test_apprise_import_and_instantiation(self):
+        import apprise
+        apobj = apprise.Apprise()
+        self.assertIsNotNone(apobj)
+        
+    def test_apprise_legacy_converter(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        self.assertIn("notification_uris", settings)
+        self.assertIsInstance(settings["notification_uris"], list)
+
+
 if __name__ == "__main__":
     unittest.main()

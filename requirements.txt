@@ -4,6 +4,7 @@ aiosignal==1.4.0
 annotated-types==0.7.0
 anyio==4.14.1
 APScheduler==3.11.3
+apprise>=1.8.0
 async-timeout==5.0.1
 attrs==26.1.0
 b4==0.15.2
