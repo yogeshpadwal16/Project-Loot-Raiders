@@ -435,5 +435,46 @@ class TestScrapyCrawler(unittest.TestCase):
         self.assertEqual(spider.platform_configs, configs)
 
 
+class TestDragonflyCache(unittest.TestCase):
+    """Tests for Dragonfly mutual exclusion locking and fallback memory caching"""
+    
+    def test_cache_set_get_delete(self):
+        from utils.cache import cache_set, cache_get, cache_delete
+        
+        test_key = "test:loot:deal_status"
+        test_val = {"status": "scanning", "time": 12345}
+        
+        # 1. Set cache
+        success = cache_set(test_key, test_val, expire_seconds=10)
+        self.assertTrue(success)
+        
+        # 2. Get cache
+        retrieved = cache_get(test_key)
+        self.assertEqual(retrieved, test_val)
+        
+        # 3. Delete cache
+        cache_delete(test_key)
+        retrieved = cache_get(test_key)
+        self.assertIsNone(retrieved)
+        
+    def test_caching_locks(self):
+        from utils.cache import acquire_lock, release_lock
+        
+        lock_name = "amazon_scraper_run"
+        
+        # 1. Acquire lock
+        self.assertTrue(acquire_lock(lock_name, expire_seconds=5))
+        
+        # 2. Re-acquiring active lock should fail
+        self.assertFalse(acquire_lock(lock_name, expire_seconds=5))
+        
+        # 3. Release lock
+        release_lock(lock_name)
+        
+        # 4. Re-acquiring should now succeed
+        self.assertTrue(acquire_lock(lock_name, expire_seconds=5))
+        release_lock(lock_name)
+
+
 if __name__ == "__main__":
     unittest.main()

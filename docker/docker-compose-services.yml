@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  dragonfly:
+    image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    container_name: dragonfly-cache
+    ports:
+      - "6379:6379"
+    command: ["--proactor_threads=1", "--maxmemory=256MB"]
+    # Dragonfly requires memlock ulimit settings to be set to unlimited for lock allocations
+    ulimits:
+      memlock: -1
+    restart: always
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n-automation
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: always
+
+volumes:
+  n8n_data:
