@@ -2690,3 +2690,25 @@ body::after {
         bottom: 20px;
     }
 }
+
+/* ==============================================================================
+   🔌 Responsive Form & Analytics Grid System
+   ============================================================================== */
+.input-row {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.grid-2-col {
+    grid-template-columns: 1fr 1fr;
+}
+.grid-2-1-col {
+    grid-template-columns: 2fr 1fr;
+}
+
+@media (max-width: 600px) {
+    .input-row {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+}

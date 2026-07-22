@@ -223,7 +223,7 @@
                         <span class="badge" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71; font-weight: bold; font-size: 0.7rem;">Active</span>
                     </div>
                     <div class="console-body" style="padding: 10px;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; font-size: 0.85rem;">
+                        <div class="input-row grid-2-col" style="gap: 10px; margin-bottom: 12px; font-size: 0.85rem;">
                             <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
                                 <span style="display:block; font-size:0.75rem; color:var(--md-sys-color-on-background-variant);">Est. EPC (Clicks)</span>
                                 <strong id="admin-analytics-epc" style="font-size:1.05rem; color:#f1c40f;">₹0.00</strong>
@@ -280,8 +280,7 @@
                             <div class="input-group">
                                 <label for="manual-title">Product Title</label>
                                 <input type="text" id="manual-title" required placeholder="Enter product title...">
-                            </div>
-                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="input-row grid-2-col">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label for="manual-price">Loot Price (₹)</label>
                                     <input type="number" id="manual-price" required placeholder="e.g. 299">
@@ -306,8 +305,7 @@
                             
                             <input type="hidden" id="manual-unique-id">
                             <input type="hidden" id="manual-platform">
-                            
-                            <div class="manual-actions-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                            <div class="manual-actions-row input-row grid-2-col" style="margin-top: 15px;">
                                 <button type="button" class="btn btn-secondary" id="btn-post-telegram" disabled style="opacity: 0.6; cursor: not-allowed;">
                                     <i class="fa-brands fa-telegram"></i> Post Telegram
                                 </button>
@@ -369,8 +367,7 @@
                         </button>
                     </div>
                     <div class="selector-body">
-                        <form id="settings-form" class="selector-form">
-                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="input-row grid-2-col">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label for="set-amazon-tag">Amazon Tag</label>
                                     <input type="text" id="set-amazon-tag" required placeholder="lootraiders-21">
@@ -379,8 +376,7 @@
                                     <label for="set-flipkart-affid">Flipkart AffID</label>
                                     <input type="text" id="set-flipkart-affid" required placeholder="flipkart-affid">
                                 </div>
-                            </div>
-                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="input-row grid-2-col">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label for="set-cuelinks-id">Cuelinks Publisher ID</label>
                                     <input type="text" id="set-cuelinks-id" placeholder="e.g. 12345">
@@ -393,8 +389,7 @@
                             <div class="input-group" style="margin-bottom: 15px;">
                                 <label for="set-telegram-token">Telegram Bot Token</label>
                                 <input type="text" id="set-telegram-token" placeholder="bot_token">
-                            </div>
-                            <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div class="input-row grid-2-col">
                                 <div class="input-group" style="margin-bottom: 0;">
                                     <label for="set-telegram-chat">Telegram Chat ID</label>
                                     <input type="text" id="set-telegram-chat" placeholder="@channel">
@@ -429,7 +424,7 @@
                              
                              <h4 style="margin: 0 0 10px 0; color: var(--accent-orange); font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-envelope"></i> SMTP Email Alerts Configuration (Optional)</h4>
                              
-                             <div class="input-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 15px;">
+                             <div class="input-row grid-2-1-col">
                                  <div class="input-group" style="margin-bottom: 0;">
                                      <label for="set-smtp-server">SMTP Server</label>
                                      <input type="text" id="set-smtp-server" placeholder="smtp.gmail.com or smtp.sendgrid.net">
@@ -439,27 +434,27 @@
                                      <input type="number" id="set-smtp-port" placeholder="587" value="587">
                                  </div>
                              </div>
-                             <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                 <div class="input-group" style="margin-bottom: 0;">
-                                     <label for="set-smtp-username">SMTP Username</label>
-                                     <input type="text" id="set-smtp-username" placeholder="e.g. your_email@gmail.com">
-                                 </div>
-                                 <div class="input-group" style="margin-bottom: 0;">
-                                     <label for="set-smtp-password">SMTP Password / API Key</label>
-                                     <input type="password" id="set-smtp-password" placeholder="Password or SendGrid API token">
-                                 </div>
-                             </div>
-                             <div class="input-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                 <div class="input-group" style="margin-bottom: 0;">
-                                     <label for="set-smtp-from">Sender Email (From)</label>
-                                     <input type="email" id="set-smtp-from" placeholder="alerts@lootraiders.com">
-                                 </div>
-                                 <div class="input-group" style="margin-bottom: 0;">
-                                     <label for="set-smtp-to">Recipient Email(s) (Comma-separated)</label>
-                                     <input type="text" id="set-smtp-to" placeholder="user1@gmail.com, user2@gmail.com">
-                                 </div>
-                             </div>
-                             <div class="input-group" style="margin-bottom: 15px;">
+                             <div class="input-row grid-2-col">
+                                  <div class="input-group" style="margin-bottom: 0;">
+                                      <label for="set-smtp-username">SMTP Username</label>
+                                      <input type="text" id="set-smtp-username" placeholder="e.g. your_email@gmail.com">
+                                  </div>
+                                  <div class="input-group" style="margin-bottom: 0;">
+                                      <label for="set-smtp-password">SMTP Password / API Key</label>
+                                      <input type="password" id="set-smtp-password" placeholder="Password or SendGrid API token">
+                                  </div>
+                              </div>
+                              <div class="input-row grid-2-col">
+                                  <div class="input-group" style="margin-bottom: 0;">
+                                      <label for="set-smtp-from">Sender Email (From)</label>
+                                      <input type="email" id="set-smtp-from" placeholder="alerts@lootraiders.com">
+                                  </div>
+                                  <div class="input-group" style="margin-bottom: 0;">
+                                      <label for="set-smtp-to">Recipient Email(s) (Comma-separated)</label>
+                                      <input type="text" id="set-smtp-to" placeholder="user1@gmail.com, user2@gmail.com">
+                                  </div>
+                              </div>
+                              <div class="input-group" style="margin-bottom: 15px;">
                                  <label for="set-sendgrid-key">SendGrid API Key (Optional REST API Alerting)</label>
                                  <input type="password" id="set-sendgrid-key" placeholder="SG.xxx...">
                              </div>
