@@ -364,11 +364,57 @@ class TestShlinkIntegration(unittest.TestCase):
             # Should fallback to local /go/ path
             self.assertTrue(result.endswith("/go/test_fallback_id"))
         finally:
-            # Restore settings
             settings["shlink_api_url"] = orig_url
             settings["shlink_api_key"] = orig_key
             settings["cloaker_domain"] = orig_cloak
             save_settings(settings)
+
+
+class TestSemanticDeduplication(unittest.TestCase):
+    """Tests for FastEmbed + ChromaDB semantic product matching and deduplication"""
+    
+    def setUp(self):
+        try:
+            from utils.deduplicator import _init_db
+            import utils.deduplicator as deduplicator
+            _init_db()
+            if deduplicator._collection:
+                deduplicator._collection.delete(ids=["test_product_9999"])
+        except Exception:
+            pass
+
+    def tearDown(self):
+        try:
+            import utils.deduplicator as deduplicator
+            if deduplicator._collection:
+                deduplicator._collection.delete(ids=["test_product_9999"])
+        except Exception:
+            pass
+            
+    def test_semantic_matching_and_indexing(self):
+        from utils.deduplicator import find_similar_product, add_product_to_vector_db
+        
+        p1_id = "test_product_9999"
+        p1_title = "Apple iPhone 15 Pro (128 GB) - Natural Titanium"
+        
+        p2_title = "Apple iPhone 15 Pro 128GB (Natural Titanium)"  # Very similar (should match)
+        p3_title = "Sony WH-1000XM4 Noise Cancelling Headphones"  # Completely different (should not match)
+        
+        # 1. Verify similar product should not exist initially
+        match = find_similar_product(p1_title, distance_threshold=0.15)
+        self.assertIsNone(match)
+        
+        # 2. Add product to vector database
+        success = add_product_to_vector_db(p1_id, p1_title)
+        self.assertTrue(success)
+        
+        # 3. Test similar match retrieval
+        match = find_similar_product(p2_title, distance_threshold=0.15)
+        self.assertEqual(match, p1_id)
+        
+        # 4. Test mismatch handling
+        match = find_similar_product(p3_title, distance_threshold=0.15)
+        self.assertIsNone(match)
 
 
 if __name__ == "__main__":

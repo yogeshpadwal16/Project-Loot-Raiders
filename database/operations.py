@@ -142,10 +142,25 @@ def initialize_database_selectors():
     finally:
         db.close()
 
-def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0):
+def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0) -> str:
     db = SessionLocal()
     try:
+        # Check if exact product unique_id exists
         product = db.query(Product).filter_by(id=unique_id).first()
+        
+        # If product does not exist, check for semantic duplicates in vector catalog
+        if not product:
+            try:
+                from utils.deduplicator import find_similar_product
+                similar_id = find_similar_product(title)
+                if similar_id:
+                    logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{similar_id}'")
+                    unique_id = similar_id
+                    product = db.query(Product).filter_by(id=unique_id).first()
+            except Exception as vector_err:
+                logging.error(f"Failed to run semantic similarity check: {vector_err}")
+                
+        # Insert if still not found
         if not product:
             product = Product(
                 id=unique_id,
@@ -156,8 +171,15 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             )
             db.add(product)
             db.flush()
+            
+            # Index inside vector catalog for future match alerts
+            try:
+                from utils.deduplicator import add_product_to_vector_db
+                add_product_to_vector_db(unique_id, title)
+            except Exception as index_err:
+                logging.error(f"Failed to index new deal vector embedding: {index_err}")
         else:
-            # Keep details up-to-date
+            # Update parent properties to keep link fresh
             product.title = title
             product.image_url = img_url
             product.url = final_url
@@ -178,6 +200,7 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
         logging.error(f"Failed to save deal to database: {e}")
     finally:
         db.close()
+    return unique_id
 
 def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: str):
     db = SessionLocal()

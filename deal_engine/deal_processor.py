@@ -264,13 +264,13 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
             logging.warning(f"[Deal Processor] Price verification failed, defaulting to True: {verify_err}")
             is_verified_low = True
             
-        # 8. Calculate score and save
+        # 8. Calculate score and save (capturing resolved semantic parent unique_id)
         deal_score = calculate_deal_score(
             platform, price, mrp, discount, is_verified_low, False, 
             product_id=unique_id, title=title, rating=rating, reviews=reviews, 
             has_bank_offer=has_bank_offer
         )
-        save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
+        unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
         
         # 9. Dispatch alerts
         # Competitor mirror deals are broadcasted immediately with no score restrictions
