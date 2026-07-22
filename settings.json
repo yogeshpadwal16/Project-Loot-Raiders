@@ -9,6 +9,12 @@
   "earnkaro_pub_id": "",
   "discord_webhook_url": "",
   "sendgrid_api_key": "",
+  "notification_uris": [
+    "tgram://8888375196:AAEXd53Yhz-ZSTQjZoIhX5UqEyQcB2x7TRU/@LootRaidersDeals"
+  ],
+  "shlink_api_url": "",
+  "shlink_api_key": "",
+  "external_price_tracker_enabled": false,
   "min_discount": 30.0,
   "min_deal_price": 149,
   "min_deal_savings": 100,
@@ -46,8 +52,6 @@
   ],
   "proxy_list": [],
   "proxies_enabled": false,
-  "external_price_tracker_enabled": false,
-  "notification_uris": [],
   "scraper_concurrency": 1,
   "scoring_rules": {
     "min_publish_score": 45.0,
@@ -66,5 +70,6 @@
     }
   },
   "last_digest_date": "2026-07-19",
-  "last_growth_check_time": 1784470980.708082
+  "last_growth_check_time": 1784470980.708082,
+  "cloaker_domain": null
 }

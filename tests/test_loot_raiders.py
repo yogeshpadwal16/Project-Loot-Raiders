@@ -326,5 +326,50 @@ class TestAppriseAlerting(unittest.TestCase):
         self.assertIsInstance(settings["notification_uris"], list)
 
 
+class TestShlinkIntegration(unittest.TestCase):
+    """Tests for Shlink URL shortener integration and link fallback routing"""
+    
+    def test_shlink_client_instantiation(self):
+        from utils.shlink import ShlinkClient
+        client = ShlinkClient("https://link.lootraiders.com", "dummy_key")
+        self.assertEqual(client.base_url, "https://link.lootraiders.com")
+        self.assertEqual(client.headers["X-Api-Key"], "dummy_key")
+        
+    def test_shlink_client_failure_fallback(self):
+        from utils.shlink import ShlinkClient
+        client = ShlinkClient("http://invalid-shlink-url.local", "dummy_key")
+        # Shortening an invalid link with a bad server should safely fallback to the original URL
+        test_url = "https://www.amazon.in/dp/B0CX12345"
+        result = client.shorten_url(test_url, custom_slug="test_slug")
+        self.assertEqual(result, test_url)
+        
+    def test_get_short_deal_link_local_fallback(self):
+        from deal_engine.notifier import get_short_deal_link
+        from config.settings import load_settings, save_settings
+        
+        # Save temporary settings to clean out shlink config for fallback check
+        settings = load_settings()
+        orig_url = settings.get("shlink_api_url")
+        orig_key = settings.get("shlink_api_key")
+        orig_cloak = settings.get("cloaker_domain")
+        
+        settings["shlink_api_url"] = ""
+        settings["shlink_api_key"] = ""
+        settings["cloaker_domain"] = "localhost:5555"
+        save_settings(settings)
+        
+        try:
+            test_url = "https://www.flipkart.com/product"
+            result = get_short_deal_link(test_url, "test_fallback_id")
+            # Should fallback to local /go/ path
+            self.assertTrue(result.endswith("/go/test_fallback_id"))
+        finally:
+            # Restore settings
+            settings["shlink_api_url"] = orig_url
+            settings["shlink_api_key"] = orig_key
+            settings["cloaker_domain"] = orig_cloak
+            save_settings(settings)
+
+
 if __name__ == "__main__":
     unittest.main()

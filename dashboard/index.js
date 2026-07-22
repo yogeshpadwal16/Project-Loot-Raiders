@@ -1066,6 +1066,8 @@ async function fetchSettings() {
         document.getElementById('set-smtp-from').value = settings.smtp_from || '';
         document.getElementById('set-smtp-to').value = settings.smtp_to || '';
         document.getElementById('set-sendgrid-key').value = settings.sendgrid_api_key || '';
+        document.getElementById('set-shlink-url').value = settings.shlink_api_url || '';
+        document.getElementById('set-shlink-key').value = settings.shlink_api_key || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         document.getElementById('set-external-price-tracker-enabled').checked = settings.external_price_tracker_enabled || false;
         
@@ -1099,6 +1101,8 @@ async function saveSettings(e) {
     const smtp_from = document.getElementById('set-smtp-from').value.trim();
     const smtp_to = document.getElementById('set-smtp-to').value.trim();
     const sendgrid_api_key = document.getElementById('set-sendgrid-key').value.trim();
+    const shlink_api_url = document.getElementById('set-shlink-url').value.trim();
+    const shlink_api_key = document.getElementById('set-shlink-key').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     const external_price_tracker_enabled = document.getElementById('set-external-price-tracker-enabled').checked;
     
@@ -1130,6 +1134,8 @@ async function saveSettings(e) {
         smtp_from,
         smtp_to,
         sendgrid_api_key,
+        shlink_api_url,
+        shlink_api_key,
         proxies_enabled,
         external_price_tracker_enabled,
         notification_uris,
