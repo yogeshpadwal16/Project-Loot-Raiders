@@ -797,16 +797,29 @@ def main():
                 concurrency = settings.get("scraper_concurrency", 3)
                 logging.info(f"Initiating scraping scan frame using {concurrency} parallel workers.")
                 
-                with ThreadPoolExecutor(max_workers=concurrency) as executor:
-                    futures = []
-                    for platform, config in matrix.items():
-                        futures.append(executor.submit(scrape_platform, platform, config, history))
-                    
-                    for fut in futures:
+                # Use clean dedicated threads with a Semaphore lock to enforce concurrency rules
+                # and prevent asyncio loop state pollution (Playwright Sync API compatibility).
+                sem = threading.Semaphore(concurrency)
+                
+                def run_scraper_safe(p_name, p_config, p_history):
+                    with sem:
                         try:
-                            fut.result()
+                            scrape_platform(p_name, p_config, p_history)
                         except Exception as thread_err:
-                            logging.error(f"Thread execution error: {thread_err}")
+                            logging.error(f"Scraper thread execution error for {p_name}: {thread_err}")
+
+                threads = []
+                for platform, config in matrix.items():
+                    t = threading.Thread(
+                        target=run_scraper_safe,
+                        args=(platform, config, history),
+                        name=f"Scraper-{platform}"
+                    )
+                    threads.append(t)
+                    t.start()
+                    
+                for t in threads:
+                    t.join()
                 
                 # Export SQLite state to JSON for static host environment (like GitHub Pages)
                 sync_database_to_json()
