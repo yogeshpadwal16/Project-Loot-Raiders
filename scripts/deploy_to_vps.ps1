@@ -15,7 +15,7 @@ $OriginalLocation = Get-Location
 Set-Location "C:\Users\yoges\Desktop\Project Loot Raiders"
 
 # Create a tar.gz archive including essential directories and files (added 'web' folder)
-tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js
+tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js
 
 # Restore directory location
 Set-Location $OriginalLocation
