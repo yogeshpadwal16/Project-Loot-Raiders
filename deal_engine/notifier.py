@@ -193,6 +193,35 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     
     return "\n".join(parts)
 
+def send_n8n_webhook(webhook_url: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, short_url: str, deal_score: float) -> bool:
+    """
+    Dispatches scraped deal details to a self-hosted n8n workflow for syndication.
+    """
+    if not webhook_url or webhook_url.strip() == "":
+        return False
+    try:
+        payload = {
+            "platform": platform,
+            "title": title,
+            "price": price,
+            "mrp": mrp,
+            "discount": discount,
+            "image_url": img_url,
+            "short_url": short_url,
+            "deal_score": deal_score,
+            "timestamp": time.time()
+        }
+        res = requests.post(webhook_url, json=payload, timeout=10)
+        if res.status_code in [200, 201, 202]:
+            logging.info(f"[n8n webhook] Payload dispatched successfully to {webhook_url}")
+            return True
+        else:
+            logging.warning(f"[n8n webhook] Payload dispatch failed with status: {res.status_code}")
+            return False
+    except Exception as e:
+        logging.error(f"Error dispatching to n8n webhook: {e}")
+        return False
+
 def send_discord_webhook(webhook_url: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float = 0.0) -> bool:
     try:
         is_amazon = "amazon" in final_url.lower()
@@ -1233,6 +1262,31 @@ def notifier_worker():
                         recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
                     )
                     email_ok = False
+            
+        # C. Dispatch to n8n low-code syndication webhook
+        n8n_url = settings.get("n8n_webhook_url")
+        if n8n_url:
+            try:
+                send_n8n_webhook(
+                    webhook_url=n8n_url,
+                    platform=platform,
+                    title=title,
+                    price=price,
+                    mrp=mrp,
+                    discount=discount,
+                    img_url=img_url,
+                    short_url=short_url,
+                    deal_score=deal_score
+                )
+            except Exception as n8n_err:
+                log_failure(
+                    component="n8n Webhook Notifier",
+                    context=f"Failed to post deal '{title[:30]}' to n8n webhook",
+                    err=n8n_err,
+                    severity="WARNING",
+                    recovery_status="Ignored",
+                    recommended_action="Validate your n8n Webhook URL configuration."
+                )
             
         # Retry with exponential backoff on failure
         if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):

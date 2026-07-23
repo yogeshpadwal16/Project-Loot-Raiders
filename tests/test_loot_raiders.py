@@ -476,5 +476,48 @@ class TestDragonflyCache(unittest.TestCase):
         release_lock(lock_name)
 
 
+class TestN8NIntegration(unittest.TestCase):
+    """Tests for n8n syndication webhook notifications"""
+    
+    def test_send_n8n_webhook_success(self):
+        from unittest.mock import patch, MagicMock
+        from deal_engine.notifier import send_n8n_webhook
+        
+        with patch('requests.post') as mock_post:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_post.return_value = mock_response
+            
+            url = "http://n8n-webhook-test.local"
+            success = send_n8n_webhook(
+                webhook_url=url,
+                platform="amazon",
+                title="Test Product Title",
+                price=999,
+                mrp=1999,
+                discount=50.0,
+                img_url="http://img.local/1.jpg",
+                short_url="http://go.local/xyz",
+                deal_score=85.0
+            )
+            self.assertTrue(success)
+            mock_post.assert_called_once()
+            
+    def test_send_n8n_webhook_empty_url(self):
+        from deal_engine.notifier import send_n8n_webhook
+        success = send_n8n_webhook(
+            webhook_url="",
+            platform="amazon",
+            title="Test",
+            price=1,
+            mrp=2,
+            discount=50,
+            img_url="",
+            short_url="",
+            deal_score=10.0
+        )
+        self.assertFalse(success)
+
+
 if __name__ == "__main__":
     unittest.main()
