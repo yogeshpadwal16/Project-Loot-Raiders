@@ -156,6 +156,7 @@ def scrape_platform(platform: str, config: dict, history: set):
             # Fetch latest price from DB to see if it's a duplicate or if the price changed
             price_changed = True
             is_price_drop = False
+            stale_data = False
             db = SessionLocal()
             try:
                 latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
@@ -166,6 +167,11 @@ def scrape_platform(platform: str, config: dict, history: set):
                     else:
                         price_changed = True
                         is_price_drop = price < latest.price
+                    # Detect stale data: if last price record is older than 12 hours,
+                    # the system was likely offline — treat as fresh discovery so deals
+                    # get broadcast even if the price went up during the downtime.
+                    if (time.time() - latest.timestamp) > 43200:
+                        stale_data = True
                 else:
                     # New product is treated as a price drop
                     price_changed = True
@@ -216,8 +222,9 @@ def scrape_platform(platform: str, config: dict, history: set):
             unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
             history.add(unique_id)
             
-            # Dispatch notifications if score is above the configured threshold and it's a price drop (or new product)
-            if should_publish_deal(platform, deal_score) and is_price_drop:
+            # Dispatch notifications if score is above the configured threshold and
+            # it's either a price drop, a new product, or the data was stale (system was offline)
+            if should_publish_deal(platform, deal_score) and (is_price_drop or stale_data):
                 bank_offers = []
                 coupon_detail = ""
                 review_grade = "N/A"
@@ -258,10 +265,10 @@ def scrape_platform(platform: str, config: dict, history: set):
                 )
                 time.sleep(0.5)
             else:
-                if not is_price_drop:
-                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
-                else:
+                if not should_publish_deal(platform, deal_score):
                     logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
+                else:
+                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
@@ -798,29 +805,28 @@ def main():
                 concurrency = settings.get("scraper_concurrency", 3)
                 logging.info(f"Initiating scraping scan frame using {concurrency} parallel workers.")
                 
-                # Use clean dedicated threads with a Semaphore lock to enforce concurrency rules
-                # and prevent asyncio loop state pollution (Playwright Sync API compatibility).
-                sem = threading.Semaphore(concurrency)
-                
-                def run_scraper_safe(p_name, p_config, p_history):
-                    with sem:
+                # Run scrapers sequentially in dedicated threads to keep CPU/memory footprint low,
+                # prevent OOM on 1GB VPS, and avoid Playwright Sync API asyncio event loop conflicts.
+                for platform, config in matrix.items():
+                    if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
+                        logging.info("Scraper execution halted by user request.")
+                        break
+                    
+                    logging.info(f"Starting sequential scrape scan for: {platform}")
+                    
+                    def run_scraper_safe(p_name, p_config, p_history):
                         try:
                             scrape_platform(p_name, p_config, p_history)
                         except Exception as thread_err:
-                            logging.error(f"Scraper thread execution error for {p_name}: {thread_err}")
-
-                threads = []
-                for platform, config in matrix.items():
+                            logging.error(f"Scraper execution error for {p_name}: {thread_err}")
+                            
                     t = threading.Thread(
                         target=run_scraper_safe,
                         args=(platform, config, history),
                         name=f"Scraper-{platform}"
                     )
-                    threads.append(t)
                     t.start()
-                    
-                for t in threads:
-                    t.join()
+                    t.join() # Wait for this scraper to finish before launching the next one.
                 
                 # Export SQLite state to JSON for static host environment (like GitHub Pages)
                 sync_database_to_json()
@@ -829,7 +835,10 @@ def main():
                     try:
                         from deal_engine.channel_mirror import run_mirror_single_run
                         logging.info("Initiating single-run competitor channel mirror scan...")
-                        run_mirror_single_run()
+                        # Run in a separate thread to prevent event loop collision
+                        t_mirror = threading.Thread(target=run_mirror_single_run, name="Mirror-SingleRun")
+                        t_mirror.start()
+                        t_mirror.join()
                     except Exception as mirror_err:
                         logging.error(f"Failed to execute single-run channel mirror scan: {mirror_err}")
                 

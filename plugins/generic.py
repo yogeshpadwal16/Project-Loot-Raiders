@@ -186,71 +186,122 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         logging.info(f"[Generic Plugin - {self._platform_id}] DOM auto-heal successful. Rescanning with corrected selectors...")
                         cards = driver.find_elements(By.CSS_SELECTOR, config['card_selector'])
             
-            for card in cards:
+            js_script = """
+            const cardSel = arguments[0];
+            const titleSel = arguments[1];
+            const cards = document.querySelectorAll(cardSel);
+            const results = [];
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                const text = card.innerText || "";
+                
+                // Links
+                const links = [];
+                const linkEls = card.getElementsByTagName("a");
+                for (let j = 0; j < linkEls.length; j++) {
+                    links.push({
+                        href: linkEls[j].href || "",
+                        tagName: "a"
+                    });
+                }
+                
+                // Title
+                let title = "";
+                if (titleSel) {
+                    const titleEl = card.querySelector(titleSel);
+                    if (titleEl) {
+                        title = titleEl.getAttribute("title") || titleEl.getAttribute("alt") || titleEl.textContent || "";
+                    }
+                }
+                
+                // Images
+                const imgs = [];
+                const imgEls = card.getElementsByTagName("img");
+                for (let j = 0; j < imgEls.length; j++) {
+                    const img = imgEls[j];
+                    imgs.push({
+                        src: img.getAttribute("src") || "",
+                        dataSrc: img.getAttribute("data-src") || "",
+                        srcset: img.getAttribute("srcset") || "",
+                        dataLazySrc: img.getAttribute("data-lazy-src") || "",
+                        dataOriginal: img.getAttribute("data-original") || "",
+                        alt: img.getAttribute("alt") || "",
+                        className: img.className || ""
+                    });
+                }
+                
+                // Sources
+                const sources = [];
+                const sourceEls = card.getElementsByTagName("source");
+                for (let j = 0; j < sourceEls.length; j++) {
+                    sources.push({
+                        srcset: sourceEls[j].getAttribute("srcset") || sourceEls[j].getAttribute("data-srcset") || ""
+                    });
+                }
+                
+                results.push({
+                    text: text,
+                    links: links,
+                    title: title,
+                    imgs: imgs,
+                    sources: sources,
+                    tagName: card.tagName.toLowerCase(),
+                    href: card.getAttribute("href") || "",
+                    dataProductSlug: card.getAttribute("data-product-slug") || "",
+                    dataId: card.getAttribute("data-id") || "",
+                    parentDataProductSlug: (card.parentElement ? card.parentElement.getAttribute("data-product-slug") : "") || ""
+                });
+            }
+            return results;
+            """
+            
+            card_data_list = driver.execute_script(js_script, config['card_selector'], config.get('title_selector'))
+            
+            if not card_data_list:
+                logging.warning(f"[Generic Plugin - {self._platform_id}] JS extraction returned no data for URL: {config['url']}")
+                return deals
+                
+            for card in card_data_list:
                 try:
                     # 1. Extract Target Link URL
-                    links = card.find_elements(By.TAG_NAME, "a")
+                    links = card["links"]
                     raw_url = None
                     if links:
                         # Scan all links for product patterns
                         for l in links:
-                            href = l.get_attribute("href")
+                            href = l["href"]
                             if href and ("javascript" not in href) and len(href) > 15:
                                 # Exclude search, category, or browse pages
                                 if "/search" not in href and "/s/" not in href and "/c/" not in href and "/pr?" not in href and "/all-" not in href:
                                     raw_url = href
                                     break
                         if not raw_url:
-                            first_href = links[0].get_attribute("href")
+                            first_href = links[0]["href"]
                             if first_href and "/search" not in first_href and "/s/" not in first_href and "/c/" not in first_href and "/pr?" not in first_href and "/all-" not in first_href:
                                 raw_url = first_href
                             
                     if not raw_url:
                         # Check if the card itself is an a tag or wrapped in/ancestor of one
-                        if card.tag_name == "a":
-                            raw_url = card.get_attribute("href")
+                        if card["tagName"] == "a":
+                            raw_url = card["href"]
                         else:
-                            try:
-                                parent_a = card.find_element(By.XPATH, "./ancestor::a")
-                                parent_href = parent_a.get_attribute("href")
-                                if parent_href and "/search" not in parent_href and "/s/" not in parent_href and "/c/" not in parent_href and "/pr?" not in parent_href and "/all-" not in parent_href:
-                                    raw_url = parent_href
-                            except Exception:
-                                pass
+                            if card["href"]:
+                                raw_url = card["href"]
                             
                     if not raw_url:
-                        # Fallback: check data-product-slug attribute (JioMart / Meesho and other modern SPAs)
-                        slug = card.get_attribute("data-product-slug")
+                        # Fallback: check data-product-slug attribute
+                        slug = card["dataProductSlug"]
                         if not slug:
-                            try:
-                                parent_container = card.find_element(By.XPATH, "./parent::div[@data-product-slug]")
-                                slug = parent_container.get_attribute("data-product-slug")
-                            except Exception:
-                                pass
+                            slug = card["parentDataProductSlug"]
                         
                         if slug:
-                            prod_id = card.get_attribute("data-id")
-                            if not prod_id:
-                                try:
-                                    gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
-                                    prod_id = gtm_el.get_attribute("data-id")
-                                except Exception:
-                                    pass
-                            
+                            prod_id = card["dataId"]
                             if not prod_id:
                                 match_num = re.findall(r'\d+$', slug)
                                 if match_num:
                                     prod_id = match_num[0]
                                     
                             vertical = "groceries"
-                            try:
-                                gtm_el = card.find_element(By.CSS_SELECTOR, ".gtmEvents")
-                                v = gtm_el.get_attribute("data-vertical")
-                                if v: vertical = v.lower()
-                            except Exception:
-                                pass
-                                
-                            # Clean slug of merchant suffix (e.g. -mmdlqy-74442527)
                             clean_slug = re.sub(r'-[a-z0-9]{6}-\d+$', '', slug)
                             raw_url = f"/p/{vertical}/{clean_slug}/{prod_id}"
                             
@@ -276,18 +327,13 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         prod_id = str(abs(hash(raw_url)))
                         
                     # 2. Extract Title
-                    title = ""
-                    try:
-                        title_el = card.find_element(By.CSS_SELECTOR, config['title_selector'])
-                        title = title_el.get_attribute("title") or title_el.get_attribute("textContent").strip()
-                    except Exception:
-                        pass
-                        
-                    if not title and card.text:
+                    title = card["title"]
+                    if not title and card["text"]:
                         # Fallback: Parse first line of text
-                        lines = [l.strip() for l in card.text.split("\n") if l.strip()]
+                        lines = [l.strip() for l in card["text"].split("\n") if l.strip()]
                         for l in lines:
                             if (len(l) > 12 
+                                and not l.startswith("₹") 
                                 and not l.startswith("â‚¹") 
                                 and "OFF" not in l 
                                 and "%" not in l):
@@ -299,69 +345,61 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         
                     title = re.sub(r'\s+', ' ', title).strip()
                     
-                    # 3. Extract Image (with rating star and icon filtering)
+                    # 3. Extract Image
                     img_url = None
-                    try:
-                        img_elements = card.find_elements(By.TAG_NAME, "img")
-                        for img_element in img_elements:
-                            candidate_url = None
-                            for attr in ["src", "data-src", "srcset", "data-lazy-src", "data-original"]:
-                                val = img_element.get_attribute(attr)
-                                if val:
-                                    val = val.strip()
-                                    if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
-                                        if val.startswith("//"):
-                                            val = "https:" + val
-                                        if attr == "srcset":
-                                            val = val.split()[0]
-                                        candidate_url = val
-                                        break
+                    img_elements = card["imgs"]
+                    for img_element in img_elements:
+                        candidate_url = None
+                        for attr in ["src", "dataSrc", "srcset", "dataLazySrc", "dataOriginal"]:
+                            val = img_element.get(attr)
+                            if val:
+                                val = val.strip()
+                                if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
+                                    if val.startswith("//"):
+                                        val = "https:" + val
+                                    if attr == "srcset":
+                                        val = val.split()[0]
+                                    candidate_url = val
+                                    break
+                        
+                        if candidate_url:
+                            lower_url = candidate_url.lower()
+                            alt_text = (img_element.get("alt") or "").lower()
+                            class_text = (img_element.get("className") or "").lower()
                             
-                            if candidate_url:
-                                lower_url = candidate_url.lower()
-                                alt_text = (img_element.get_attribute("alt") or "").lower()
-                                class_text = (img_element.get_attribute("class") or "").lower()
+                            if any(x in lower_url for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
+                                continue
+                            if any(x in alt_text for x in ["star", "rating", "icon", "logo", "arrow"]):
+                                continue
+                            if any(x in class_text for x in ["star", "rating", "icon", "logo", "arrow"]):
+                                continue
                                 
-                                # Filter out common UI assets, star ratings, and placeholders
-                                if any(x in lower_url for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
-                                    continue
-                                if any(x in alt_text for x in ["star", "rating", "icon", "logo", "arrow"]):
-                                    continue
-                                if any(x in class_text for x in ["star", "rating", "icon", "logo", "arrow"]):
-                                    continue
-                                    
-                                img_url = candidate_url
-                                break
-                    except Exception as img_err:
-                        logging.debug(f"Image extraction error: {img_err}")
-                        
+                            img_url = candidate_url
+                            break
+                            
                     if not img_url:
-                        # Fallback for picture/source responsive image configurations
-                        try:
-                            sources = card.find_elements(By.TAG_NAME, "source")
-                            for s in sources:
-                                val = s.get_attribute("srcset") or s.get_attribute("data-srcset")
-                                if val:
-                                    url_candidate = val.split(",")[0].split()[0].strip()
-                                    if url_candidate.startswith("http") or url_candidate.startswith("//"):
-                                        if url_candidate.startswith("//"):
-                                            url_candidate = "https:" + url_candidate
-                                        
-                                        lower_cand = url_candidate.lower()
-                                        if any(x in lower_cand for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
-                                            continue
-                                        img_url = url_candidate
-                                        break
-                        except Exception:
-                            pass
-                        
+                        sources = card["sources"]
+                        for s in sources:
+                            val = s["srcset"]
+                            if val:
+                                url_candidate = val.split(",")[0].split()[0].strip()
+                                if url_candidate.startswith("http") or url_candidate.startswith("//"):
+                                    if url_candidate.startswith("//"):
+                                        url_candidate = "https:" + url_candidate
+                                    
+                                    lower_cand = url_candidate.lower()
+                                    if any(x in lower_cand for x in ["star", "rating", "icon", "logo", "arrow", "placeholder", "loading", "gif", "svg"]):
+                                        continue
+                                    img_url = url_candidate
+                                    break
+                                    
                     # 4. Extract pricing and discount
-                    price, mrp, true_discount = calculate_true_discount(card.text)
+                    price, mrp, true_discount = calculate_true_discount(card["text"])
                     min_discount = settings.get("min_discount", 30.0)
                     if price and mrp and (min_discount <= true_discount <= 98.0):
                         from utils.parser import extract_rating_and_reviews, detect_bank_offers
-                        rating, reviews = extract_rating_and_reviews(card.text)
-                        has_bank_offer = detect_bank_offers(card.text)
+                        rating, reviews = extract_rating_and_reviews(card["text"])
+                        has_bank_offer = detect_bank_offers(card["text"])
                         deals.append({
                             "id": f"{self._platform_id}_{prod_id}",
                             "title": title,
