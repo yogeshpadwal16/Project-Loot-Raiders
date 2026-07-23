@@ -519,5 +519,28 @@ class TestN8NIntegration(unittest.TestCase):
         self.assertFalse(success)
 
 
+class TestCPUResourceTuningSettings(unittest.TestCase):
+    """Tests for Host CPU resource throttling settings"""
+    
+    def test_resource_tuning_defaults(self):
+        from config.settings import load_settings
+        settings = load_settings()
+        
+        # Verify loop interval is present and is positive integer
+        self.assertIn("scraper_loop_interval", settings)
+        self.assertIsInstance(settings["scraper_loop_interval"], int)
+        self.assertTrue(settings["scraper_loop_interval"] > 0)
+        
+        # Verify service toggles exist as booleans
+        self.assertIn("channel_mirror_enabled", settings)
+        self.assertIsInstance(settings["channel_mirror_enabled"], bool)
+        
+        self.assertIn("catalog_monitor_enabled", settings)
+        self.assertIsInstance(settings["catalog_monitor_enabled"], bool)
+        
+        self.assertIn("supermarket_monitor_enabled", settings)
+        self.assertIsInstance(settings["supermarket_monitor_enabled"], bool)
+
+
 if __name__ == "__main__":
     unittest.main()
