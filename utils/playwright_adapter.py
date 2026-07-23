@@ -257,9 +257,9 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
                 proxy_config = {"server": proxy_url}
                 logging.info(f"Playwright launching using proxy: {proxy_url}")
 
-        # Set headless=False and pass --headless=new argument to run undetected new headless mode
+        # Launch in true headless mode to avoid requiring X11 display server on headless VPS
         browser = playwright.chromium.launch(
-            headless=False,
+            headless=True,
             args=browser_args
         )
         

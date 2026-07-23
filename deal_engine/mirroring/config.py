@@ -38,7 +38,24 @@ def get_source_channels() -> List[str]:
 # Telegram Client credentials
 TELEGRAM_API_ID = os.environ.get("TELEGRAM_API_ID", "39413198")
 TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH", "d648fd457db96dffa53ae18d3d1869d8")
-TELEGRAM_STRING_SESSION = os.environ.get("TELEGRAM_STRING_SESSION", "")
+
+def load_string_session() -> str:
+    session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()
+    if session_str:
+        return session_str
+    # Fallback: read from TELEGRAM_STRING_SESSION.txt in project root
+    session_file = os.path.join(BASE_DIR, "TELEGRAM_STRING_SESSION.txt")
+    if os.path.exists(session_file):
+        try:
+            with open(session_file, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+            if content:
+                return content
+        except Exception:
+            pass
+    return ""
+
+TELEGRAM_STRING_SESSION = load_string_session()
 
 # Redis Configuration (For persistent message queues)
 REDIS_HOST = os.environ.get("REDIS_HOST", "127.0.0.1")
