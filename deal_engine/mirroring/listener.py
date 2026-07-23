@@ -114,6 +114,7 @@ class MultiClientMirrorListener:
 
     async def _start_pyrogram(self) -> bool:
         """Initializes and runs the Pyrogram client."""
+        client = None
         try:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             session_path = os.path.join(base_dir, "pyrogram") # creates pyrogram.session
@@ -121,19 +122,20 @@ class MultiClientMirrorListener:
             # Use StringSession if available, else standard session file
             # Pyrogram StringSession format differs from Telethon, so we only use it if format is compatible
             # or fallback to session file.
-            self.pyro_client = Client(
+            client = Client(
                 name=session_path,
                 api_id=int(TELEGRAM_API_ID),
                 api_hash=TELEGRAM_API_HASH,
                 workers=4
             )
+            self.pyro_client = client
             
             # Connect in non-interactive mode
-            await self.pyro_client.connect()
+            await client.connect()
             
             # Check authorization
             try:
-                me = await self.pyro_client.get_me()
+                me = await client.get_me()
                 is_authorized = me is not None
             except Exception as auth_err:
                 logging.warning(f"[Mirror Listener] Pyrogram authorization check failed: {auth_err}")
@@ -141,7 +143,8 @@ class MultiClientMirrorListener:
 
             if not is_authorized:
                 logging.warning("[Mirror Listener] Pyrogram session is not authorized. Pyrogram start aborted.")
-                await self.pyro_client.disconnect()
+                await client.disconnect()
+                self.pyro_client = None
                 return False
                 
             # Set up message handlers for monitored channels
@@ -150,7 +153,7 @@ class MultiClientMirrorListener:
             
             for ch in channels:
                 try:
-                    chat_entity = await self.pyro_client.get_chat(ch)
+                    chat_entity = await client.get_chat(ch)
                     resolved_chats.append(chat_entity.id)
                     logging.info(f"[Pyrogram] Resolved chat: {ch} (ID: {chat_entity.id})")
                 except Exception as e:
@@ -158,11 +161,12 @@ class MultiClientMirrorListener:
                     
             if not resolved_chats:
                 logging.error("[Pyrogram] No source channels resolved. Failing start.")
-                await self.pyro_client.disconnect()
+                await client.disconnect()
+                self.pyro_client = None
                 return False
                 
             # Message Handler Function
-            async def pyro_handler(client, message):
+            async def pyro_handler(c, message):
                 async with self.limiter:
                     # Stage 2: Message Reception
                     chat_name = message.chat.username or message.chat.title or str(message.chat.id)
@@ -186,17 +190,24 @@ class MultiClientMirrorListener:
                         raise
                         
             # Register event handler dynamically
-            self.pyro_client.add_handler(
+            client.add_handler(
                 MessageHandler(pyro_handler, filters.chat(resolved_chats))
             )
             logging.info("[Pyrogram] Message handler registered for active channels.")
             return True
         except Exception as e:
             logging.error(f"[Mirror Listener] Failed to start Pyrogram: {e}", exc_info=True)
-            raise
+            if client:
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
+            self.pyro_client = None
+            return False
 
     async def _start_telethon(self) -> bool:
         """Initializes and runs the Telethon client."""
+        client = None
         try:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             session_path = os.path.join(base_dir, "channel_mirror.session")
@@ -204,14 +215,16 @@ class MultiClientMirrorListener:
             session_str = TELEGRAM_STRING_SESSION
             
             if session_str:
-                self.tele_client = TelegramClient(StringSession(session_str), int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
+                client = TelegramClient(StringSession(session_str), int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
             else:
-                self.tele_client = TelegramClient(session_path, int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
+                client = TelegramClient(session_path, int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
                 
-            await self.tele_client.connect()
-            if not await self.tele_client.is_user_authorized():
+            self.tele_client = client
+            await client.connect()
+            if not await client.is_user_authorized():
                 logging.error("[Telethon] Telethon session is not authorized. Fallback start failed.")
-                await self.tele_client.disconnect()
+                await client.disconnect()
+                self.tele_client = None
                 return False
                 
             # Resolve channels
@@ -220,7 +233,7 @@ class MultiClientMirrorListener:
             
             for ch in channels:
                 try:
-                    entity = await self.tele_client.get_input_entity(ch)
+                    entity = await client.get_input_entity(ch)
                     resolved_chats.append(entity)
                     logging.info(f"[Telethon] Resolved chat: {ch}")
                 except Exception as e:
@@ -228,7 +241,8 @@ class MultiClientMirrorListener:
                     
             if not resolved_chats:
                 logging.error("[Telethon] No source channels resolved. Failing start.")
-                await self.tele_client.disconnect()
+                await client.disconnect()
+                self.tele_client = None
                 return False
                 
             # Message Handler Function
@@ -255,12 +269,18 @@ class MultiClientMirrorListener:
                         logging.error(f"[Listener Exception] [Telethon tele_handler] Error processing message {event.message.id}: {err}", exc_info=True)
                         raise
                         
-            self.tele_client.add_event_handler(tele_handler, events.NewMessage(chats=resolved_chats))
+            client.add_event_handler(tele_handler, events.NewMessage(chats=resolved_chats))
             logging.info("[Telethon] Message handler registered for active channels.")
             return True
         except Exception as e:
             logging.error(f"[Mirror Listener] Failed to start Telethon fallback: {e}", exc_info=True)
-            raise
+            if client:
+                try:
+                    await client.disconnect()
+                except Exception:
+                    pass
+            self.tele_client = None
+            return False
 
     def _process_inline(self, normalized: NormalizedMessage):
         """Processes a normalized message directly without pushing to Redis queue (fallback/single-run)."""
