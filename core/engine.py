@@ -5,6 +5,7 @@ import time
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
+import threading
 
 # Core database and configuration imports
 from database.db_session import SessionLocal, init_db
