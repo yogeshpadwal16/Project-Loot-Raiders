@@ -104,3 +104,60 @@ class ChannelGrowthLog(Base):
     subscribers = Column(Integer)
     timestamp = Column(Float, default=time.time)
 
+
+class MirroredMessage(Base):
+    __tablename__ = 'mirrored_messages'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    correlation_id = Column(String, index=True)
+    channel_id = Column(String)
+    channel_name = Column(String)
+    message_id = Column(Integer)
+    timestamp = Column(Float, default=time.time)
+    raw_text = Column(String)
+    extracted_urls = Column(String) # Stored as serialized JSON
+    status = Column(String, default='queued') # 'queued', 'processed', 'failed', 'duplicate'
+    error_reason = Column(String, nullable=True)
+
+
+class SourceChannel(Base):
+    __tablename__ = 'source_channels'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username_or_invite = Column(String, unique=True, index=True)
+    chat_id = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    added_at = Column(Float, default=time.time)
+
+
+class ProcessingLog(Base):
+    __tablename__ = 'processing_logs'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    correlation_id = Column(String, index=True)
+    stage = Column(String) # 'listener', 'queue', 'normalization', 'deduplication', 'publisher'
+    status = Column(String) # 'success', 'failure', 'retry'
+    details = Column(String)
+    timestamp = Column(Float, default=time.time)
+
+
+class SystemHealth(Base):
+    __tablename__ = 'system_health'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    metric_name = Column(String, index=True) # 'active_sessions', 'queue_size', 'cpu_usage', 'memory_usage'
+    metric_value = Column(Float)
+    timestamp = Column(Float, default=time.time)
+
+
+class RetryHistory(Base):
+    __tablename__ = 'retry_history'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    correlation_id = Column(String, index=True)
+    retry_count = Column(Integer, default=0)
+    error_message = Column(String)
+    next_retry_at = Column(Float)
+    timestamp = Column(Float, default=time.time)
+
+
