@@ -33,7 +33,7 @@ def get_short_deal_link(long_url: str, unique_id: str) -> str:
             logging.error(f"Shlink URL shortening failed: {e}")
             
     # Fallback to local redirection URL
-    cloaker_domain = settings.get("cloaker_domain", "").strip()
+    cloaker_domain = (settings.get("cloaker_domain") or "").strip()
     if cloaker_domain:
         if not cloaker_domain.startswith("http"):
             cloaker_domain = "https://" + cloaker_domain

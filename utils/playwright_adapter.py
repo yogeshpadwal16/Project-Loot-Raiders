@@ -133,7 +133,29 @@ class PlaywrightSeleniumAdapter:
                 logging.warning(f"Failed to open window via execute_script: {e}")
                 return None
         try:
-            return self.page.evaluate(script)
+            # Guard against operating on a closed page (prevents "Target closed" errors)
+            if self.page.is_closed():
+                logging.warning("execute_script called on a closed page, skipping.")
+                return None
+
+            # Selenium's execute_script() wraps code in a function body where 'return'
+            # and 'arguments' are valid. Playwright's evaluate() expects an expression,
+            # so bare 'return' causes SyntaxError. Detect and wrap in an IIFE to match
+            # Selenium semantics.
+            has_return = 'return ' in script or 'return;' in script
+
+            if args:
+                # Inject arguments as a local variable inside an IIFE so that
+                # scripts using arguments[0], arguments[1] etc. work correctly
+                import json as _json
+                args_json = _json.dumps(list(args))
+                wrapped = f"(() => {{ const arguments = {args_json}; {script} }})()"
+                return self.page.evaluate(wrapped)
+            elif has_return:
+                wrapped = f"(() => {{ {script} }})()"
+                return self.page.evaluate(wrapped)
+            else:
+                return self.page.evaluate(script)
         except Exception as e:
             logging.warning(f"execute_script error: {e}")
             return None
