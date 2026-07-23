@@ -726,28 +726,38 @@ def main():
     single_run = "--single-run" in sys.argv or os.environ.get('GITHUB_ACTIONS') == 'true'
     
     if not single_run:
+        settings = load_settings()
         start_api_server(5555)
         
         # 4. Start Asynchronous Competitor Mirroring Listener
-        try:
-            from deal_engine.channel_mirror import start_channel_mirror
-            start_channel_mirror()
-        except Exception as mirror_err:
-            logging.error(f"Failed to start Channel Mirroring bot: {mirror_err}")
+        if settings.get("channel_mirror_enabled", False):
+            try:
+                from deal_engine.channel_mirror import start_channel_mirror
+                start_channel_mirror()
+            except Exception as mirror_err:
+                logging.error(f"Failed to start Channel Mirroring bot: {mirror_err}")
+        else:
+            logging.info("Competitor channel mirroring disabled (conserving CPU resources).")
             
         # 5. Start Asynchronous Catalog Priority Monitor
-        try:
-            from deal_engine.catalog_monitor import start_catalog_monitor
-            start_catalog_monitor()
-        except Exception as catalog_err:
-            logging.error(f"Failed to start Catalog Monitor: {catalog_err}")
+        if settings.get("catalog_monitor_enabled", False):
+            try:
+                from deal_engine.catalog_monitor import start_catalog_monitor
+                start_catalog_monitor()
+            except Exception as catalog_err:
+                logging.error(f"Failed to start Catalog Monitor: {catalog_err}")
+        else:
+            logging.info("Catalog priority monitoring disabled (conserving CPU resources).")
             
         # 5.5 Start Asynchronous Supermarket Loot Drop Monitor (Feature 28)
-        try:
-            from deal_engine.supermarket_monitor import start_supermarket_monitor
-            start_supermarket_monitor()
-        except Exception as supermarket_err:
-            logging.error(f"Failed to start Supermarket Monitor: {supermarket_err}")
+        if settings.get("supermarket_monitor_enabled", False):
+            try:
+                from deal_engine.supermarket_monitor import start_supermarket_monitor
+                start_supermarket_monitor()
+            except Exception as supermarket_err:
+                logging.error(f"Failed to start Supermarket Monitor: {supermarket_err}")
+        else:
+            logging.info("Supermarket monitor disabled (conserving CPU resources).")
             
         logging.info("Master Engine Activated. Scanners operating.")
     else:
@@ -827,7 +837,8 @@ def main():
                 logging.info("Single-run execution complete. Exiting scraper loop.")
                 break
                 
-            for _ in range(60):
+            loop_interval = settings.get("scraper_loop_interval", 300)
+            for _ in range(loop_interval):
                 if not scraper_state["is_running"] or scraper_state["scan_trigger"]:
                     break
                 time.sleep(1)

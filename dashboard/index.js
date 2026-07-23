@@ -1071,6 +1071,10 @@ async function fetchSettings() {
         document.getElementById('set-n8n-url').value = settings.n8n_webhook_url || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         document.getElementById('set-external-price-tracker-enabled').checked = settings.external_price_tracker_enabled || false;
+        document.getElementById('set-loop-interval').value = settings.scraper_loop_interval || 300;
+        document.getElementById('set-channel-mirror-enabled').checked = settings.channel_mirror_enabled || false;
+        document.getElementById('set-catalog-monitor-enabled').checked = settings.catalog_monitor_enabled || false;
+        document.getElementById('set-supermarket-monitor-enabled').checked = settings.supermarket_monitor_enabled || false;
         
         const notificationUris = settings.notification_uris || [];
         document.getElementById('set-notification-uris').value = notificationUris.join('\n');
@@ -1107,6 +1111,10 @@ async function saveSettings(e) {
     const n8n_webhook_url = document.getElementById('set-n8n-url').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     const external_price_tracker_enabled = document.getElementById('set-external-price-tracker-enabled').checked;
+    const scraper_loop_interval = parseInt(document.getElementById('set-loop-interval').value) || 300;
+    const channel_mirror_enabled = document.getElementById('set-channel-mirror-enabled').checked;
+    const catalog_monitor_enabled = document.getElementById('set-catalog-monitor-enabled').checked;
+    const supermarket_monitor_enabled = document.getElementById('set-supermarket-monitor-enabled').checked;
     
     const notificationUrisText = document.getElementById('set-notification-uris').value;
     const notification_uris = notificationUrisText.split('\n')
@@ -1141,6 +1149,10 @@ async function saveSettings(e) {
         n8n_webhook_url,
         proxies_enabled,
         external_price_tracker_enabled,
+        scraper_loop_interval,
+        channel_mirror_enabled,
+        catalog_monitor_enabled,
+        supermarket_monitor_enabled,
         notification_uris,
         proxy_list
     };
