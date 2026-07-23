@@ -1068,6 +1068,7 @@ async function fetchSettings() {
         document.getElementById('set-sendgrid-key').value = settings.sendgrid_api_key || '';
         document.getElementById('set-shlink-url').value = settings.shlink_api_url || '';
         document.getElementById('set-shlink-key').value = settings.shlink_api_key || '';
+        document.getElementById('set-n8n-url').value = settings.n8n_webhook_url || '';
         document.getElementById('set-proxies-enabled').checked = settings.proxies_enabled || false;
         document.getElementById('set-external-price-tracker-enabled').checked = settings.external_price_tracker_enabled || false;
         
@@ -1103,6 +1104,7 @@ async function saveSettings(e) {
     const sendgrid_api_key = document.getElementById('set-sendgrid-key').value.trim();
     const shlink_api_url = document.getElementById('set-shlink-url').value.trim();
     const shlink_api_key = document.getElementById('set-shlink-key').value.trim();
+    const n8n_webhook_url = document.getElementById('set-n8n-url').value.trim();
     const proxies_enabled = document.getElementById('set-proxies-enabled').checked;
     const external_price_tracker_enabled = document.getElementById('set-external-price-tracker-enabled').checked;
     
@@ -1136,6 +1138,7 @@ async function saveSettings(e) {
         sendgrid_api_key,
         shlink_api_url,
         shlink_api_key,
+        n8n_webhook_url,
         proxies_enabled,
         external_price_tracker_enabled,
         notification_uris,

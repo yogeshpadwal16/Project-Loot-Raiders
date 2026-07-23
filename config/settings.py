@@ -48,6 +48,7 @@ def load_settings() -> dict:
         "notification_uris": [],
         "shlink_api_url": "",
         "shlink_api_key": "",
+        "n8n_webhook_url": "",
         "external_price_tracker_enabled": False,
         "min_discount": 30.0,
         "min_deal_price": 299,
