@@ -132,7 +132,14 @@ class MultiClientMirrorListener:
             await self.pyro_client.connect()
             
             # Check authorization
-            if not await self.pyro_client.is_authorized():
+            try:
+                me = await self.pyro_client.get_me()
+                is_authorized = me is not None
+            except Exception as auth_err:
+                logging.warning(f"[Mirror Listener] Pyrogram authorization check failed: {auth_err}")
+                is_authorized = False
+
+            if not is_authorized:
                 logging.warning("[Mirror Listener] Pyrogram session is not authorized. Pyrogram start aborted.")
                 await self.pyro_client.disconnect()
                 return False
@@ -157,11 +164,26 @@ class MultiClientMirrorListener:
             # Message Handler Function
             async def pyro_handler(client, message):
                 async with self.limiter:
+                    # Stage 2: Message Reception
+                    chat_name = message.chat.username or message.chat.title or str(message.chat.id)
+                    logging.info(f"[STAGE 2: Message Reception] Pyrogram received message {message.id} from {chat_name}")
+                    
                     try:
+                        # Stage 5: Message Normalization
                         normalized = MessageNormalizer.from_pyrogram(message)
-                        self.queue.enqueue(normalized)
+                        logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                        
+                        # Stage 3: Queue Insertion
+                        logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                        success = self.queue.enqueue(normalized)
+                        if success:
+                            logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                        else:
+                            logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                            self._process_inline(normalized)
                     except Exception as err:
-                        logging.error(f"[Pyrogram Handler] Message normalization/enqueue failed: {err}")
+                        logging.error(f"[Listener Exception] [Pyrogram pyro_handler] Error processing message {message.id}: {err}", exc_info=True)
+                        raise
                         
             # Register event handler dynamically
             self.pyro_client.add_handler(
@@ -170,8 +192,8 @@ class MultiClientMirrorListener:
             logging.info("[Pyrogram] Message handler registered for active channels.")
             return True
         except Exception as e:
-            logging.error(f"[Mirror Listener] Failed to start Pyrogram: {e}")
-            return False
+            logging.error(f"[Mirror Listener] Failed to start Pyrogram: {e}", exc_info=True)
+            raise
 
     async def _start_telethon(self) -> bool:
         """Initializes and runs the Telethon client."""
@@ -179,8 +201,7 @@ class MultiClientMirrorListener:
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             session_path = os.path.join(base_dir, "channel_mirror.session")
             
-            from deal_engine.channel_mirror import _load_string_session
-            session_str = _load_string_session()
+            session_str = TELEGRAM_STRING_SESSION
             
             if session_str:
                 self.tele_client = TelegramClient(StringSession(session_str), int(TELEGRAM_API_ID), TELEGRAM_API_HASH)
@@ -213,18 +234,40 @@ class MultiClientMirrorListener:
             # Message Handler Function
             async def tele_handler(event):
                 async with self.limiter:
+                    # Stage 2: Message Reception
+                    chat_name = getattr(event.chat, 'username', None) or str(event.chat_id)
+                    logging.info(f"[STAGE 2: Message Reception] Telethon received message {event.message.id} from {chat_name}")
+                    
                     try:
+                        # Stage 5: Message Normalization
                         normalized = MessageNormalizer.from_telethon(event.message)
-                        self.queue.enqueue(normalized)
+                        logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                        
+                        # Stage 3: Queue Insertion
+                        logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                        success = self.queue.enqueue(normalized)
+                        if success:
+                            logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                        else:
+                            logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                            self._process_inline(normalized)
                     except Exception as err:
-                        logging.error(f"[Telethon Handler] Message normalization/enqueue failed: {err}")
+                        logging.error(f"[Listener Exception] [Telethon tele_handler] Error processing message {event.message.id}: {err}", exc_info=True)
+                        raise
                         
             self.tele_client.add_event_handler(tele_handler, events.NewMessage(chats=resolved_chats))
             logging.info("[Telethon] Message handler registered for active channels.")
             return True
         except Exception as e:
-            logging.error(f"[Mirror Listener] Failed to start Telethon fallback: {e}")
-            return False
+            logging.error(f"[Mirror Listener] Failed to start Telethon fallback: {e}", exc_info=True)
+            raise
+
+    def _process_inline(self, normalized: NormalizedMessage):
+        """Processes a normalized message directly without pushing to Redis queue (fallback/single-run)."""
+        logging.info(f"[STAGE 4: Queue Consumption] [CorrID: {normalized.correlation_id}] Bypassing Redis queue (Processing inline)")
+        from deal_engine.mirroring.processor import DealMirrorProcessor
+        processor = DealMirrorProcessor(self.queue)
+        processor._execute_pipeline(normalized)
 
     async def run_single_run_scan(self, limit: int = 20):
         """Performs a one-time sweep of recent messages (CI/GitHub Actions support)."""
@@ -240,13 +283,21 @@ class MultiClientMirrorListener:
                         logging.info(f"[Pyrogram Single-Run] Sweeping last {limit} messages from: {ch}")
                         async for message in self.pyro_client.get_chat_history(ch, limit=limit):
                             async with self.limiter:
+                                # Stage 2: Message Reception
+                                logging.info(f"[STAGE 2: Message Reception] Pyrogram swept message {message.id} from {ch}")
+                                # Stage 5: Message Normalization
                                 normalized = MessageNormalizer.from_pyrogram(message)
-                                self.queue.enqueue(normalized)
+                                logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
+                                # Stage 3: Queue Insertion / Consumption (Processing Inline)
+                                try:
+                                    self._process_inline(normalized)
+                                except Exception as proc_err:
+                                    logging.error(f"[Single-Run Processing Exception] [CorrID: {normalized.correlation_id}] Inline processing failed: {proc_err}", exc_info=True)
                     except Exception as ch_err:
-                        logging.error(f"[Pyrogram Single-Run] Failed sweeping chat {ch}: {ch_err}")
+                        logging.error(f"[Pyrogram Single-Run] Failed sweeping chat {ch}: {ch_err}", exc_info=True)
                 await self.pyro_client.disconnect()
             except Exception as e:
-                logging.error(f"[Pyrogram Single-Run] Sweep failed: {e}")
+                logging.error(f"[Pyrogram Single-Run] Sweep failed: {e}", exc_info=True)
         else:
             logging.warning("[Mirror Listener] Pyrogram unavailable. Falling back to Telethon for single-run sweep...")
             client_started = await self._start_telethon()
@@ -259,12 +310,20 @@ class MultiClientMirrorListener:
                             entity = await self.tele_client.get_input_entity(ch)
                             async for message in self.tele_client.iter_messages(entity, limit=limit):
                                 async with self.limiter:
+                                    # Stage 2: Message Reception
+                                    logging.info(f"[STAGE 2: Message Reception] Telethon swept message {message.id} from {ch}")
+                                    # Stage 5: Message Normalization
                                     normalized = MessageNormalizer.from_telethon(message)
-                                    self.queue.enqueue(normalized)
+                                    logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
+                                    # Stage 3: Queue Insertion / Consumption (Processing Inline)
+                                    try:
+                                        self._process_inline(normalized)
+                                    except Exception as proc_err:
+                                        logging.error(f"[Single-Run Processing Exception] [CorrID: {normalized.correlation_id}] Inline processing failed: {proc_err}", exc_info=True)
                         except Exception as ch_err:
-                            logging.error(f"[Telethon Single-Run] Failed sweeping chat {ch}: {ch_err}")
+                            logging.error(f"[Telethon Single-Run] Failed sweeping chat {ch}: {ch_err}", exc_info=True)
                     await self.tele_client.disconnect()
                 except Exception as e:
-                    logging.error(f"[Telethon Single-Run] Sweep failed: {e}")
+                    logging.error(f"[Telethon Single-Run] Sweep failed: {e}", exc_info=True)
             else:
                 logging.error("[Mirror Listener] Both Pyrogram and Telethon failed to initialize for history sweep.")
