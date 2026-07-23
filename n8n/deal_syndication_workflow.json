@@ -1,0 +1,89 @@
+{
+  "name": "Loot Raiders Deal Syndication",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "loot-deal-syndication",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        360
+      ],
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger"
+    },
+    {
+      "parameters": {
+        "text": "=🔥 LOOT DROP: {{ $json.discount }}% OFF!\n\n🛒 {{ $json.title }}\n\n💵 Price: ₹{{ $json.price }}\n❌ MRP: ₹{{ $json.mrp }}\n💰 You Save: ₹{{ $json.mrp - $json.price }}\n\n🔗 Grab it here: {{ $json.short_url }}"
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 1,
+      "position": [
+        500,
+        200
+      ],
+      "id": "twitter-post",
+      "name": "Post to X (Twitter)"
+    },
+    {
+      "parameters": {
+        "boardId": "YOUR_PINTEREST_BOARD_ID",
+        "note": "=🛒 {{ $json.title }} - Get {{ $json.discount }}% Off!\n\nPrice: ₹{{ $json.price }} (MRP: ₹{{ $json.mrp }})\n\nGrab this deal now: {{ $json.short_url }}",
+        "link": "={{ $json.short_url }}",
+        "imageUrl": "={{ $json.image_url }}"
+      },
+      "type": "n8n-nodes-base.pinterest",
+      "typeVersion": 1,
+      "position": [
+        500,
+        360
+      ],
+      "id": "pinterest-post",
+      "name": "Post to Pinterest"
+    },
+    {
+      "parameters": {
+        "message": "=🔥 LOOT DROP: {{ $json.discount }}% OFF!\n\n🛒 {{ $json.title }}\n\n💵 Price: ₹{{ $json.price }} (MRP: ₹{{ $json.mrp }})\n\n🔗 Get it here: {{ $json.short_url }}",
+        "link": "={{ $json.short_url }}"
+      },
+      "type": "n8n-nodes-base.facebook",
+      "typeVersion": 1,
+      "position": [
+        500,
+        520
+      ],
+      "id": "facebook-post",
+      "name": "Post to Facebook Page"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Post to X (Twitter)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to Pinterest",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post to Facebook Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1"
+}
