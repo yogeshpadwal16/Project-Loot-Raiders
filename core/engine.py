@@ -239,6 +239,23 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
             if should_publish_deal(platform, deal_score) and is_price_drop:
+                # 10. Deal Intelligence Engine check to suppress recurring / non-loot listing spams
+                from utils.deduplicator import is_genuine_loot_deal
+                db_sess = SessionLocal()
+                try:
+                    is_genuine, suppression_reason = is_genuine_loot_deal(unique_id, title, price, mrp, discount, db_sess)
+                except Exception as eval_err:
+                    logging.error(f"Error evaluating deal intelligence logic: {eval_err}")
+                    is_genuine = True
+                    suppression_reason = "error_fallback"
+                finally:
+                    db_sess.close()
+                    
+                if not is_genuine:
+                    logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+                    release_in_flight_deal(title, platform, final_url)
+                    continue
+                    
                 bank_offers = []
                 coupon_detail = ""
                 review_grade = "N/A"

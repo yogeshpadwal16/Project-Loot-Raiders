@@ -292,7 +292,8 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
             bank_offers=bank_offers,
             coupon_detail=coupon_detail,
             review_grade=review_grade,
-            auto_cart_url=auto_cart_url
+            auto_cart_url=auto_cart_url,
+            is_mirror=True
         )
         logging.info(f"[Deal Processor] Competitor deal alert successfully dispatched for: {title[:35]}")
             

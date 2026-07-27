@@ -257,3 +257,84 @@ def add_product_to_vector_db(product_id: str, title: str) -> bool:
     MOCKED_VECTOR_DB[product_id] = title
     logger.info(f"Mock-indexed product '{product_id}' -> '{title[:30]}' in memory.")
     return True
+
+def is_genuine_loot_deal(product_id: str, title: str, price: int, mrp: int, discount: float, db) -> Tuple[bool, str]:
+    """
+    Evaluates whether a candidate deal discovered by the Loot Scraper is a genuine,
+    value-adding loot deal, or if it is a spammy recurring listing that should be suppressed.
+    """
+    # Clean/normalize product_id if it was fallback hashed or transient
+    real_pid = product_id
+    similar_id = find_similar_product(title)
+    if similar_id:
+        real_pid = similar_id
+
+    # Retrieve all price and posting history for this product (most recent first)
+    history_entries = db.query(PriceHistory).filter_by(product_id=real_pid).order_by(PriceHistory.timestamp.desc()).all()
+    
+    if not history_entries:
+        # Check by title in case product_id was different
+        recent_prods = db.query(Product).order_by(Product.created_at.desc()).limit(300).all()
+        cleaned_title = clean_title_for_fuzzy(title)
+        
+        try:
+            from rapidfuzz import fuzz
+            use_rapidfuzz = True
+        except ImportError:
+            import difflib
+            use_rapidfuzz = False
+            
+        matched_pid = None
+        for p in recent_prods:
+            clean_cand = clean_title_for_fuzzy(p.title)
+            if not clean_cand:
+                continue
+            if use_rapidfuzz:
+                score = fuzz.token_sort_ratio(cleaned_title, clean_cand)
+            else:
+                score = difflib.SequenceMatcher(None, cleaned_title, clean_cand).ratio() * 100
+            if score >= 90.0:
+                matched_pid = p.id
+                break
+        
+        if matched_pid:
+            history_entries = db.query(PriceHistory).filter_by(product_id=matched_pid).order_by(PriceHistory.timestamp.desc()).all()
+            real_pid = matched_pid
+
+    if not history_entries:
+        # Brand new product with no history
+        return True, "new_product"
+
+    # Analyze posting history
+    latest_entry = history_entries[0]
+    now = time.time()
+    
+    # 1. Frequency suppression: If it was posted within the last 12 hours,
+    # suppress it unless there's a significant price drop (>= 15% drop from last post)
+    time_since_last_post = now - latest_entry.timestamp
+    if time_since_last_post < 43200: # 12 hours
+        price_drop_pct = ((latest_entry.price - price) / latest_entry.price) * 100.0 if latest_entry.price > 0 else 0.0
+        if price_drop_pct < 15.0:
+            return False, f"suppressed: posted recently ({time_since_last_post/3600:.2f}h ago) and price change too small ({price_drop_pct:.1f}%)"
+            
+    # 2. Daily frequency limits
+    # If the same product has been posted 3 or more times in the last 24 hours, suppress it!
+    last_24h_posts = [h for h in history_entries if now - h.timestamp < 86400]
+    if len(last_24h_posts) >= 3:
+        return False, f"suppressed: daily post limit reached ({len(last_24h_posts)} posts in 24h)"
+
+    # 3. Suppress recurring listings
+    # If the product has been posted historically many times (e.g. >= 5 times in last 7 days)
+    # and the current price is not lower than the historical minimum price, it is a recurring listing!
+    last_7d_posts = [h for h in history_entries if now - h.timestamp < 7 * 86400]
+    if len(last_7d_posts) >= 5:
+        min_historical_price = min(h.price for h in history_entries)
+        if price >= min_historical_price:
+            return False, f"suppressed: recurring listing (posted {len(last_7d_posts)} times in 7d at or above historical low ₹{min_historical_price})"
+
+    # 4. Check actual discount savings material change
+    # If the last post had the same or lower price, skip
+    if price >= latest_entry.price:
+        return False, f"suppressed: price is same or higher than last post (₹{price} >= ₹{latest_entry.price})"
+
+    return True, "approved"
