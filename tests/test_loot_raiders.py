@@ -565,9 +565,10 @@ class TestDealIntelligenceEngine(unittest.TestCase):
     
     def setUp(self):
         from database.db_session import SessionLocal
-        from knowledge_base.models import Product
+        from knowledge_base.models import Product, PriceHistory
         try:
             db = SessionLocal()
+            db.query(PriceHistory).filter(PriceHistory.product_id.startswith("test_intel_")).delete()
             db.query(Product).filter(Product.id.startswith("test_intel_")).delete()
             db.commit()
             db.close()
@@ -576,9 +577,10 @@ class TestDealIntelligenceEngine(unittest.TestCase):
 
     def tearDown(self):
         from database.db_session import SessionLocal
-        from knowledge_base.models import Product
+        from knowledge_base.models import Product, PriceHistory
         try:
             db = SessionLocal()
+            db.query(PriceHistory).filter(PriceHistory.product_id.startswith("test_intel_")).delete()
             db.query(Product).filter(Product.id.startswith("test_intel_")).delete()
             db.commit()
             db.close()
