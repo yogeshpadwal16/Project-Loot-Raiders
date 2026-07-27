@@ -30,6 +30,7 @@ class MultiClientMirrorListener:
         self.pyro_client: Optional[Client] = None
         self.tele_client: Optional[TelegramClient] = None
         self.active_client_name: Optional[str] = None
+        self.web_scraper_task: Optional[asyncio.Task] = None
         
         # Throttler to prevent API rate limits / FloodWait (Feature 28)
         self.limiter = AsyncLimiter(RATE_LIMIT_REQUESTS, RATE_LIMIT_PERIOD)
@@ -47,6 +48,8 @@ class MultiClientMirrorListener:
         self.should_run = False
         if self.supervisor_task:
             self.supervisor_task.cancel()
+        if self.web_scraper_task:
+            self.web_scraper_task.cancel()
         
         logging.info("[Mirror Listener] Stopping Telegram clients...")
         if self.pyro_client:
@@ -81,9 +84,16 @@ class MultiClientMirrorListener:
                             self.active_client_name = "telethon"
                             logging.info("[Mirror Listener] Fallback client (Telethon) is now active.")
                         else:
-                            logging.error("[Mirror Listener] Both primary and fallback clients failed to start. Re-trying in 30s...")
-                            await asyncio.sleep(30)
-                            continue
+                            # 3. Fall back to public session-less web scraper
+                            logging.warning("[Mirror Listener] Both primary and fallback clients failed to start. Falling back to public session-less Web Scraper...")
+                            success = await self._start_web_scraper()
+                            if success:
+                                self.active_client_name = "web_scraper"
+                                logging.info("[Mirror Listener] Public Web Scraper fallback is now active.")
+                            else:
+                                logging.error("[Mirror Listener] All client layers (Pyrogram, Telethon, Web Scraper) failed to start. Re-trying in 30s...")
+                                await asyncio.sleep(30)
+                                continue
                 
                 # Health Check Checkpoint
                 await asyncio.sleep(15)
@@ -106,10 +116,15 @@ class MultiClientMirrorListener:
                 self.active_client_name = None
         elif self.active_client_name == "telethon" and self.tele_client:
             if not self.tele_client.is_connected():
-                logging.warning("[Mirror Listener] Active client (Telethon) disconnected. Triggering Pyrogram retry...")
+                logging.warning("[Mirror Listener] Active client (Telethon) disconnected. Triggering public Web Scraper fallback...")
                 try: await self.tele_client.disconnect()
                 except Exception: pass
                 self.tele_client = None
+                self.active_client_name = None
+        elif self.active_client_name == "web_scraper":
+            if not self.web_scraper_task or self.web_scraper_task.done():
+                logging.warning("[Mirror Listener] Active public Web Scraper task died. Triggering restart...")
+                self.web_scraper_task = None
                 self.active_client_name = None
 
     async def _start_pyrogram(self) -> bool:
@@ -184,7 +199,7 @@ class MultiClientMirrorListener:
                             logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
                             logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
-                            self._process_inline(normalized)
+                            asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                     except Exception as err:
                         logging.error(f"[Listener Exception] [Pyrogram pyro_handler] Error processing message {message.id}: {err}", exc_info=True)
                         raise
@@ -264,7 +279,7 @@ class MultiClientMirrorListener:
                             logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
                             logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
-                            self._process_inline(normalized)
+                            asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                     except Exception as err:
                         logging.error(f"[Listener Exception] [Telethon tele_handler] Error processing message {event.message.id}: {err}", exc_info=True)
                         raise
@@ -310,7 +325,7 @@ class MultiClientMirrorListener:
                                 logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
                                 # Stage 3: Queue Insertion / Consumption (Processing Inline)
                                 try:
-                                    self._process_inline(normalized)
+                                    await asyncio.to_thread(self._process_inline, normalized)
                                 except Exception as proc_err:
                                     logging.error(f"[Single-Run Processing Exception] [CorrID: {normalized.correlation_id}] Inline processing failed: {proc_err}", exc_info=True)
                     except Exception as ch_err:
@@ -337,7 +352,7 @@ class MultiClientMirrorListener:
                                     logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
                                     # Stage 3: Queue Insertion / Consumption (Processing Inline)
                                     try:
-                                        self._process_inline(normalized)
+                                        await asyncio.to_thread(self._process_inline, normalized)
                                     except Exception as proc_err:
                                         logging.error(f"[Single-Run Processing Exception] [CorrID: {normalized.correlation_id}] Inline processing failed: {proc_err}", exc_info=True)
                         except Exception as ch_err:
@@ -347,3 +362,176 @@ class MultiClientMirrorListener:
                     logging.error(f"[Telethon Single-Run] Sweep failed: {e}", exc_info=True)
             else:
                 logging.error("[Mirror Listener] Both Pyrogram and Telethon failed to initialize for history sweep.")
+
+    async def _start_web_scraper(self) -> bool:
+        """Initializes and runs the public web scraper polling fallback task."""
+        self.active_client_name = "web_scraper"
+        self.web_scraper_task = asyncio.create_task(self._web_scraper_loop())
+        logging.info("[Mirror Listener] Public Web Scraper fallback task started.")
+        return True
+
+    async def _web_scraper_loop(self):
+        import httpx
+        from bs4 import BeautifulSoup
+        import re
+        from deal_engine.mirroring.schemas import ButtonSchema
+        
+        logging.info("[Mirror Listener] Starting public web scraper polling loop...")
+        
+        # Track last processed message IDs to avoid duplicates
+        last_seen_msg_ids = {}
+        
+        # Initialize headers
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        }
+        
+        channels = get_source_channels()
+        # Filter public channels
+        public_channels = [ch for ch in channels if not (ch.startswith("+") or "joinchat" in ch)]
+        
+        # Perform initial sweep to establish baseline last_seen IDs
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10) as client:
+            for ch in public_channels:
+                try:
+                    url = f"https://t.me/s/{ch}"
+                    resp = await client.get(url)
+                    if resp.status_code == 200:
+                        soup = BeautifulSoup(resp.text, "html.parser")
+                        messages = soup.find_all("div", class_="tgme_widget_message")
+                        max_id = 0
+                        for msg in messages:
+                            post_ref = msg.get("data-post", "")
+                            if post_ref and "/" in post_ref:
+                                try:
+                                    msg_id = int(post_ref.split("/")[-1])
+                                    if msg_id > max_id:
+                                        max_id = msg_id
+                                except ValueError:
+                                    pass
+                        if max_id > 0:
+                            # Start baseline 5 messages back so we pull the most recent 5 deals on startup
+                            baseline_val = max(0, max_id - 5)
+                            last_seen_msg_ids[ch] = baseline_val
+                            logging.info(f"[Web Scraper] Initialized baseline for {ch} at message ID {baseline_val} (Current max: {max_id})")
+                except Exception as init_err:
+                    logging.warning(f"[Web Scraper] Failed to initialize baseline for {ch}: {init_err}")
+        
+        # Main polling loop
+        while self.should_run and self.active_client_name == "web_scraper":
+            try:
+                logging.info("[Web Scraper] Polling competitor channels...")
+                async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10) as client:
+                    for ch in public_channels:
+                        try:
+                            url = f"https://t.me/s/{ch}"
+                            resp = await client.get(url)
+                            if resp.status_code != 200:
+                                logging.warning(f"[Web Scraper] Failed to fetch {ch}, status: {resp.status_code}")
+                                continue
+                                
+                            soup = BeautifulSoup(resp.text, "html.parser")
+                            messages = soup.find_all("div", class_="tgme_widget_message")
+                            
+                            new_messages = []
+                            baseline_id = last_seen_msg_ids.get(ch, 0)
+                            
+                            for msg in messages:
+                                post_ref = msg.get("data-post", "")
+                                if not post_ref or "/" not in post_ref:
+                                    continue
+                                try:
+                                    msg_id = int(post_ref.split("/")[-1])
+                                except ValueError:
+                                    continue
+                                    
+                                if msg_id > baseline_id:
+                                    new_messages.append((msg_id, msg))
+                                    
+                            # Process new messages in chronological order (smallest ID first)
+                            new_messages.sort(key=lambda x: x[0])
+                            
+                            for msg_id, msg in new_messages:
+                                # Stage 2: Message Reception
+                                logging.info(f"[STAGE 2: Message Reception] Web Scraper received message {msg_id} from {ch}")
+                                
+                                # Extract content
+                                text_elem = msg.find("div", class_="tgme_widget_message_text")
+                                full_text = text_elem.get_text(separator="\n").strip() if text_elem else ""
+                                
+                                # Extract raw links from text
+                                from deal_engine.mirroring.normalizer import extract_urls_from_text, extract_coupons_from_text, extract_seller_info
+                                extracted_urls = extract_urls_from_text(full_text)
+                                
+                                # Extract additional links from hyperlinked anchors
+                                if text_elem:
+                                    for a in text_elem.find_all("a"):
+                                        href = a.get("href")
+                                        if href and href.startswith("http") and href not in extracted_urls:
+                                            extracted_urls.append(href)
+                                            
+                                # Extract inline keyboard buttons
+                                buttons = []
+                                btn_container = msg.find("div", class_="tgme_widget_message_inline_keyboard")
+                                if btn_container:
+                                    for btn in btn_container.find_all("a", class_="tgme_widget_message_inline_button"):
+                                        btn_text = btn.get_text(strip=True)
+                                        btn_href = btn.get("href")
+                                        buttons.append(ButtonSchema(text=btn_text, url=btn_href))
+                                        if btn_href and btn_href.startswith("http") and btn_href not in extracted_urls:
+                                            extracted_urls.append(btn_href)
+                                            
+                                # Extract photo URL if present
+                                photo_wrap = msg.find("a", class_="tgme_widget_message_photo_wrap")
+                                photo_url = None
+                                media_type = "none"
+                                if photo_wrap:
+                                    style = photo_wrap.get("style", "")
+                                    match = re.search(r"background-image:\s*url\(['\"]?(.*?)['\"]?\)", style)
+                                    if match:
+                                        photo_url = match.group(1)
+                                        media_type = "photo"
+                                        
+                                coupons = extract_coupons_from_text(full_text)
+                                seller = extract_seller_info(full_text)
+                                
+                                # Stage 5: Message Normalization
+                                normalized = NormalizedMessage(
+                                    channel_id=ch,
+                                    channel_name=ch,
+                                    message_id=msg_id,
+                                    is_edited=False,
+                                    raw_text=full_text,
+                                    caption="",
+                                    media_type=media_type,
+                                    media_file_id=photo_url,
+                                    extracted_urls=extracted_urls,
+                                    buttons=buttons,
+                                    seller=seller,
+                                    coupon_codes=coupons,
+                                    metadata={
+                                        "client": "web_scraper",
+                                        "photo_url": photo_url
+                                    }
+                                )
+                                logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                                
+                                # Stage 3: Queue Insertion
+                                logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                                success = self.queue.enqueue(normalized)
+                                if success:
+                                    logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                                else:
+                                    logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                                    asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
+                                    
+                                last_seen_msg_ids[ch] = msg_id
+                        except Exception as ch_err:
+                            logging.error(f"[Web Scraper] Error scraping channel {ch}: {ch_err}", exc_info=True)
+                            
+                # Sleep for 120 seconds (2 minutes) before next poll loop
+                await asyncio.sleep(120)
+            except Exception as e:
+                logging.error(f"[Web Scraper] Polling loop exception: {e}", exc_info=True)
+                await asyncio.sleep(30)
+

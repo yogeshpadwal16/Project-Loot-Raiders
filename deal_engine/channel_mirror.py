@@ -1,9 +1,25 @@
 import logging
 import asyncio
-import threading
+import re
 from deal_engine.mirroring import (
     start_mirror_engine, stop_mirror_engine, get_listener, get_queue
 )
+
+# Non-product URL patterns to skip (search pages, category listings, etc.)
+SKIP_URL_PATTERNS = [
+    r'amazon\.in/s\?',        # Amazon search pages
+    r'flipkart\.com/.*/pr\?', # Flipkart category pages
+    r'/gp/goldbox',            # Amazon deals hub
+    r'/gp/bestsellers',        # Amazon bestsellers
+    r'/gp/new-releases',       # Amazon new releases
+]
+
+def _should_skip_url(url: str) -> bool:
+    """Check if a URL is a non-product page (search, category, etc.) that should be skipped."""
+    for pattern in SKIP_URL_PATTERNS:
+        if re.search(pattern, url, re.IGNORECASE):
+            return True
+    return False
 
 def start_channel_mirror():
     """
@@ -35,3 +51,4 @@ def run_mirror_single_run():
         logging.error(f"[Channel Mirror Wrapper] History sweep failed: {e}")
     finally:
         loop.close()
+

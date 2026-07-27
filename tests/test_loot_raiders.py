@@ -375,6 +375,15 @@ class TestSemanticDeduplication(unittest.TestCase):
     
     def setUp(self):
         try:
+            from database.db_session import SessionLocal
+            from knowledge_base.models import Product
+            db = SessionLocal()
+            db.query(Product).filter_by(id="test_product_9999").delete()
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+        try:
             from utils.deduplicator import _init_db
             import utils.deduplicator as deduplicator
             _init_db()
@@ -384,6 +393,15 @@ class TestSemanticDeduplication(unittest.TestCase):
             pass
 
     def tearDown(self):
+        try:
+            from database.db_session import SessionLocal
+            from knowledge_base.models import Product
+            db = SessionLocal()
+            db.query(Product).filter_by(id="test_product_9999").delete()
+            db.commit()
+            db.close()
+        except Exception:
+            pass
         try:
             import utils.deduplicator as deduplicator
             if deduplicator._collection:

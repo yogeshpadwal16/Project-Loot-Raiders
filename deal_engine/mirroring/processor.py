@@ -2,6 +2,7 @@ import time
 import logging
 import threading
 import uuid
+import re
 from typing import List, Optional, Tuple
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -118,15 +119,15 @@ class DealMirrorProcessor:
                 expanded_url = self._expand_url_with_retry(raw_url)
                 
                 # Resolve competitor landing pages
-                store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
-                if not any(d in expanded_url.lower() for d in store_domains):
-                    logging.info(f"[Mirror Pipeline] Non-store URL: {expanded_url}. Scanning landing page...")
-                    extracted = extract_store_url_from_competitor_landing_page(expanded_url)
-                    if extracted:
-                        expanded_url = self._expand_url_with_retry(extracted)
-                        
-                # 3. Extract platform and ID
                 platform, unique_id = self._parse_url_metadata(expanded_url)
+                if not platform or not unique_id:
+                    # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
+                    logging.info(f"[Mirror Pipeline] Non-store URL: {expanded_url}. Scanning landing page...")
+                    candidates = extract_store_url_from_competitor_landing_page(expanded_url)
+                    if candidates:
+                        expanded_url = candidates
+                        platform, unique_id = self._parse_url_metadata(expanded_url)
+                
                 if not platform or not unique_id:
                     logging.warning(f"[Mirror Pipeline] Could not resolve store identifier for: {expanded_url}")
                     continue
@@ -150,22 +151,53 @@ class DealMirrorProcessor:
                     discount = ((mrp - price) / mrp) * 100.0
                     
                 # 5. Duplicate Detection (Intelligent RapidFuzz check)
-                is_dup, matched_id = IntelligentDeduplicator.find_duplicate(title, price, time_window_hours=24)
+                is_dup, matched_id = IntelligentDeduplicator.find_duplicate(
+                    title=title,
+                    current_price=price,
+                    time_window_hours=24,
+                    platform=platform,
+                    url=expanded_url,
+                    text=message.raw_text
+                )
+                
+                is_price_drop = True
                 if is_dup:
-                    # Update price history under the matched parent ID
                     logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
                     unique_id = matched_id
+                    
+                    # Fetch latest price from DB to see if the price actually dropped
+                    db_session = SessionLocal()
+                    try:
+                        latest = db_session.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
+                        if latest:
+                            # If the price is the same or higher, we do NOT alert it again (avoids subscriber spam)
+                            if price >= latest.price:
+                                is_price_drop = False
+                                logging.info(f"[Mirror Pipeline] Skipping duplicate deal: {title[:35]}... (Price ₹{price} >= latest ₹{latest.price})")
+                    except Exception as db_err:
+                        logging.error(f"[Mirror Pipeline] Error querying latest price for duplicate check: {db_err}")
+                    finally:
+                        db_session.close()
+
+                if not is_price_drop:
+                    from utils.deduplicator import release_in_flight_deal
+                    release_in_flight_deal(title, platform, expanded_url)
+                    continue
+
                     
                 # 6. Check price trends
                 is_verified_low = True
                 try:
-                    from utils.playwright_adapter import get_playwright_driver
                     settings = load_settings()
-                    temp_driver = get_playwright_driver(settings)
-                    try:
-                        is_verified_low = verify_historical_low(temp_driver, expanded_url, price, unique_id, discount)
-                    finally:
-                        temp_driver.quit()
+                    if settings.get("external_price_tracker_enabled", False):
+                        from utils.playwright_adapter import get_playwright_driver
+                        temp_driver = get_playwright_driver(settings)
+                        try:
+                            is_verified_low = verify_historical_low(temp_driver, expanded_url, price, unique_id, discount)
+                        finally:
+                            temp_driver.quit()
+                    else:
+                        is_verified_low = verify_historical_low(None, expanded_url, price, unique_id, discount)
                 except Exception as verify_err:
                     logging.warning(f"[Mirror Pipeline] Historical check failed, defaulting to True: {verify_err}")
                     
@@ -206,13 +238,35 @@ class DealMirrorProcessor:
 
     def _expand_url_with_retry(self, url: str) -> str:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+        expanded = url
         try:
             res = requests.head(url, headers=headers, allow_redirects=True, timeout=10)
             if res.status_code >= 400 or res.url == url:
                 res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=10)
-            return res.url
+            expanded = res.url
         except Exception:
-            return url
+            pass
+            
+        # If it's still a non-store URL, use Playwright to resolve JS redirects
+        store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
+        if not any(d in expanded.lower() for d in store_domains):
+            try:
+                from utils.playwright_adapter import get_playwright_driver
+                settings = load_settings()
+                temp_driver = get_playwright_driver(settings)
+                try:
+                    temp_driver.get(expanded)
+                    time.sleep(5)  # Wait for JS redirects to settle
+                    final_url = temp_driver.page.url
+                    if any(d in final_url.lower() for d in store_domains):
+                        logging.info(f"[Mirror Pipeline] Playwright resolved JS redirect: {url} -> {final_url}")
+                        expanded = final_url
+                finally:
+                    temp_driver.quit()
+            except Exception as e:
+                logging.warning(f"[Mirror Pipeline] Playwright redirect resolution failed: {e}")
+                
+        return expanded
 
     def _parse_url_metadata(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         url_lower = url.lower()
@@ -232,6 +286,19 @@ class DealMirrorProcessor:
             return "meesho", f"meesho_{match.group(1)}" if match else f"meesho_{str(hash(url))}"
         elif "ajio.com" in url_lower:
             return "ajio", f"ajio_{str(hash(url))}"
+        elif "jiomart.com" in url_lower:
+            prod_id = None
+            if "/p/" in url:
+                try:
+                    p_path = url.split("/p/")[-1].split("?")[0].rstrip("/")
+                    parts = [p for p in p_path.split("/") if p]
+                    if parts:
+                        prod_id = parts[-1]
+                except Exception:
+                    pass
+            if not prod_id:
+                prod_id = str(abs(hash(url)))
+            return "jiomart", f"jiomart_{prod_id}"
         return None, None
 
     def _log_stage(self, db, correlation_id: str, stage: str, status: str, details: str):
