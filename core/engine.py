@@ -153,10 +153,27 @@ def scrape_platform(platform: str, config: dict, history: set):
             reviews = deal.get("reviews")
             has_bank_offer = deal.get("has_bank_offer", False)
             
+            # Concurrency and duplicate detection
+            from utils.deduplicator import find_duplicate_deal, release_in_flight_deal
+            is_dup, matched_id = find_duplicate_deal(
+                title=title,
+                price=price,
+                platform=platform,
+                url=final_url,
+                time_window_hours=24
+            )
+            
+            if is_dup and matched_id == "in-flight":
+                logging.info(f"Skipping concurrent in-flight deal: {title[:35]}")
+                continue
+                
+            if is_dup and matched_id:
+                logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{matched_id}'")
+                unique_id = matched_id
+            
             # Fetch latest price from DB to see if it's a duplicate or if the price changed
             price_changed = True
             is_price_drop = False
-            stale_data = False
             db = SessionLocal()
             try:
                 latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
@@ -167,11 +184,6 @@ def scrape_platform(platform: str, config: dict, history: set):
                     else:
                         price_changed = True
                         is_price_drop = price < latest.price
-                    # Detect stale data: if last price record is older than 12 hours,
-                    # the system was likely offline — treat as fresh discovery so deals
-                    # get broadcast even if the price went up during the downtime.
-                    if (time.time() - latest.timestamp) > 43200:
-                        stale_data = True
                 else:
                     # New product is treated as a price drop
                     price_changed = True
@@ -182,6 +194,7 @@ def scrape_platform(platform: str, config: dict, history: set):
                 db.close()
                 
             if not price_changed:
+                release_in_flight_deal(title, platform, final_url)
                 continue
                 
             # Filter out low-value cheap products or minor savings spams
@@ -197,6 +210,7 @@ def scrape_platform(platform: str, config: dict, history: set):
                     break
             if blocked_match:
                 logging.info(f"Skipping blocklisted accessory deal: {title[:35]}... (Matched: '{blocked_match}')")
+                release_in_flight_deal(title, platform, final_url)
                 continue
                 
             min_price = settings.get("min_deal_price", 299)
@@ -205,6 +219,7 @@ def scrape_platform(platform: str, config: dict, history: set):
             
             if price < min_price or savings < min_savings:
                 logging.info(f"Skipping basic/cheap deal: {title[:35]}... (Price: ₹{price}, Savings: ₹{savings})")
+                release_in_flight_deal(title, platform, final_url)
                 continue
                 
             # Extract base URL to check price tracker history
@@ -222,9 +237,8 @@ def scrape_platform(platform: str, config: dict, history: set):
             unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
             history.add(unique_id)
             
-            # Dispatch notifications if score is above the configured threshold and
-            # it's either a price drop, a new product, or the data was stale (system was offline)
-            if should_publish_deal(platform, deal_score) and (is_price_drop or stale_data):
+            # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
+            if should_publish_deal(platform, deal_score) and is_price_drop:
                 bank_offers = []
                 coupon_detail = ""
                 review_grade = "N/A"

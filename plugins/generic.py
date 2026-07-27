@@ -315,14 +315,24 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         
                     # Extract unique ID from URL path or fallback
                     prod_id = None
-                    match_id = re.search(r'/p/([a-zA-Z0-9_-]+)', raw_url)
-                    if match_id:
-                        prod_id = match_id.group(1)
-                    else:
-                        match_num = re.findall(r'\b\d{6,15}\b', raw_url)
-                        if match_num:
-                            prod_id = match_num[0]
+                    if "/p/" in raw_url:
+                        try:
+                            p_path = raw_url.split("/p/")[-1].split("?")[0].rstrip("/")
+                            parts = [p for p in p_path.split("/") if p]
+                            if parts:
+                                prod_id = parts[-1]
+                        except Exception:
+                            pass
                             
+                    if not prod_id:
+                        match_id = re.search(r'/p/([a-zA-Z0-9_-]+)', raw_url)
+                        if match_id:
+                            prod_id = match_id.group(1)
+                        else:
+                            match_num = re.findall(r'\b\d{6,15}\b', raw_url)
+                            if match_num:
+                                prod_id = match_num[0]
+                                
                     if not prod_id:
                         prod_id = str(abs(hash(raw_url)))
                         

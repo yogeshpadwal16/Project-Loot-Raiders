@@ -143,14 +143,18 @@ def initialize_database_selectors():
         db.close()
 
 def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0) -> str:
+    logging.info(f"[DB Save] Entering save_deal_to_db for '{title[:30]}' (ID: {unique_id})")
     db = SessionLocal()
     try:
         # Check if exact product unique_id exists
+        logging.info(f"[DB Save] Querying product table for ID: {unique_id}")
         product = db.query(Product).filter_by(id=unique_id).first()
+        logging.info(f"[DB Save] Product database query finished. Found: {product is not None}")
         
         # If product does not exist, check for semantic duplicates in vector catalog
         if not product:
             try:
+                logging.info(f"[DB Save] Product not in DB. Running find_similar_product check...")
                 from utils.deduplicator import find_similar_product
                 similar_id = find_similar_product(title)
                 if similar_id:
@@ -162,6 +166,7 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
                 
         # Insert if still not found
         if not product:
+            logging.info(f"[DB Save] Creating new Product entry in DB: {unique_id}")
             product = Product(
                 id=unique_id,
                 platform=platform,
@@ -171,6 +176,7 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             )
             db.add(product)
             db.flush()
+            logging.info(f"[DB Save] Product entry flushed. Indexing vector...")
             
             # Index inside vector catalog for future match alerts
             try:
@@ -179,11 +185,13 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             except Exception as index_err:
                 logging.error(f"Failed to index new deal vector embedding: {index_err}")
         else:
+            logging.info(f"[DB Save] Updating existing Product entry: {unique_id}")
             # Update parent properties to keep link fresh
             product.title = title
             product.image_url = img_url
             product.url = final_url
         
+        logging.info(f"[DB Save] Adding PriceHistory record for: {unique_id}")
         price_hist = PriceHistory(
             product_id=unique_id,
             price=price,
@@ -194,7 +202,9 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             timestamp=time.time()
         )
         db.add(price_hist)
+        logging.info(f"[DB Save] Committing database transaction...")
         db.commit()
+        logging.info(f"[DB Save] Database transaction committed successfully for: {unique_id}")
     except Exception as e:
         db.rollback()
         logging.error(f"Failed to save deal to database: {e}")

@@ -1089,225 +1089,230 @@ def notifier_worker():
         if job is None:
             break
             
-        platform = job.get("platform")
-        title = job.get("title")
-        price = job.get("price")
-        mrp = job.get("mrp")
-        discount = job.get("discount")
-        img_url = job.get("image_url")
-        final_url = job.get("url")
-        is_verified_low = job.get("is_verified_low")
-        deal_score = job.get("deal_score")
-        unique_id = job.get("unique_id")
-        
-        # Resolve short deal link (via Shlink API or local fallback redirection)
-        short_url = get_short_deal_link(final_url, unique_id)
-        bank_offers = job.get("bank_offers", [])
-        coupon_detail = job.get("coupon_detail", "")
-        review_grade = job.get("review_grade", "N/A")
-        auto_cart_url = job.get("auto_cart_url")
-        retries = job.get("retries", 0)
-        
-        settings = load_settings()
-        bot_token = settings.get("telegram_bot_token")
-        chat_id = settings.get("telegram_chat_id")
-        discord_webhook = settings.get("discord_webhook_url")
-        
-        has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
-        has_discord = (discord_webhook and discord_webhook.strip() != "")
-        
-        smtp_server = settings.get("smtp_server")
-        smtp_user = settings.get("smtp_username")
-        smtp_pass = settings.get("smtp_password")
-        smtp_from = settings.get("smtp_from")
-        smtp_to = settings.get("smtp_to")
-        has_email = bool(smtp_server and smtp_user and smtp_pass and smtp_from and smtp_to)
-        
-        telegram_ok = True
-        discord_ok = True
-        email_ok = True
-        
-        # A. Dispatch personal direct message alerts first
         try:
-            check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, short_url, bank_offers)
-        except Exception as alerts_err:
-            log_failure(
-                component="Personal Alerts Dispatcher",
-                context=f"Failed to match and alert personal alert subscribers for deal '{title[:30]}'",
-                err=alerts_err,
-                severity="WARNING",
-                recovery_status="Ignored",
-                recommended_action="Check database connection or query integrity."
-            )
+            platform = job.get("platform")
+            title = job.get("title")
+            price = job.get("price")
+            mrp = job.get("mrp")
+            discount = job.get("discount")
+            img_url = job.get("image_url")
+            final_url = job.get("url")
+            is_verified_low = job.get("is_verified_low")
+            deal_score = job.get("deal_score")
+            unique_id = job.get("unique_id")
         
-        # B. Dispatch channel updates
-        if has_telegram:
-            # Enforce compulsory product image rule
-            if not img_url or img_url.strip() == "" or "base64" in img_url:
-                logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
-                notification_queue.task_done()
-                continue
-                
+            # Resolve short deal link (via Shlink API or local fallback redirection)
+            short_url = get_short_deal_link(final_url, unique_id)
+            bank_offers = job.get("bank_offers", [])
+            coupon_detail = job.get("coupon_detail", "")
+            review_grade = job.get("review_grade", "N/A")
+            auto_cart_url = job.get("auto_cart_url")
+            retries = job.get("retries", 0)
+        
+            settings = load_settings()
+            bot_token = settings.get("telegram_bot_token")
+            chat_id = settings.get("telegram_chat_id")
+            discord_webhook = settings.get("discord_webhook_url")
+        
+            has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
+            has_discord = (discord_webhook and discord_webhook.strip() != "")
+        
+            smtp_server = settings.get("smtp_server")
+            smtp_user = settings.get("smtp_username")
+            smtp_pass = settings.get("smtp_password")
+            smtp_from = settings.get("smtp_from")
+            smtp_to = settings.get("smtp_to")
+            has_email = bool(smtp_server and smtp_user and smtp_pass and smtp_from and smtp_to)
+        
+            telegram_ok = True
+            discord_ok = True
+            email_ok = True
+        
+            # A. Dispatch personal direct message alerts first
             try:
-                telegram_ok = send_telegram_alert(
-                    bot_token=bot_token,
-                    chat_id=chat_id,
-                    platform=platform,
-                    title=title,
-                    price=price,
-                    mrp=mrp,
-                    discount=discount,
-                    img_url=img_url,
-                    final_url=final_url,
-                    is_verified_low=is_verified_low,
-                    deal_score=deal_score,
-                    unique_id=unique_id,
-                    bank_offers=bank_offers,
-                    coupon_detail=coupon_detail,
-                    review_grade=review_grade,
-                    auto_cart_url=auto_cart_url
-                )
-            except Exception as tg_err:
+                check_and_dispatch_personal_alerts(unique_id, platform, title, price, mrp, discount, img_url, short_url, bank_offers)
+            except Exception as alerts_err:
                 log_failure(
-                    component="Telegram Channel Notifier",
-                    context=f"Failed to broadcast deal '{title[:30]}' to channel {chat_id}",
-                    err=tg_err,
-                    severity="ERROR",
-                    recovery_status="Retrying" if retries < 3 else "Failed",
-                    recommended_action="Validate Telegram Bot token and chat ID, or check for Telegram API blockages."
-                )
-                telegram_ok = False
-            
-        apprise_ok = True
-        apprise_uris = settings.get("notification_uris", [])
-        if apprise_uris:
-            try:
-                import apprise
-                apobj = apprise.Apprise()
-                for uri in apprise_uris:
-                    # Skip primary Telegram URI to prevent double-posting
-                    if has_telegram and "tgram://" in uri and bot_token in uri and (chat_id in uri or chat_id.lstrip('@') in uri):
-                        continue
-                    apobj.add(uri)
-                
-                if len(apobj) > 0:
-                    savings = mrp - price
-                    title_clean = title.split('\n')[0].strip()
-                    subject = f"🔥 LOOT DROP: {discount:.0f}% OFF - {title_clean[:50]}..."
-                    
-                    body_md = (
-                        f"🛍️ **{title_clean}**\n\n"
-                        f"💵 **Loot Price:**  `₹{price:,}`\n"
-                        f"❌ **Original MRP:** ~~₹{mrp:,}~~\n"
-                        f"📉 **Discount:**     **{discount:.0f}% OFF**\n"
-                        f"💰 **You Save:**     `₹{savings:,}`\n\n"
-                        f"🔗 [Buy Link]({short_url})"
-                    )
-                    
-                    apprise_ok = apobj.notify(
-                        body=body_md,
-                        title=subject,
-                        body_format=apprise.NotifyFormat.MARKDOWN
-                    )
-                    if not apprise_ok:
-                        logging.warning("Apprise notification failed for one or more endpoints.")
-            except Exception as apprise_err:
-                log_failure(
-                    component="Apprise Alerting Engine",
-                    context=f"Failed to dispatch unified alert for deal '{title[:30]}'",
-                    err=apprise_err,
-                    severity="ERROR",
-                    recovery_status="Ignored",
-                    recommended_action="Validate your Apprise URI formats in Settings Panel."
-                )
-                apprise_ok = False
-        else:
-            # Legacy fallbacks
-            if has_discord:
-                try:
-                    discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
-                except Exception as disc_err:
-                    log_failure(
-                        component="Discord Webhook Notifier",
-                        context=f"Failed to dispatch webhook alert for deal '{title[:30]}'",
-                        err=disc_err,
-                        severity="ERROR",
-                        recovery_status="Retrying" if retries < 3 else "Failed",
-                        recommended_action="Check validity of the Discord Webhook URL."
-                    )
-                    discord_ok = False
-                
-            try:
-                send_whatsapp_alert(title, price, mrp, discount, short_url, is_verified_low, deal_score)
-            except Exception as wa_err:
-                log_failure(
-                    component="WhatsApp Notifier",
-                    context=f"Failed to send Twilio alert for deal '{title[:30]}'",
-                    err=wa_err,
+                    component="Personal Alerts Dispatcher",
+                    context=f"Failed to match and alert personal alert subscribers for deal '{title[:30]}'",
+                    err=alerts_err,
                     severity="WARNING",
                     recovery_status="Ignored",
-                    recommended_action="Verify Twilio Account SID, Auth Token, and phone numbers in local environment."
+                    recommended_action="Check database connection or query integrity."
                 )
+        
+            # B. Dispatch channel updates
+            if has_telegram:
+                # Enforce compulsory product image rule
+                if not img_url or img_url.strip() == "" or "base64" in img_url:
+                    logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
+                    notification_queue.task_done()
+                    continue
                 
-            if has_email:
                 try:
-                    email_ok = send_email_alert(title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
-                except Exception as mail_err:
+                    telegram_ok = send_telegram_alert(
+                        bot_token=bot_token,
+                        chat_id=chat_id,
+                        platform=platform,
+                        title=title,
+                        price=price,
+                        mrp=mrp,
+                        discount=discount,
+                        img_url=img_url,
+                        final_url=final_url,
+                        is_verified_low=is_verified_low,
+                        deal_score=deal_score,
+                        unique_id=unique_id,
+                        bank_offers=bank_offers,
+                        coupon_detail=coupon_detail,
+                        review_grade=review_grade,
+                        auto_cart_url=auto_cart_url
+                    )
+                except Exception as tg_err:
                     log_failure(
-                        component="Email Alert Notifier",
-                        context=f"Failed to dispatch deal '{title[:30]}' to recipient list",
-                        err=mail_err,
+                        component="Telegram Channel Notifier",
+                        context=f"Failed to broadcast deal '{title[:30]}' to channel {chat_id}",
+                        err=tg_err,
                         severity="ERROR",
                         recovery_status="Retrying" if retries < 3 else "Failed",
-                        recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
+                        recommended_action="Validate Telegram Bot token and chat ID, or check for Telegram API blockages."
                     )
-                    email_ok = False
+                    telegram_ok = False
             
-        # C. Dispatch to n8n low-code syndication webhook
-        n8n_url = settings.get("n8n_webhook_url")
-        if n8n_url:
-            try:
-                send_n8n_webhook(
-                    webhook_url=n8n_url,
-                    platform=platform,
-                    title=title,
-                    price=price,
-                    mrp=mrp,
-                    discount=discount,
-                    img_url=img_url,
-                    short_url=short_url,
-                    deal_score=deal_score
-                )
-            except Exception as n8n_err:
-                log_failure(
-                    component="n8n Webhook Notifier",
-                    context=f"Failed to post deal '{title[:30]}' to n8n webhook",
-                    err=n8n_err,
-                    severity="WARNING",
-                    recovery_status="Ignored",
-                    recommended_action="Validate your n8n Webhook URL configuration."
-                )
-            
-        # Retry with exponential backoff on failure
-        if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):
-            if retries < 3:
-                job["retries"] = retries + 1
-                backoff = (2 ** retries) * 5
-                logging.warning(f"Notification broadcast failed. Retrying job in {backoff} seconds...")
-                threading.Timer(backoff, lambda: notification_queue.put(job)).start()
+            apprise_ok = True
+            apprise_uris = settings.get("notification_uris", [])
+            if apprise_uris:
+                try:
+                    import apprise
+                    apobj = apprise.Apprise()
+                    for uri in apprise_uris:
+                        # Skip primary Telegram URI to prevent double-posting
+                        if has_telegram and "tgram://" in uri and bot_token in uri and (chat_id in uri or chat_id.lstrip('@') in uri):
+                            continue
+                        apobj.add(uri)
+                
+                    if len(apobj) > 0:
+                        savings = mrp - price
+                        title_clean = title.split('\n')[0].strip()
+                        subject = f"🔥 LOOT DROP: {discount:.0f}% OFF - {title_clean[:50]}..."
+                    
+                        body_md = (
+                            f"🛍️ **{title_clean}**\n\n"
+                            f"💵 **Loot Price:**  `₹{price:,}`\n"
+                            f"❌ **Original MRP:** ~~₹{mrp:,}~~\n"
+                            f"📉 **Discount:**     **{discount:.0f}% OFF**\n"
+                            f"💰 **You Save:**     `₹{savings:,}`\n\n"
+                            f"🔗 [Buy Link]({short_url})"
+                        )
+                    
+                        apprise_ok = apobj.notify(
+                            body=body_md,
+                            title=subject,
+                            body_format=apprise.NotifyFormat.MARKDOWN
+                        )
+                        if not apprise_ok:
+                            logging.warning("Apprise notification failed for one or more endpoints.")
+                except Exception as apprise_err:
+                    log_failure(
+                        component="Apprise Alerting Engine",
+                        context=f"Failed to dispatch unified alert for deal '{title[:30]}'",
+                        err=apprise_err,
+                        severity="ERROR",
+                        recovery_status="Ignored",
+                        recommended_action="Validate your Apprise URI formats in Settings Panel."
+                    )
+                    apprise_ok = False
             else:
-                log_failure(
-                    component="Broadcaster Queue Scheduler",
-                    context=f"Broadcast completely failed after 3 attempts: '{title[:50]}'",
-                    err=Exception("Maximum retry limit exceeded"),
-                    severity="CRITICAL",
-                    recovery_status="Discarded",
-                    recommended_action="Examine underlying service outages for Telegram, Discord, or SMTP server."
-                )
+                # Legacy fallbacks
+                if has_discord:
+                    try:
+                        discord_ok = send_discord_webhook(discord_webhook, title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
+                    except Exception as disc_err:
+                        log_failure(
+                            component="Discord Webhook Notifier",
+                            context=f"Failed to dispatch webhook alert for deal '{title[:30]}'",
+                            err=disc_err,
+                            severity="ERROR",
+                            recovery_status="Retrying" if retries < 3 else "Failed",
+                            recommended_action="Check validity of the Discord Webhook URL."
+                        )
+                        discord_ok = False
                 
-        notification_queue.task_done()
-        # Spacer delay to avoid Telegram 429 rate limit
-        time.sleep(3.5)
+                try:
+                    send_whatsapp_alert(title, price, mrp, discount, short_url, is_verified_low, deal_score)
+                except Exception as wa_err:
+                    log_failure(
+                        component="WhatsApp Notifier",
+                        context=f"Failed to send Twilio alert for deal '{title[:30]}'",
+                        err=wa_err,
+                        severity="WARNING",
+                        recovery_status="Ignored",
+                        recommended_action="Verify Twilio Account SID, Auth Token, and phone numbers in local environment."
+                    )
+                
+                if has_email:
+                    try:
+                        email_ok = send_email_alert(title, price, mrp, discount, img_url, short_url, is_verified_low, deal_score)
+                    except Exception as mail_err:
+                        log_failure(
+                            component="Email Alert Notifier",
+                            context=f"Failed to dispatch deal '{title[:30]}' to recipient list",
+                            err=mail_err,
+                            severity="ERROR",
+                            recovery_status="Retrying" if retries < 3 else "Failed",
+                            recommended_action="Check SMTP Server address, port, and credentials in Settings Panel."
+                        )
+                        email_ok = False
+            
+            # C. Dispatch to n8n low-code syndication webhook
+            n8n_url = settings.get("n8n_webhook_url")
+            if n8n_url:
+                try:
+                    send_n8n_webhook(
+                        webhook_url=n8n_url,
+                        platform=platform,
+                        title=title,
+                        price=price,
+                        mrp=mrp,
+                        discount=discount,
+                        img_url=img_url,
+                        short_url=short_url,
+                        deal_score=deal_score
+                    )
+                except Exception as n8n_err:
+                    log_failure(
+                        component="n8n Webhook Notifier",
+                        context=f"Failed to post deal '{title[:30]}' to n8n webhook",
+                        err=n8n_err,
+                        severity="WARNING",
+                        recovery_status="Ignored",
+                        recommended_action="Validate your n8n Webhook URL configuration."
+                    )
+            
+            # Retry with exponential backoff on failure
+            if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):
+                if retries < 3:
+                    job["retries"] = retries + 1
+                    backoff = (2 ** retries) * 5
+                    logging.warning(f"Notification broadcast failed. Retrying job in {backoff} seconds...")
+                    threading.Timer(backoff, lambda: notification_queue.put(job)).start()
+                else:
+                    log_failure(
+                        component="Broadcaster Queue Scheduler",
+                        context=f"Broadcast completely failed after 3 attempts: '{title[:50]}'",
+                        err=Exception("Maximum retry limit exceeded"),
+                        severity="CRITICAL",
+                        recovery_status="Discarded",
+                        recommended_action="Examine underlying service outages for Telegram, Discord, or SMTP server."
+                    )
+                
+            notification_queue.task_done()
+            # Spacer delay to avoid Telegram 429 rate limit
+            time.sleep(3.5)
+        except Exception as job_err:
+            logging.error(f'[Broadcaster Worker] Error processing alert job: {job_err}', exc_info=True)
+            try: notification_queue.task_done()
+            except Exception: pass
 
 def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
                   bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None):

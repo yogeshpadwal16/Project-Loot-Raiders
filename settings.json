@@ -21,8 +21,8 @@
   "supermarket_monitor_enabled": false,
   "external_price_tracker_enabled": false,
   "min_discount": 30.0,
-  "min_deal_price": 149,
-  "min_deal_savings": 100,
+  "min_deal_price": 299,
+  "min_deal_savings": 250,
   "smtp_server": "",
   "smtp_port": 587,
   "smtp_username": "",
@@ -75,6 +75,6 @@
     }
   },
   "last_digest_date": "2026-07-19",
-  "last_growth_check_time": 1784797199.1961827,
+  "last_growth_check_time": 1785178079.4437144,
   "cloaker_domain": null
 }

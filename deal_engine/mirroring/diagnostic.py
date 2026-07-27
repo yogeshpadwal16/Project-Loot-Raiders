@@ -47,15 +47,29 @@ def run_pipeline_diagnostic():
         
     try:
         tele_ok = asyncio.run(listener._start_telethon())
-        stage_output += f"Telethon check: {'PASS' if tele_ok else 'FAIL'}."
+        stage_output += f"Telethon check: {'PASS' if tele_ok else 'FAIL'}. "
     except Exception as e:
         if not stage_exception:
             stage_exception = e
         tele_ok = False
-        stage_output += f"Telethon error: {e}."
+        stage_output += f"Telethon error: {e}. "
         
-    if not pyro_ok and not tele_ok:
+    try:
+        web_ok = asyncio.run(listener._start_web_scraper())
+        stage_output += f"Web Scraper check: {'PASS' if web_ok else 'FAIL'}."
+        # Clean up the test task immediately
+        if listener.web_scraper_task:
+            listener.web_scraper_task.cancel()
+    except Exception as e:
+        web_ok = False
+        stage_output += f"Web Scraper error: {e}."
+
+    if not pyro_ok and not tele_ok and not web_ok:
         stage_status = "FAIL"
+    elif not pyro_ok and not tele_ok and web_ok:
+        stage_status = "PASS"
+        stage_output += " (Web Scraper fallback active)"
+        stage_exception = None
         
     report.append({
         "Stage": "1. Telegram Listener",
@@ -64,7 +78,7 @@ def run_pipeline_diagnostic():
         "Output": stage_output,
         "Time": f"{(time.time() - start_time) * 1000:.1f}ms",
         "Exception": str(stage_exception) if stage_exception else "None",
-        "RootCause": "Session unauthorized or incorrect credentials" if stage_status == "FAIL" else "N/A"
+        "RootCause": "All clients (Pyrogram, Telethon, Web Scraper) failed to initialize" if stage_status == "FAIL" else "N/A"
     })
 
     # ---------------------------------------------------------
