@@ -162,6 +162,10 @@ class DealMirrorProcessor:
                 
                 is_price_drop = True
                 if is_dup:
+                    if matched_id == "in-flight":
+                        logging.info(f"[Mirror Pipeline] Skipping concurrent in-flight deal: {title[:35]}")
+                        continue
+                        
                     logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
                     unique_id = matched_id
                     
