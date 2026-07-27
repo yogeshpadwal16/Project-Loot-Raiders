@@ -560,5 +560,103 @@ class TestCPUResourceTuningSettings(unittest.TestCase):
         self.assertIsInstance(settings["supermarket_monitor_enabled"], bool)
 
 
+class TestDealIntelligenceEngine(unittest.TestCase):
+    """Tests for Deal Intelligence Engine suppression of recurring listings and posting frequency limits"""
+    
+    def setUp(self):
+        from database.db_session import SessionLocal
+        from knowledge_base.models import Product
+        try:
+            db = SessionLocal()
+            db.query(Product).filter(Product.id.startswith("test_intel_")).delete()
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+
+    def tearDown(self):
+        from database.db_session import SessionLocal
+        from knowledge_base.models import Product
+        try:
+            db = SessionLocal()
+            db.query(Product).filter(Product.id.startswith("test_intel_")).delete()
+            db.commit()
+            db.close()
+        except Exception:
+            pass
+
+    def test_deal_intelligence_rules(self):
+        from database.db_session import SessionLocal
+        from knowledge_base.models import Product, PriceHistory
+        from utils.deduplicator import is_genuine_loot_deal
+        import time
+
+        db = SessionLocal()
+        try:
+            # 1. Test brand new deal (should approve)
+            product_id = "test_intel_prod1"
+            title = "Test Intel Product 1"
+            is_genuine, reason = is_genuine_loot_deal(product_id, title, 100, 200, 50.0, db)
+            self.assertTrue(is_genuine)
+            self.assertEqual(reason, "new_product")
+
+            # Seed the first post in DB
+            prod = Product(id=product_id, platform="amazon", title=title, url="http://amazon.in/dp/test_intel_prod1")
+            db.add(prod)
+            db.flush()
+
+            price_hist1 = PriceHistory(
+                product_id=product_id,
+                price=100,
+                mrp=200,
+                discount=50.0,
+                is_verified_low=True,
+                deal_score=80.0,
+                timestamp=time.time() - 3600  # 1 hour ago
+            )
+            db.add(price_hist1)
+            db.commit()
+
+            # 2. Test frequency suppression (posted 1 hour ago, price did not drop)
+            is_genuine, reason = is_genuine_loot_deal(product_id, title, 100, 200, 50.0, db)
+            self.assertFalse(is_genuine)
+            self.assertTrue(reason.startswith("suppressed: posted recently"))
+
+            # 3. Test frequency suppression override with drop (posted 1 hour ago, but price dropped by 20% from 100 to 80)
+            is_genuine, reason = is_genuine_loot_deal(product_id, title, 80, 200, 60.0, db)
+            self.assertTrue(is_genuine)
+            self.assertEqual(reason, "approved")
+
+            # 4. Test daily limit (seed 3 posts within 24h)
+            price_hist2 = PriceHistory(
+                product_id=product_id,
+                price=90,
+                mrp=200,
+                discount=55.0,
+                is_verified_low=True,
+                deal_score=80.0,
+                timestamp=time.time() - 7200  # 2 hours ago
+            )
+            price_hist3 = PriceHistory(
+                product_id=product_id,
+                price=85,
+                mrp=200,
+                discount=57.5,
+                is_verified_low=True,
+                deal_score=80.0,
+                timestamp=time.time() - 10800  # 3 hours ago
+            )
+            db.add(price_hist2)
+            db.add(price_hist3)
+            db.commit()
+
+            is_genuine, reason = is_genuine_loot_deal(product_id, title, 70, 200, 65.0, db)
+            self.assertFalse(is_genuine)
+            self.assertTrue(reason.startswith("suppressed: daily post limit reached"))
+
+        finally:
+            db.close()
+
+
 if __name__ == "__main__":
     unittest.main()

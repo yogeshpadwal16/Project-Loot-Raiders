@@ -315,7 +315,8 @@ def run_pipeline_diagnostic():
             final_url=final_aff_url,
             is_verified_low=True,
             deal_score=85.0,
-            unique_id="diagnostic_test_id"
+            unique_id="diagnostic_test_id",
+            is_mirror=True
         )
         stage_output = "Successfully placed alert job inside notification_queue."
     except Exception as e:

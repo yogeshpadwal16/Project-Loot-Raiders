@@ -234,7 +234,8 @@ class DealMirrorProcessor:
                     bank_offers=scraped.get("bank_offers", []),
                     coupon_detail=scraped.get("coupon_detail", ""),
                     review_grade=scraped.get("review_grade", "N/A"),
-                    auto_cart_url=auto_cart_url
+                    auto_cart_url=auto_cart_url,
+                    is_mirror=True
                 )
                 logging.info(f"[Mirror Pipeline] Deal alerts enqueued for publishing: {title[:30]}")
         finally:

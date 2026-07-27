@@ -13,7 +13,9 @@ from knowledge_base.models import Product, PriceHistory
 from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 
-notification_queue = queue.Queue()
+notification_queue = queue.PriorityQueue()
+queue_counter = 0
+queue_counter_lock = threading.Lock()
 
 def get_short_deal_link(long_url: str, unique_id: str) -> str:
     """
@@ -1082,12 +1084,17 @@ def notifier_worker():
             logging.error(f"Error checking presale alerts: {e}")
             
         try:
-            job = notification_queue.get(timeout=5)
+            queue_item = notification_queue.get(timeout=5)
         except queue.Empty:
             continue
             
-        if job is None:
+        if queue_item is None:
             break
+            
+        if isinstance(queue_item, tuple) and len(queue_item) == 4:
+            priority_level, timestamp, cnt, job = queue_item
+        else:
+            job = queue_item
             
         try:
             platform = job.get("platform")
@@ -1295,7 +1302,26 @@ def notifier_worker():
                     job["retries"] = retries + 1
                     backoff = (2 ** retries) * 5
                     logging.warning(f"Notification broadcast failed. Retrying job in {backoff} seconds...")
-                    threading.Timer(backoff, lambda: notification_queue.put(job)).start()
+                    is_mirror = job.get("is_mirror", False)
+                    platform = job.get("platform", "unknown")
+                    timestamp = time.time()
+                    if is_mirror:
+                        priority_level = 3
+                    else:
+                        plat_lower = platform.lower()
+                        if "amazon" in plat_lower:
+                            priority_level = 1
+                        elif "flipkart" in plat_lower:
+                            priority_level = 2
+                        else:
+                            priority_level = 4
+                            
+                    with queue_counter_lock:
+                        queue_counter += 1
+                        cnt = queue_counter
+                        
+                    retry_item = (priority_level, timestamp, cnt, job)
+                    threading.Timer(backoff, lambda: notification_queue.put(retry_item)).start()
                 else:
                     log_failure(
                         component="Broadcaster Queue Scheduler",
@@ -1315,7 +1341,8 @@ def notifier_worker():
             except Exception: pass
 
 def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
-                  bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None):
+                  bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, is_mirror: bool = False):
+    global queue_counter
     job = {
         "platform": platform,
         "title": title,
@@ -1331,9 +1358,28 @@ def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: flo
         "coupon_detail": coupon_detail,
         "review_grade": review_grade,
         "auto_cart_url": auto_cart_url,
-        "retries": 0
+        "retries": 0,
+        "is_mirror": is_mirror
     }
-    notification_queue.put(job)
+    
+    # Calculate priority
+    timestamp = time.time()
+    if is_mirror:
+        priority_level = 3
+    else:
+        plat_lower = platform.lower()
+        if "amazon" in plat_lower:
+            priority_level = 1
+        elif "flipkart" in plat_lower:
+            priority_level = 2
+        else:
+            priority_level = 4
+            
+    with queue_counter_lock:
+        queue_counter += 1
+        cnt = queue_counter
+        
+    notification_queue.put((priority_level, timestamp, cnt, job))
 
 def start_notifier():
     t = threading.Thread(target=notifier_worker, daemon=True)

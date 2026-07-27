@@ -334,7 +334,8 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 prod_id = match_num[0]
                                 
                     if not prod_id:
-                        prod_id = str(abs(hash(raw_url)))
+                        import hashlib
+                        prod_id = hashlib.md5(raw_url.encode('utf-8')).hexdigest()[:16]
                         
                     # 2. Extract Title
                     title = card["title"]
