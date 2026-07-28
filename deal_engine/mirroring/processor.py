@@ -228,7 +228,6 @@ class DealMirrorProcessor:
                     text=message.raw_text
                 )
                 
-                is_price_drop = True
                 if is_dup:
                     if matched_id == "in-flight":
                         logging.info(f"[Mirror Pipeline] Skipping concurrent in-flight deal: {title[:35]}")
@@ -236,25 +235,7 @@ class DealMirrorProcessor:
                         
                     logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
                     unique_id = matched_id
-                    
-                    # Fetch latest price from DB to see if the price actually dropped
-                    db_session = SessionLocal()
-                    try:
-                        latest = db_session.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
-                        if latest:
-                            # If the price is the same or higher, we do NOT alert it again (avoids subscriber spam)
-                            if price >= latest.price:
-                                is_price_drop = False
-                                logging.info(f"[Mirror Pipeline] Skipping duplicate deal: {title[:35]}... (Price ₹{price} >= latest ₹{latest.price})")
-                    except Exception as db_err:
-                        logging.error(f"[Mirror Pipeline] Error querying latest price for duplicate check: {db_err}")
-                    finally:
-                        db_session.close()
 
-                if not is_price_drop:
-                    from utils.deduplicator import release_in_flight_deal
-                    release_in_flight_deal(title, platform, expanded_url)
-                    continue
 
                     
                 # 6. Check price trends
