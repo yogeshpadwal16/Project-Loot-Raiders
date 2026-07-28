@@ -255,6 +255,41 @@ def scrape_platform(platform: str, config: dict, history: set):
                     logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
                     release_in_flight_deal(title, platform, final_url)
                     continue
+                
+                # Publication Frequency Guard — suppress re-posts within 6h at same price
+                # This directly fixes the 3x-same-product-in-8-seconds spam bug
+                import datetime as _dt
+                db_freq = SessionLocal()
+                try:
+                    prod_freq = db_freq.query(Product).filter_by(id=unique_id).first()
+                    if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
+                        hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
+                        price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
+                        today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                        daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
+                        daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
+                        if daily_date != today_str:
+                            daily_count = 0
+                        
+                        if hours_ago < 6.0 and price >= price_at_last:
+                            logging.info(
+                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                                f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
+                            )
+                            release_in_flight_deal(title, platform, final_url)
+                            continue
+                        
+                        if daily_count >= 3:
+                            logging.info(
+                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                                f"already posted {daily_count}x today (cap: 3/day)"
+                            )
+                            release_in_flight_deal(title, platform, final_url)
+                            continue
+                except Exception as freq_err:
+                    logging.error(f"[Publication Guard] DB check error: {freq_err}")
+                finally:
+                    db_freq.close()
                     
                 bank_offers = []
                 coupon_detail = ""
@@ -295,6 +330,27 @@ def scrape_platform(platform: str, config: dict, history: set):
                     auto_cart_url=auto_cart_url
                 )
                 time.sleep(0.5)
+                
+                # Update publication tracking so this product won't be spammed again
+                import datetime as _dt
+                db_pub = SessionLocal()
+                try:
+                    today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                    prod_record = db_pub.query(Product).filter_by(id=unique_id).first()
+                    if prod_record:
+                        prod_record.last_published_at = time.time()
+                        prod_record.last_published_price = price
+                        if getattr(prod_record, 'daily_post_date', '') == today_str:
+                            prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
+                        else:
+                            prod_record.daily_post_count = 1
+                            prod_record.daily_post_date = today_str
+                        db_pub.commit()
+                except Exception as pub_upd_err:
+                    db_pub.rollback()
+                    logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
+                finally:
+                    db_pub.close()
             else:
                 if not should_publish_deal(platform, deal_score):
                     logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")

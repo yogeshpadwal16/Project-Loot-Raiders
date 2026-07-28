@@ -133,22 +133,90 @@ class DealMirrorProcessor:
                     continue
                     
                 # 4. Scrape details
-                scraped = scrape_product_details(expanded_url)
-                title = scraped.get("title", "Product Deal")
-                price = scraped.get("price", 0)
-                mrp = scraped.get("mrp", 0)
-                img_url = scraped.get("image_url", "")
-                rating = scraped.get("rating")
-                reviews = scraped.get("reviews")
-                has_bank_offer = scraped.get("has_bank_offer", False)
+                # Priority A: Parse from Telegram message text (message.raw_text)
+                # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
+                title, price, mrp, img_url = "", 0, 0, ""
+                
+                if message.raw_text and message.raw_text.strip():
+                    import re
+                    def extract_deal_number(pattern: str, text: str) -> int:
+                        m = re.search(pattern, text.replace(',', ''), flags=re.IGNORECASE)
+                        if m:
+                            try:
+                                return int(m.group(1))
+                            except (ValueError, IndexError):
+                                pass
+                        return 0
+                    
+                    price_patterns = [
+                        r'(?:price|deal\s+price|deal|now|at\s+just|at|for)\s*:?\s*(?:rs\.?|₹)\s*(\d+)',
+                        r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-)\s*(?:rs\.?|₹)?\s*\d+',
+                        r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
+                    ]
+                    mrp_patterns = [
+                        r'(?:mrp|original\s+price|was|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
+                    ]
+                    
+                    msg_clean = message.raw_text.replace(',', '')
+                    for pat in price_patterns:
+                        extracted = extract_deal_number(pat, msg_clean)
+                        if extracted > 0:
+                            price = extracted
+                            break
+                            
+                    for pat in mrp_patterns:
+                        extracted = extract_deal_number(pat, msg_clean)
+                        if extracted > 0 and extracted != price:
+                            mrp = extracted
+                            break
+                            
+                    if price > 0 and mrp == 0:
+                        all_prices = [int(n) for n in re.findall(r'(?:rs\.?|₹)\s*(\d+)', msg_clean, flags=re.IGNORECASE)]
+                        larger = [p for p in all_prices if p > price]
+                        if larger:
+                            mrp = min(larger)
+                        else:
+                            mrp = int(price * 1.4)
+                            
+                    if price > 0:
+                        logging.info(f"[Mirror Pipeline] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
+                        lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
+                        for line in lines:
+                            if (len(line) >= 10 and 'http' not in line and
+                                    not line.startswith('#') and
+                                    not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
+                                title = line[:120]
+                                break
+                        if not title:
+                            title = "Competitor Deal"
+                
+                # Fallback to lightweight scraper if needed
+                scraped = {}
+                if price == 0:
+                    logging.info(f"[Mirror Pipeline] No price from message text — attempting lightweight HTTP scrape")
+                    from deal_engine.deal_processor import scrape_product_lightweight
+                    scraped_data = scrape_product_lightweight(expanded_url)
+                    if scraped_data:
+                        scraped = scraped_data
+                        if not title or title == "Competitor Deal":
+                            title = scraped_data.get("title", "Product Deal")
+                        price = scraped_data.get("price", 0)
+                        mrp = scraped_data.get("mrp", 0)
+                        img_url = scraped_data.get("image_url", "")
                 
                 if price == 0:
-                    logging.warning(f"[Mirror Pipeline] Scraped price is 0. Skipping.")
+                    logging.warning(f"[Mirror Pipeline] Could not extract price. Skipping.")
                     continue
                     
                 discount = 0.0
                 if mrp > price:
                     discount = ((mrp - price) / mrp) * 100.0
+                    
+                rating = scraped.get("rating")
+                reviews = scraped.get("reviews")
+                has_bank_offer = scraped.get("has_bank_offer", False)
                     
                 # 5. Duplicate Detection (Intelligent RapidFuzz check)
                 is_dup, matched_id = IntelligentDeduplicator.find_duplicate(
