@@ -37,7 +37,9 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         
     def end_headers(self):
         # Restrict CORS to same-origin requests; override via CORS_ORIGIN env var
-        allowed_origin = os.environ.get('CORS_ORIGIN', self.headers.get('Origin', '*'))
+        headers_obj = getattr(self, 'headers', None)
+        origin = headers_obj.get('Origin', '*') if headers_obj else '*'
+        allowed_origin = os.environ.get('CORS_ORIGIN', origin)
         self.send_header('Access-Control-Allow-Origin', allowed_origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')

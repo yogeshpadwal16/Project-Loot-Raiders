@@ -151,13 +151,15 @@ class MultiClientMirrorListener:
             # Check authorization
             try:
                 me = await client.get_me()
-                is_authorized = me is not None
+                is_authorized = me is not None and not me.is_bot
+                if me and me.is_bot:
+                    logging.warning("[Mirror Listener] Connected as Bot (@" + getattr(me, 'username', 'unknown') + ") instead of User. Pyrogram listener needs a User session to read competitor channels. Aborting Pyrogram to trigger Telethon fallback...")
             except Exception as auth_err:
                 logging.warning(f"[Mirror Listener] Pyrogram authorization check failed: {auth_err}")
                 is_authorized = False
 
             if not is_authorized:
-                logging.warning("[Mirror Listener] Pyrogram session is not authorized. Pyrogram start aborted.")
+                logging.warning("[Mirror Listener] Pyrogram session is not authorized or is a bot. Pyrogram start aborted.")
                 await client.disconnect()
                 self.pyro_client = None
                 return False
