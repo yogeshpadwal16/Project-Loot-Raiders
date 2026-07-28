@@ -15,8 +15,14 @@ class Product(Base):
     telegram_message_id = Column(Integer, nullable=True)
     telegram_caption = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    # Publication frequency tracking — prevents duplicate spam
+    last_published_at = Column(Float, default=0.0)    # epoch timestamp of last Telegram post
+    last_published_price = Column(Integer, default=0) # price at time of last post
+    daily_post_count = Column(Integer, default=0)     # how many times posted today
+    daily_post_date = Column(String, default="")      # YYYY-MM-DD for daily counter reset
     
     prices = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
+
 
 class PriceHistory(Base):
     __tablename__ = 'price_history'

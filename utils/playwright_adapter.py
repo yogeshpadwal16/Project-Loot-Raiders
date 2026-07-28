@@ -285,6 +285,23 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
         page = context.new_page()
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
+        # Block heavy/slow resources and tracking scripts to prevent timeouts on the headless VPS
+        def block_slow_resources(route):
+            try:
+                resource_type = route.request.resource_type
+                url = route.request.url.lower()
+                exclude_types = ["image", "media", "font", "stylesheet"]
+                exclude_domains = ["google-analytics", "doubleclick", "demdex", "newrelic", "facebook", "youtube", "scorecardresearch", "hotjar"]
+                if resource_type in exclude_types or any(dom in url for dom in exclude_domains):
+                    route.abort()
+                else:
+                    route.continue_()
+            except Exception:
+                try: route.continue_()
+                except Exception: pass
+                
+        page.route("**/*", block_slow_resources)
+        
         # Release the lock immediately now that the browser launch is complete.
         # This serializes launches (preventing high CPU load spikes) but allows concurrent scraping.
         if lock_held:

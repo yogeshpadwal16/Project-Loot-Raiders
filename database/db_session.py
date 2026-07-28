@@ -79,8 +79,21 @@ def init_db():
             cursor.execute("ALTER TABLE products ADD COLUMN telegram_caption TEXT")
         except sqlite3.OperationalError:
             pass # column already exists
+
+        # Publication frequency tracking — prevents duplicate spam
+        for col_sql in [
+            "ALTER TABLE products ADD COLUMN last_published_at REAL DEFAULT 0.0",
+            "ALTER TABLE products ADD COLUMN last_published_price INTEGER DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN daily_post_count INTEGER DEFAULT 0",
+            "ALTER TABLE products ADD COLUMN daily_post_date TEXT DEFAULT ''",
+        ]:
+            try:
+                cursor.execute(col_sql)
+            except sqlite3.OperationalError:
+                pass # column already exists
             
         conn.commit()
         conn.close()
     except Exception as e:
         logging.warning(f"Database products table migration failed: {e}")
+
