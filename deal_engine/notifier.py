@@ -719,7 +719,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping text-only fallback per product rules.")
+    # 5. Text-Only Fallback (sendMessage API) if photo sending failed or was skipped
+    try:
+        endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": caption,
+            "parse_mode": "HTML",
+            "reply_markup": reply_markup_json,
+            "disable_web_page_preview": False
+        }
+        res = requests.post(endpoint, json=payload, timeout=25)
+        if res.status_code == 200:
+            logging.info(f"[Mirror Notifier] ✓ Text-only mirror post sent | Telegram Message ID: {res.json().get('result', {}).get('message_id')} | {truncated_title[:20]}...")
+            save_telegram_message_info(unique_id, res, caption)
+            return True
+        else:
+            logging.warning(f"Telegram text-only send returned {res.status_code}: {res.text}")
+    except Exception as text_send_err:
+        logging.error(f"Failed to send text-only Telegram message: {text_send_err}")
+        
+    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping.")
     return False
 
 def save_telegram_message_info(unique_id: str, res, caption: str):
@@ -1124,8 +1144,7 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
     
         if has_telegram:
             if not img_url or img_url.strip() == "" or "base64" in img_url:
-                logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
-                return True # Finished, do not retry
+                logging.info(f"Product image missing for '{title[:30]}'. Proceeding to broadcast text-only deal alert.")
             
             try:
                 telegram_ok = send_telegram_alert(
