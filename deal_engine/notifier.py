@@ -592,21 +592,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
+    # Only generate a local PIL card when we have a real product image URL.
+    # If img_url is empty or base64, skip card generation entirely and proceed
+    # to the text-only sendMessage path — PIL card upload via sendPhoto hangs
+    # indefinitely when the upload body has no hard timeout in requests.
     local_card_path = None
-    try:
-        local_card_path = generate_deal_image(
-            unique_id=unique_id,
-            platform=platform,
-            title=title,
-            price=price,
-            mrp=mrp,
-            discount=discount,
-            original_image_url=img_url,
-            is_verified_low=is_verified_low,
-            deal_score=deal_score
-        )
-    except Exception as img_gen_err:
-        logging.error(f"Image generation failed inside notifier: {img_gen_err}")
+    has_real_image = bool(img_url and img_url.startswith("http") and not img_url.startswith("data:image"))
+    if has_real_image:
+        try:
+            local_card_path = generate_deal_image(
+                unique_id=unique_id,
+                platform=platform,
+                title=title,
+                price=price,
+                mrp=mrp,
+                discount=discount,
+                original_image_url=img_url,
+                is_verified_low=is_verified_low,
+                deal_score=deal_score
+            )
+        except Exception as img_gen_err:
+            logging.error(f"Image generation failed inside notifier: {img_gen_err}")
 
     # 3. Build Inline Buy Button markup (Feature 3: Verification/Expiration Buttons)
     from knowledge_base.models import DealVote
@@ -690,23 +696,31 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
 
     # Fallback to local PIL card if raw image send was not successful
     if not photo_sent and local_card_path and os.path.exists(local_card_path):
-        try:
+        import concurrent.futures
+        def _upload_local_card():
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
                 payload = {
-                    "chat_id": chat_id, 
-                    "caption": caption, 
+                    "chat_id": chat_id,
+                    "caption": caption,
                     "parse_mode": "HTML",
                     "reply_markup": reply_markup_json
                 }
-                res = requests.post(endpoint, data=payload, files=files, timeout=25)
-                if res.status_code == 200:
-                    logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
-                    photo_sent = True
-                    save_telegram_message_info(unique_id, res, caption)
-                else:
-                    logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
+                return requests.post(endpoint, data=payload, files=files, timeout=25)
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(_upload_local_card)
+                try:
+                    res = future.result(timeout=40)  # hard 40s wall-clock limit incl. upload body
+                    if res.status_code == 200:
+                        logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
+                        photo_sent = True
+                        save_telegram_message_info(unique_id, res, caption)
+                    else:
+                        logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
+                except concurrent.futures.TimeoutError:
+                    logging.error(f"Telegram photo card upload timed out (>40s) for {truncated_title[:20]}. Falling back to text-only.")
         except Exception as upload_err:
             logging.error(f"Failed to upload photo card: {upload_err}")
         finally:
