@@ -438,11 +438,111 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
         logging.error(f"Email alert dispatch failed: {e}")
         return False
 
+def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
+    """
+    Attempts to fetch the product page URL and parse the main product image.
+    Uses curl_cffi for anti-bot bypass and selectolax for rapid parsing.
+    Strictly times out in 'timeout' seconds.
+    """
+    if not url or not url.startswith("http"):
+        return None
+    try:
+        from curl_cffi import requests as curl_requests
+        from selectolax.parser import HTMLParser
+        import json
+        import re
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        try:
+            res = curl_requests.get(url, headers=headers, impersonate="chrome110", timeout=timeout)
+        except Exception:
+            # Fallback to standard requests
+            import requests as std_requests
+            res = std_requests.get(url, headers=headers, timeout=timeout)
+
+        if res.status_code == 200:
+            tree = HTMLParser(res.text)
+            
+            # Amazon image parsing
+            if "amazon" in url.lower():
+                for sel in ["img#landingImage", "img#imgBlkFront", "img#main-image", "div#imgTagWrapperId img"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        dyn = el.attributes.get("data-a-dynamic-image")
+                        if dyn:
+                            try:
+                                urls = list(json.loads(dyn).keys())
+                                if urls:
+                                    return urls[0]
+                            except Exception:
+                                pass
+                        src = el.attributes.get("src")
+                        if src and src.startswith("http") and "spinner" not in src:
+                            return src
+                
+                # Regex fallback for Amazon image block in JS
+                match = re.search(r"colorImages\':\s*\{\s*\'initial\':\s*(\[.*?\])\s*\}", res.text)
+                if match:
+                    try:
+                        images_data = json.loads(match.group(1).replace("'", '"'))
+                        for img in images_data:
+                            large_url = img.get("large") or img.get("hiRes")
+                            if large_url:
+                                return large_url
+                    except Exception:
+                        pass
+
+            # Flipkart image parsing
+            elif "flipkart" in url.lower():
+                for img in tree.css("img"):
+                    src = img.attributes.get("src") or img.attributes.get("data-src")
+                    if src and "rukminim2.flixcart.com/image/" in src:
+                        # Prefer larger image
+                        src = src.replace("/128/128/", "/832/832/").replace("/416/416/", "/832/832/")
+                        return src
+
+            # Generic fallback: find first large image
+            for img in tree.css("img"):
+                src = img.attributes.get("src") or img.attributes.get("data-src")
+                if src and src.startswith("http") and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                    if any(x in src.lower() for x in ["icon", "logo", "avatar", "loader", "spinner", "sprite"]):
+                        continue
+                    return src
+    except Exception as e:
+        logging.warning(f"Failed to scrape product image from page {url}: {e}")
+    return None
+
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
     buy_url = get_short_deal_link(final_url, unique_id)
+    
+    # Try page scrape for product image if it's missing (max 3s)
+    if not img_url or img_url.strip() == "" or "base64" in img_url:
+        logging.info(f"Product image missing/empty for '{title[:30]}'. Attempting page scrape for image (Max 3s)...")
+        scraped_img = scrape_product_image_from_page(final_url, timeout=3.0)
+        if scraped_img:
+            logging.info(f"Successfully scraped product image: {scraped_img}")
+            img_url = scraped_img
+            # Save to database so we don't have to scrape it again
+            db = SessionLocal()
+            try:
+                prod = db.query(Product).filter_by(id=unique_id).first()
+                if prod:
+                    prod.image_url = scraped_img
+                    db.commit()
+            except Exception as db_err:
+                db.rollback()
+                logging.error(f"Error saving scraped image URL to DB: {db_err}")
+            finally:
+                db.close()
+        else:
+            logging.info(f"Page image scrape failed or timed out. Proceeding without image.")
         
     is_amazon = "amazon" in platform.lower()
     from deal_engine.scorer import check_if_glitch
@@ -1158,7 +1258,7 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
     
         if has_telegram:
             if not img_url or img_url.strip() == "" or "base64" in img_url:
-                logging.info(f"Product image missing for '{title[:30]}'. Proceeding to broadcast text-only deal alert.")
+                logging.info(f"Product image missing for '{title[:30]}'. Telegram alert will attempt page scrape fallback.")
             
             try:
                 telegram_ok = send_telegram_alert(
