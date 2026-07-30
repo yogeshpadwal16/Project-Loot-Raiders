@@ -786,13 +786,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             }
             res = requests.post(endpoint, json=payload, timeout=25)
             if res.status_code == 200:
-                logging.info(f"Telegram raw product image uploaded successfully -> {truncated_title[:20]}...")
+                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal to Telegram: {truncated_title[:20]}...")
                 photo_sent = True
                 save_telegram_message_info(unique_id, res, caption)
             else:
-                logging.warning(f"Telegram photo send for raw URL returned {res.status_code}: {res.text}. Falling back to local card.")
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image send failed ({res.status_code}). Falling back to local card.")
         except Exception as raw_send_err:
-            logging.error(f"Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
 
     # Fallback to local PIL card if raw image send was not successful
     if not photo_sent and local_card_path and os.path.exists(local_card_path):
@@ -814,15 +814,15 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 try:
                     res = future.result(timeout=40)  # hard 40s wall-clock limit incl. upload body
                     if res.status_code == 200:
-                        logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
+                        logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
                         photo_sent = True
                         save_telegram_message_info(unique_id, res, caption)
                     else:
-                        logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
+                        logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}).")
                 except concurrent.futures.TimeoutError:
-                    logging.error(f"Telegram photo card upload timed out (>40s) for {truncated_title[:20]}. Falling back to text-only.")
+                    logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out (>40s). Falling back to text-only.")
         except Exception as upload_err:
-            logging.error(f"Failed to upload photo card: {upload_err}")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to upload photo card: {upload_err}")
         finally:
             try: os.remove(local_card_path)
             except Exception: pass
@@ -845,13 +845,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         }
         res = requests.post(endpoint, json=payload, timeout=25)
         if res.status_code == 200:
-            logging.info(f"[Mirror Notifier] ✓ Text-only mirror post sent | Telegram Message ID: {res.json().get('result', {}).get('message_id')} | {truncated_title[:20]}...")
+            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored text-only deal to Telegram: {truncated_title[:20]}...")
             save_telegram_message_info(unique_id, res, caption)
             return True
         else:
-            logging.warning(f"Telegram text-only send returned {res.status_code}: {res.text}")
+            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Telegram text-only send returned {res.status_code}: {res.text}")
     except Exception as text_send_err:
-        logging.error(f"Failed to send text-only Telegram message: {text_send_err}")
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send text-only Telegram message: {text_send_err}")
         
     logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping.")
     return False
