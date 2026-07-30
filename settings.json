@@ -76,5 +76,17 @@
   },
   "last_digest_date": "2026-07-19",
   "last_growth_check_time": 1785178079.4437144,
-  "cloaker_domain": null
+  "cloaker_domain": null,
+  "extensions": {
+    "smart_filter": {
+      "enabled": false,
+      "allowlist_keywords": [],
+      "blocklist_regex": ""
+    },
+    "voice_alerts": {
+      "enabled": false,
+      "min_score": 75,
+      "voice": "en-IN-NeerjaNeural"
+    }
+  }
 }

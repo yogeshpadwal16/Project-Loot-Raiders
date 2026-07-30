@@ -1289,6 +1289,47 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                     recommended_action="Validate Telegram Bot token and chat ID, or check for Telegram API blockages."
                 )
                 telegram_ok = False
+                
+            if telegram_ok:
+                try:
+                    extensions = settings.get("extensions", {}) if settings else {}
+                    voice_alerts = extensions.get("voice_alerts", {}) if extensions else {}
+                    if voice_alerts and voice_alerts.get("enabled", False):
+                        min_score = voice_alerts.get("min_score", 75)
+                        if (deal_score and deal_score >= min_score) or is_verified_low:
+                            import asyncio
+                            from deal_engine.voice_generator import generate_deal_voice_note
+                            
+                            clean_title = title.split('(')[0].split('[')[0].strip()[:80]
+                            output_fn = f"scratch/voice_{unique_id}.mp3"
+                            
+                            voice_file = asyncio.run(generate_deal_voice_note(
+                                title=clean_title,
+                                deal_price=price,
+                                platform=platform,
+                                output_path=output_fn
+                            ))
+                            
+                            if voice_file and os.path.exists(voice_file):
+                                endpoint = f"https://api.telegram.org/bot{bot_token}/sendVoice"
+                                with open(voice_file, "rb") as f:
+                                    files = {"voice": f}
+                                    payload = {
+                                        "chat_id": chat_id,
+                                        "caption": f"🔊 Voice Alert: {clean_title[:35]}..."
+                                    }
+                                    import requests
+                                    v_res = requests.post(endpoint, data=payload, files=files, timeout=30)
+                                    if v_res.status_code == 200:
+                                        logging.info(f"[VOICE_NOTE] Posted audio loot alert to Telegram for {unique_id}")
+                                    else:
+                                        logging.warning(f"[VOICE_NOTE] Failed to post voice note: {v_res.text}")
+                                        
+                                # Clean up local voice note file
+                                try: os.remove(voice_file)
+                                except Exception: pass
+                except Exception as voice_err:
+                    logging.error(f"[VOICE_NOTE] Failed to process voice note alert: {voice_err}")
         
         apprise_ok = True
         apprise_uris = settings.get("notification_uris", [])
