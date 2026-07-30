@@ -877,6 +877,13 @@ def main():
         else:
             logging.info("Supermarket monitor disabled (conserving CPU resources).")
             
+        # 5.8 Start Background Expiration Daemon
+        try:
+            from deal_engine.expiration_daemon import start_expiration_daemon
+            start_expiration_daemon()
+        except Exception as expiration_err:
+            logging.error(f"Failed to start Expiration Daemon: {expiration_err}")
+            
         logging.info("Master Engine Activated. Scanners operating.")
     else:
         logging.info("Single-run execution mode activated (Cloud/CI environment).")
