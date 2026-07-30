@@ -18,6 +18,8 @@ from utils.parser import extract_amazon_asin, extract_flipkart_pid
 
 from config.settings import load_settings
 
+from deal_engine.wishlist import add_keyword_alert, remove_keyword_alert, list_keyword_alerts
+
 
 
 def check_channel_membership(bot_token: str, channel_id: str, user_id: int) -> bool:
@@ -343,6 +345,70 @@ def bot_listener_loop():
                     continue
 
                     
+
+                # Handle /kwtrack <keyword> <max_price> (Keyword-based wishlists)
+
+                if text.startswith("/kwtrack"):
+
+                    parts = text.replace("/kwtrack", "").strip().rsplit(" ", 1)
+
+                    if len(parts) == 2 and parts[1].isdigit():
+
+                        resp = add_keyword_alert(user_id, parts[0].strip(), int(parts[1]))
+
+                    else:
+
+                        resp = (
+
+                            "Usage: <code>/kwtrack &lt;keyword&gt; &lt;max_price&gt;</code>\n"
+
+                            "Example: <code>/kwtrack iphone 15 45000</code>"
+
+                        )
+
+                    send_bot_message(bot_token, chat_id_user, resp)
+
+                    continue
+
+
+
+                # Handle /kwlist (list keyword alerts)
+
+                if text.startswith("/kwlist"):
+
+                    resp = list_keyword_alerts(user_id)
+
+                    send_bot_message(bot_token, chat_id_user, resp)
+
+                    continue
+
+
+
+                # Handle /kwremove <keyword> (remove keyword alert)
+
+                if text.startswith("/kwremove"):
+
+                    keyword_arg = text.replace("/kwremove", "").strip()
+
+                    if keyword_arg:
+
+                        resp = remove_keyword_alert(user_id, keyword_arg)
+
+                    else:
+
+                        resp = (
+
+                            "Usage: <code>/kwremove &lt;keyword&gt;</code>\n"
+
+                            "Example: <code>/kwremove iphone 15</code>"
+
+                        )
+
+                    send_bot_message(bot_token, chat_id_user, resp)
+
+                    continue
+
+
 
                 # Handle /wallet
 

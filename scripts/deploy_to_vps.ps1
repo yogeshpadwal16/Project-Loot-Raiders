@@ -14,9 +14,8 @@ if (Test-Path $TAR_PATH) { Remove-Item $TAR_PATH -Force }
 $OriginalLocation = Get-Location
 Set-Location "C:\Users\yoges\Projects\Project-Loot-Raiders"
 
-# Create a tar.gz archive including essential directories and files (added 'web' folder and 'check_health.py')
-tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py
-
+# Create a tar.gz archive including essential directories and files (added 'web', 'docker', 'daily_briefing.py', and 'main_briefing.py')
+tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n docker loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py
 
 # Restore directory location
 Set-Location $OriginalLocation
@@ -53,4 +52,3 @@ ssh -o StrictHostKeyChecking=no -i $KEY_PATH "ubuntu@${IP}" $SSH_CMD
 
 Write-Host "=== 🎉 Cloud deployment completed successfully! ===" -ForegroundColor Green
 Write-Host "Dashboard is live at http://${IP}:5555/" -ForegroundColor Green
-

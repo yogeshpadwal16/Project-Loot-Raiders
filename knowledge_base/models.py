@@ -167,3 +167,14 @@ class RetryHistory(Base):
     timestamp = Column(Float, default=time.time)
 
 
+class WishlistItem(Base):
+    """Keyword-based price alert — complements AlertSubscription (product-ID-based)."""
+    __tablename__ = 'user_wishlists'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, index=True, nullable=False)
+    keyword = Column(String, index=True, nullable=False)
+    target_price = Column(Integer, nullable=False)
+    created_at = Column(Float, default=time.time)
+
+
