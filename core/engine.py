@@ -620,7 +620,12 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 
             for selector in selectors:
                 try:
-                    p_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    el = driver.find_element(By.CSS_SELECTOR, selector)
+                    p_text = el.get_attribute("textContent")
+                    # Ignore coupon alerts and discount banners styled as prices
+                    lower_text = p_text.lower()
+                    if any(x in lower_text for x in ["coupon", "save", "off", "discount", "%"]):
+                        continue
                     price = clean_number(p_text)
                     if price > 0: break
                 except: pass
@@ -685,11 +690,29 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 images = driver.find_elements(By.TAG_NAME, "img")
                 for img in images:
                     src = img.get_attribute("src")
+                    if not src or not src.startswith("http"):
+                        continue
+                    src_lower = src.lower()
+                    # Skip common logo, banner, and advertisement keywords
+                    if any(x in src_lower for x in ["/logo", "ad-", "banner", "sprite", "icon", "advertisement", "header", "footer"]):
+                        continue
+                        
                     w = int(img.get_attribute("width") or 0)
                     h = int(img.get_attribute("height") or 0)
-                    if src and ("product" in src.lower() or "media" in src.lower() or "dp" in src.lower() or w > 200 or h > 200):
-                        image_url = src
-                        break
+                    # If attributes are missing, extract natural dimensions via javascript
+                    if w == 0 or h == 0:
+                        try:
+                            size = driver.execute_script("return [arguments[0].naturalWidth, arguments[0].naturalHeight];", img)
+                            w, h = size[0], size[1]
+                        except:
+                            pass
+                            
+                    if w >= 250 and h >= 250:
+                        aspect_ratio = w / h
+                        # Main product images are generally square-ish (filters out wide banners and tall towers)
+                        if 0.7 <= aspect_ratio <= 1.4:
+                            image_url = src
+                            break
             except: pass
             
         # 5. Clean up & validate data values
