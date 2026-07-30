@@ -15,7 +15,7 @@ $OriginalLocation = Get-Location
 Set-Location "C:\Users\yoges\Projects\Project-Loot-Raiders"
 
 # Create a tar.gz archive including essential directories and files (added 'web' folder and 'check_health.py')
-tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py
+tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py
 
 
 # Restore directory location
