@@ -1076,6 +1076,13 @@ async function fetchSettings() {
         document.getElementById('set-catalog-monitor-enabled').checked = settings.catalog_monitor_enabled || false;
         document.getElementById('set-supermarket-monitor-enabled').checked = settings.supermarket_monitor_enabled || false;
         
+        // Extensions config mapping
+        const extensions = settings.extensions || {};
+        const smartFilter = extensions.smart_filter || {};
+        document.getElementById('ext-filter-enabled').checked = smartFilter.enabled || false;
+        document.getElementById('ext-filter-allowlist').value = (smartFilter.allowlist_keywords || []).join(', ');
+        document.getElementById('ext-filter-blocklist-regex').value = smartFilter.blocklist_regex || '';
+        
         const notificationUris = settings.notification_uris || [];
         document.getElementById('set-notification-uris').value = notificationUris.join('\n');
         
@@ -1116,6 +1123,13 @@ async function saveSettings(e) {
     const catalog_monitor_enabled = document.getElementById('set-catalog-monitor-enabled').checked;
     const supermarket_monitor_enabled = document.getElementById('set-supermarket-monitor-enabled').checked;
     
+    // Extensions input extraction
+    const ext_filter_enabled = document.getElementById('ext-filter-enabled').checked;
+    const ext_filter_allowlist = document.getElementById('ext-filter-allowlist').value.split(',')
+        .map(kw => kw.trim())
+        .filter(kw => kw.length > 0);
+    const ext_filter_blocklist_regex = document.getElementById('ext-filter-blocklist-regex').value.trim();
+    
     const notificationUrisText = document.getElementById('set-notification-uris').value;
     const notification_uris = notificationUrisText.split('\n')
         .map(line => line.trim())
@@ -1154,7 +1168,14 @@ async function saveSettings(e) {
         catalog_monitor_enabled,
         supermarket_monitor_enabled,
         notification_uris,
-        proxy_list
+        proxy_list,
+        extensions: {
+            smart_filter: {
+                enabled: ext_filter_enabled,
+                allowlist_keywords: ext_filter_allowlist,
+                blocklist_regex: ext_filter_blocklist_regex
+            }
+        }
     };
     
     try {
