@@ -1,0 +1,24 @@
+{
+  "accounts": [
+    {
+      "session_name": "loot_raiders_primary",
+      "api_id": 123456,
+      "api_hash": "abcdef1234567890abcdef1234567890",
+      "proxy": {
+        "hostname": "127.0.0.1",
+        "port": 1080,
+        "type": "socks5"
+      }
+    },
+    {
+      "session_name": "loot_raiders_secondary",
+      "api_id": 654321,
+      "api_hash": "0987654321fedcba0987654321fedcba",
+      "proxy": {
+        "hostname": "127.0.0.1",
+        "port": 1081,
+        "type": "socks5"
+      }
+    }
+  ]
+}

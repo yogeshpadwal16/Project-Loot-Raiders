@@ -23,5 +23,67 @@ services:
       - n8n_data:/home/node/.n8n
     restart: always
 
+  # ─── MONITORING STACK ───────────────────────────────────────────────────────
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: always
+    pid: host                            # Access host-level metrics
+    network_mode: host                   # Binds to host :9100, sees all interfaces
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.arp'
+      - '--no-collector.ipvs'
+      - '--no-collector.nfs'
+      - '--no-collector.nfsd'
+      - '--no-collector.xfs'
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'      # Keep 7 days of metrics
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.wal-compression'        # Compress WAL to save disk
+    mem_limit: 150m                             # Hard cap to protect 1GB VPS
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=lootraiders2026
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://92.4.70.19:3000
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_INSTALL_PLUGINS=                     # No plugins (saves RAM)
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    mem_limit: 100m                             # Hard cap to protect 1GB VPS
+    depends_on:
+      - prometheus
+
 volumes:
   n8n_data:
+  prometheus_data:
+  grafana_data:

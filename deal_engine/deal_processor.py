@@ -209,6 +209,16 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
         reviews = scraped.get("reviews")
         has_bank_offer = scraped.get("has_bank_offer", False)
         
+        # Fallback: if scraper didn't capture an image, try OpenGraph meta tag
+        if not img_url or img_url.strip() == "" or img_url.startswith("data:"):
+            try:
+                from utils.og_scraper import fetch_opengraph_image
+                img_url = fetch_opengraph_image(expanded_url)
+                logging.info(f"[Deal Processor] OG fallback image: {img_url[:80]}")
+            except Exception as og_err:
+                logging.warning(f"[Deal Processor] OG image fallback failed: {og_err}")
+
+        
         if price == 0:
             logging.warning(f"[Deal Processor] Scraped price is 0. Skipping deal.")
             return False
