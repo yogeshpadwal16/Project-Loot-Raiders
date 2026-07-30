@@ -493,11 +493,111 @@ def send_email_alert(title: str, price: int, mrp: int, discount: float, img_url:
         logging.error(f"Email alert dispatch failed: {e}")
         return False
 
+def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
+    """
+    Attempts to fetch the product page URL and parse the main product image.
+    Uses curl_cffi for anti-bot bypass and selectolax for rapid parsing.
+    Strictly times out in 'timeout' seconds.
+    """
+    if not url or not url.startswith("http"):
+        return None
+    try:
+        from curl_cffi import requests as curl_requests
+        from selectolax.parser import HTMLParser
+        import json
+        import re
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        try:
+            res = curl_requests.get(url, headers=headers, impersonate="chrome110", timeout=timeout)
+        except Exception:
+            # Fallback to standard requests
+            import requests as std_requests
+            res = std_requests.get(url, headers=headers, timeout=timeout)
+
+        if res.status_code == 200:
+            tree = HTMLParser(res.text)
+            
+            # Amazon image parsing
+            if "amazon" in url.lower():
+                for sel in ["img#landingImage", "img#imgBlkFront", "img#main-image", "div#imgTagWrapperId img"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        dyn = el.attributes.get("data-a-dynamic-image")
+                        if dyn:
+                            try:
+                                urls = list(json.loads(dyn).keys())
+                                if urls:
+                                    return urls[0]
+                            except Exception:
+                                pass
+                        src = el.attributes.get("src")
+                        if src and src.startswith("http") and "spinner" not in src:
+                            return src
+                
+                # Regex fallback for Amazon image block in JS
+                match = re.search(r"colorImages\':\s*\{\s*\'initial\':\s*(\[.*?\])\s*\}", res.text)
+                if match:
+                    try:
+                        images_data = json.loads(match.group(1).replace("'", '"'))
+                        for img in images_data:
+                            large_url = img.get("large") or img.get("hiRes")
+                            if large_url:
+                                return large_url
+                    except Exception:
+                        pass
+
+            # Flipkart image parsing
+            elif "flipkart" in url.lower():
+                for img in tree.css("img"):
+                    src = img.attributes.get("src") or img.attributes.get("data-src")
+                    if src and "rukminim2.flixcart.com/image/" in src:
+                        # Prefer larger image
+                        src = src.replace("/128/128/", "/832/832/").replace("/416/416/", "/832/832/")
+                        return src
+
+            # Generic fallback: find first large image
+            for img in tree.css("img"):
+                src = img.attributes.get("src") or img.attributes.get("data-src")
+                if src and src.startswith("http") and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                    if any(x in src.lower() for x in ["icon", "logo", "avatar", "loader", "spinner", "sprite"]):
+                        continue
+                    return src
+    except Exception as e:
+        logging.warning(f"Failed to scrape product image from page {url}: {e}")
+    return None
+
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
     buy_url = get_short_deal_link(final_url, unique_id)
+    
+    # Try page scrape for product image if it's missing (max 3s)
+    if not img_url or img_url.strip() == "" or "base64" in img_url:
+        logging.info(f"Product image missing/empty for '{title[:30]}'. Attempting page scrape for image (Max 3s)...")
+        scraped_img = scrape_product_image_from_page(final_url, timeout=3.0)
+        if scraped_img:
+            logging.info(f"Successfully scraped product image: {scraped_img}")
+            img_url = scraped_img
+            # Save to database so we don't have to scrape it again
+            db = SessionLocal()
+            try:
+                prod = db.query(Product).filter_by(id=unique_id).first()
+                if prod:
+                    prod.image_url = scraped_img
+                    db.commit()
+            except Exception as db_err:
+                db.rollback()
+                logging.error(f"Error saving scraped image URL to DB: {db_err}")
+            finally:
+                db.close()
+        else:
+            logging.info(f"Page image scrape failed or timed out. Proceeding without image.")
         
     is_amazon = "amazon" in platform.lower()
     from deal_engine.scorer import check_if_glitch
@@ -636,21 +736,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         )
     
     # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
+    # Only generate a local PIL card when we have a real product image URL.
+    # If img_url is empty or base64, skip card generation entirely and proceed
+    # to the text-only sendMessage path — PIL card upload via sendPhoto hangs
+    # indefinitely when the upload body has no hard timeout in requests.
     local_card_path = None
-    try:
-        local_card_path = generate_deal_image(
-            unique_id=unique_id,
-            platform=platform,
-            title=title,
-            price=price,
-            mrp=mrp,
-            discount=discount,
-            original_image_url=img_url,
-            is_verified_low=is_verified_low,
-            deal_score=deal_score
-        )
-    except Exception as img_gen_err:
-        logging.error(f"Image generation failed inside notifier: {img_gen_err}")
+    has_real_image = bool(img_url and img_url.startswith("http") and not img_url.startswith("data:image"))
+    if has_real_image:
+        try:
+            local_card_path = generate_deal_image(
+                unique_id=unique_id,
+                platform=platform,
+                title=title,
+                price=price,
+                mrp=mrp,
+                discount=discount,
+                original_image_url=img_url,
+                is_verified_low=is_verified_low,
+                deal_score=deal_score
+            )
+        except Exception as img_gen_err:
+            logging.error(f"Image generation failed inside notifier: {img_gen_err}")
 
     # 3. Build Inline Buy Button markup (Feature 3: Verification/Expiration Buttons)
     from knowledge_base.models import DealVote
@@ -707,35 +813,43 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             }
             res = requests.post(endpoint, json=payload, timeout=25)
             if res.status_code == 200:
-                logging.info(f"Telegram raw product image uploaded successfully -> {truncated_title[:20]}...")
+                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal to Telegram: {truncated_title[:20]}...")
                 photo_sent = True
                 save_telegram_message_info(unique_id, res, caption)
             else:
-                logging.warning(f"Telegram photo send for raw URL returned {res.status_code}: {res.text}. Falling back to local card.")
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image send failed ({res.status_code}). Falling back to local card.")
         except Exception as raw_send_err:
-            logging.error(f"Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
 
     # Fallback to local PIL card if raw image send was not successful
     if not photo_sent and local_card_path and os.path.exists(local_card_path):
-        try:
+        import concurrent.futures
+        def _upload_local_card():
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
                 payload = {
-                    "chat_id": chat_id, 
-                    "caption": caption, 
+                    "chat_id": chat_id,
+                    "caption": caption,
                     "parse_mode": "HTML",
                     "reply_markup": reply_markup_json
                 }
-                res = requests.post(endpoint, data=payload, files=files, timeout=25)
-                if res.status_code == 200:
-                    logging.info(f"Telegram verification card uploaded successfully -> {truncated_title[:20]}...")
-                    photo_sent = True
-                    save_telegram_message_info(unique_id, res, caption)
-                else:
-                    logging.warning(f"Telegram Photo method returned {res.status_code}: {res.text}")
+                return requests.post(endpoint, data=payload, files=files, timeout=25)
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(_upload_local_card)
+                try:
+                    res = future.result(timeout=40)  # hard 40s wall-clock limit incl. upload body
+                    if res.status_code == 200:
+                        logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
+                        photo_sent = True
+                        save_telegram_message_info(unique_id, res, caption)
+                    else:
+                        logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}).")
+                except concurrent.futures.TimeoutError:
+                    logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out (>40s). Falling back to text-only.")
         except Exception as upload_err:
-            logging.error(f"Failed to upload photo card: {upload_err}")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to upload photo card: {upload_err}")
         finally:
             try: os.remove(local_card_path)
             except Exception: pass
@@ -746,7 +860,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping text-only fallback per product rules.")
+    # 5. Text-Only Fallback (sendMessage API) if photo sending failed or was skipped
+    try:
+        endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": caption,
+            "parse_mode": "HTML",
+            "reply_markup": reply_markup_json,
+            "disable_web_page_preview": False
+        }
+        res = requests.post(endpoint, json=payload, timeout=25)
+        if res.status_code == 200:
+            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored text-only deal to Telegram: {truncated_title[:20]}...")
+            save_telegram_message_info(unique_id, res, caption)
+            return True
+        else:
+            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Telegram text-only send returned {res.status_code}: {res.text}")
+    except Exception as text_send_err:
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send text-only Telegram message: {text_send_err}")
+        
+    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping.")
     return False
 
 def save_telegram_message_info(unique_id: str, res, caption: str):
@@ -1173,6 +1307,7 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
     
         if has_telegram:
             if not img_url or img_url.strip() == "" or "base64" in img_url:
+                logging.info(f"Product image missing for '{title[:30]}'. Telegram alert will attempt page scrape fallback.")
                 # Last-resort: try OG image scrape before dropping the deal
                 try:
                     from utils.og_scraper import fetch_opengraph_image, DEFAULT_BANNER
@@ -1216,6 +1351,47 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                     recommended_action="Validate Telegram Bot token and chat ID, or check for Telegram API blockages."
                 )
                 telegram_ok = False
+                
+            if telegram_ok:
+                try:
+                    extensions = settings.get("extensions", {}) if settings else {}
+                    voice_alerts = extensions.get("voice_alerts", {}) if extensions else {}
+                    if voice_alerts and voice_alerts.get("enabled", False):
+                        min_score = voice_alerts.get("min_score", 75)
+                        if (deal_score and deal_score >= min_score) or is_verified_low:
+                            import asyncio
+                            from deal_engine.voice_generator import generate_deal_voice_note
+                            
+                            clean_title = title.split('(')[0].split('[')[0].strip()[:80]
+                            output_fn = f"scratch/voice_{unique_id}.mp3"
+                            
+                            voice_file = asyncio.run(generate_deal_voice_note(
+                                title=clean_title,
+                                deal_price=price,
+                                platform=platform,
+                                output_path=output_fn
+                            ))
+                            
+                            if voice_file and os.path.exists(voice_file):
+                                endpoint = f"https://api.telegram.org/bot{bot_token}/sendVoice"
+                                with open(voice_file, "rb") as f:
+                                    files = {"voice": f}
+                                    payload = {
+                                        "chat_id": chat_id,
+                                        "caption": f"🔊 Voice Alert: {clean_title[:35]}..."
+                                    }
+                                    import requests
+                                    v_res = requests.post(endpoint, data=payload, files=files, timeout=30)
+                                    if v_res.status_code == 200:
+                                        logging.info(f"[VOICE_NOTE] Posted audio loot alert to Telegram for {unique_id}")
+                                    else:
+                                        logging.warning(f"[VOICE_NOTE] Failed to post voice note: {v_res.text}")
+                                        
+                                # Clean up local voice note file
+                                try: os.remove(voice_file)
+                                except Exception: pass
+                except Exception as voice_err:
+                    logging.error(f"[VOICE_NOTE] Failed to process voice note alert: {voice_err}")
         
         apprise_ok = True
         apprise_uris = settings.get("notification_uris", [])
@@ -1352,6 +1528,14 @@ def notifier_worker():
             track_channel_growth()
         except Exception as e:
             logging.error(f"Error tracking channel growth: {e}")
+            
+        # Check and send Indian Festival greetings dynamically
+        try:
+            import asyncio
+            from deal_engine.festival_bot import check_and_run_festival_bot
+            asyncio.run(check_and_run_festival_bot())
+        except Exception as e:
+            logging.error(f"Error running festival bot check: {e}")
         
         # Check and send Mega-Sale checklist alerts (Feature 30)
         try:

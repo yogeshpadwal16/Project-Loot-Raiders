@@ -37,7 +37,9 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         
     def end_headers(self):
         # Restrict CORS to same-origin requests; override via CORS_ORIGIN env var
-        allowed_origin = os.environ.get('CORS_ORIGIN', self.headers.get('Origin', '*'))
+        headers_obj = getattr(self, 'headers', None)
+        origin = headers_obj.get('Origin', '*') if headers_obj else '*'
+        allowed_origin = os.environ.get('CORS_ORIGIN', origin)
         self.send_header('Access-Control-Allow-Origin', allowed_origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
@@ -63,7 +65,8 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             '/api/channel/growth',
             '/api/whatsapp/share',
             '/api/push/subscribe',
-            '/api/deals/stream'
+            '/api/deals/stream',
+            '/api/tma/deals'
         ]
         if clean_path in public_endpoints or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
             return True
@@ -253,6 +256,59 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 logging.error(f"Analytics query error: {e}")
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            finally:
+                db.close()
+                
+        elif clean_path == '/api/tma/deals':
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            
+            category = queries.get('category', [None])[0]
+            limit_val = queries.get('limit', ['20'])[0]
+            try:
+                limit = min(int(limit_val), 50)
+            except ValueError:
+                limit = 20
+                
+            db = SessionLocal()
+            try:
+                from sqlalchemy import func
+                from sqlalchemy.orm import joinedload
+                
+                # Fetch latest price history ID for each product
+                latest_ph_ids = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
+                
+                # Build query
+                query = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(PriceHistory.id.in_(latest_ph_ids))
+                
+                if category:
+                    query = query.join(Product).filter(Product.title.ilike(f"%{category}%"))
+                    
+                price_histories = query.order_by(PriceHistory.timestamp.desc()).limit(limit).all()
+                
+                deals = []
+                for ph in price_histories:
+                    p = ph.product
+                    if not p:
+                        continue
+                    deals.append({
+                        "id": p.id,
+                        "title": p.title,
+                        "platform": p.platform.capitalize() if p.platform else "Unknown",
+                        "deal_price": ph.price,
+                        "mrp": ph.mrp,
+                        "discount_percent": int(ph.discount) if ph.discount else 0,
+                        "image_url": p.image_url,
+                        "buy_url": p.url
+                    })
+                    
+                self.wfile.write(json.dumps({"status": "success", "count": len(deals), "deals": deals}).encode('utf-8'))
+            except Exception as e:
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
             finally:
                 db.close()
                 
@@ -1250,6 +1306,10 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
 def start_api_server(port=5555):
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
+    
+    # Prevent socket exhaustion by setting default socket timeout
+    import socket
+    socket.setdefaulttimeout(15.0)
     
     server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
