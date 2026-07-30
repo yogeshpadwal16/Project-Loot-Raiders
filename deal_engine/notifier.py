@@ -1425,6 +1425,14 @@ def notifier_worker():
             track_channel_growth()
         except Exception as e:
             logging.error(f"Error tracking channel growth: {e}")
+            
+        # Check and send Indian Festival greetings dynamically
+        try:
+            import asyncio
+            from deal_engine.festival_bot import check_and_run_festival_bot
+            asyncio.run(check_and_run_festival_bot())
+        except Exception as e:
+            logging.error(f"Error running festival bot check: {e}")
         
         # Check and send Mega-Sale checklist alerts (Feature 30)
         try:
