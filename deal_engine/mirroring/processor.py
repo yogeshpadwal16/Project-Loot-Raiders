@@ -104,7 +104,7 @@ class DealMirrorProcessor:
         
         # 1. Verify links exist in message
         if not message.extracted_urls:
-            logging.info(f"[Mirror Pipeline] No URLs in message {message.message_id}. Skipping.")
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] No URLs in message {message.message_id}. Skipping.")
             return
 
         db = SessionLocal()
@@ -113,24 +113,24 @@ class DealMirrorProcessor:
                 # Skip known bad paths
                 from deal_engine.channel_mirror import _should_skip_url
                 if _should_skip_url(raw_url):
-                    logging.info(f"[Mirror Pipeline] Skipping non-deal link: {raw_url}")
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipping non-deal link: {raw_url}")
                     continue
                 
                 # 2. Expand link
-                expanded_url = self._expand_url_with_retry(raw_url)
+                expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
                 
                 # Resolve competitor landing pages
                 platform, unique_id = self._parse_url_metadata(expanded_url)
                 if not platform or not unique_id:
                     # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
-                    logging.info(f"[Mirror Pipeline] Non-store URL: {expanded_url}. Scanning landing page...")
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
                     candidates = extract_store_url_from_competitor_landing_page(expanded_url)
                     if candidates:
                         expanded_url = candidates
                         platform, unique_id = self._parse_url_metadata(expanded_url)
                 
                 if not platform or not unique_id:
-                    logging.warning(f"[Mirror Pipeline] Could not resolve store identifier for: {expanded_url}")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not resolve store identifier for: {expanded_url}")
                     continue
                     
                 # 4. Scrape details
@@ -231,7 +231,7 @@ class DealMirrorProcessor:
                 
                 if is_dup:
                     if matched_id == "in-flight":
-                        logging.info(f"[Mirror Pipeline] Skipping concurrent in-flight deal: {title[:35]}")
+                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping concurrent in-flight deal: {title[:35]}")
                         continue
                         
                     price_changed = True
@@ -240,13 +240,13 @@ class DealMirrorProcessor:
                         if latest and price >= latest.price:
                             price_changed = False
                     except Exception as db_err:
-                        logging.error(f"[Mirror Pipeline] Price duplicate check error: {db_err}")
+                        logging.error(f"[DEDUP] [CorrID: {correlation_id}] Price duplicate check error: {db_err}")
 
                     if not price_changed:
-                        logging.info(f"[Mirror Pipeline] Skipping duplicate deal: {title[:30]} (Price ₹{price} >= latest ₹{latest.price if latest else 0})")
+                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate deal: {title[:30]} (Price ₹{price} >= latest ₹{latest.price if latest else 0})")
                         continue
 
-                    logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
+                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
                     unique_id = matched_id
 
 
@@ -266,7 +266,7 @@ class DealMirrorProcessor:
                     else:
                         is_verified_low = verify_historical_low(None, expanded_url, price, unique_id, discount)
                 except Exception as verify_err:
-                    logging.warning(f"[Mirror Pipeline] Historical check failed, defaulting to True: {verify_err}")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Historical check failed, defaulting to True: {verify_err}")
                     
                 # 7. Scorer & Database Commit
                 deal_score = calculate_deal_score(
@@ -300,11 +300,11 @@ class DealMirrorProcessor:
                     auto_cart_url=auto_cart_url,
                     is_mirror=True
                 )
-                logging.info(f"[Mirror Pipeline] Deal alerts enqueued for publishing: {title[:30]}")
+                logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
         finally:
             db.close()
 
-    def _expand_url_with_retry(self, url: str) -> str:
+    def _expand_url_with_retry(self, url: str, correlation_id: str = "") -> str:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         expanded = url
         try:
@@ -313,7 +313,7 @@ class DealMirrorProcessor:
                 res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=(3, 5))
             expanded = res.url
         except Exception as e:
-            logging.warning(f"[Mirror Pipeline] Short link expansion failed for {url}: {e}")
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Short link expansion failed for {url}: {e}")
 
             
         # If it's still a non-store URL, use Playwright to resolve JS redirects
@@ -328,12 +328,12 @@ class DealMirrorProcessor:
                     time.sleep(5)  # Wait for JS redirects to settle
                     final_url = temp_driver.page.url
                     if any(d in final_url.lower() for d in store_domains):
-                        logging.info(f"[Mirror Pipeline] Playwright resolved JS redirect: {url} -> {final_url}")
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Playwright resolved JS redirect: {url} -> {final_url}")
                         expanded = final_url
                 finally:
                     temp_driver.quit()
             except Exception as e:
-                logging.warning(f"[Mirror Pipeline] Playwright redirect resolution failed: {e}")
+                logging.warning(f"[PARSE] [CorrID: {correlation_id}] Playwright redirect resolution failed: {e}")
                 
         return expanded
 

@@ -200,7 +200,7 @@ class MultiClientMirrorListener:
                         
                         # Stage 3: Queue Insertion
                         logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                        success = self.queue.enqueue(normalized)
+                        success = await asyncio.to_thread(self.queue.enqueue, normalized)
                         if success:
                             logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
@@ -280,7 +280,7 @@ class MultiClientMirrorListener:
                         
                         # Stage 3: Queue Insertion
                         logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                        success = self.queue.enqueue(normalized)
+                        success = await asyncio.to_thread(self.queue.enqueue, normalized)
                         if success:
                             logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
@@ -524,7 +524,7 @@ class MultiClientMirrorListener:
                                 
                                 # Stage 3: Queue Insertion
                                 logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                                success = self.queue.enqueue(normalized)
+                                success = await asyncio.to_thread(self.queue.enqueue, normalized)
                                 if success:
                                     logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                                 else:

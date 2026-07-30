@@ -33,6 +33,7 @@ else:
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
         except Exception as e:
@@ -61,39 +62,28 @@ def init_db():
     )
     Base.metadata.create_all(bind=engine)
     
-    # Run migration queries to add new columns to products table if they do not exist
-    import sqlite3
+    # Run database-agnostic migration checks using SQLAlchemy Inspector
     import logging
+    from sqlalchemy import inspect, text
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        inspector = inspect(engine)
+        existing_cols = [col["name"] for col in inspector.get_columns("products")]
         
-        # Add telegram_message_id to products
-        try:
-            cursor.execute("ALTER TABLE products ADD COLUMN telegram_message_id INTEGER")
-        except sqlite3.OperationalError:
-            pass # column already exists
-            
-        # Add telegram_caption to products
-        try:
-            cursor.execute("ALTER TABLE products ADD COLUMN telegram_caption TEXT")
-        except sqlite3.OperationalError:
-            pass # column already exists
-
-        # Publication frequency tracking — prevents duplicate spam
-        for col_sql in [
-            "ALTER TABLE products ADD COLUMN last_published_at REAL DEFAULT 0.0",
-            "ALTER TABLE products ADD COLUMN last_published_price INTEGER DEFAULT 0",
-            "ALTER TABLE products ADD COLUMN daily_post_count INTEGER DEFAULT 0",
-            "ALTER TABLE products ADD COLUMN daily_post_date TEXT DEFAULT ''",
-        ]:
-            try:
-                cursor.execute(col_sql)
-            except sqlite3.OperationalError:
-                pass # column already exists
-            
-        conn.commit()
-        conn.close()
+        migrations = {
+            "telegram_message_id": "INTEGER",
+            "telegram_caption": "TEXT",
+            "last_published_at": "REAL DEFAULT 0.0" if "sqlite" in engine.url.drivername else "DOUBLE PRECISION DEFAULT 0.0",
+            "last_published_price": "INTEGER DEFAULT 0",
+            "daily_post_count": "INTEGER DEFAULT 0",
+            "daily_post_date": "TEXT DEFAULT ''" if "sqlite" in engine.url.drivername else "VARCHAR(10) DEFAULT ''"
+        }
+        
+        with engine.begin() as connection:
+            for col_name, col_type in migrations.items():
+                if col_name not in existing_cols:
+                    alter_sql = f"ALTER TABLE products ADD COLUMN {col_name} {col_type}"
+                    connection.execute(text(alter_sql))
+                    logging.info(f"[Migration] Successfully added column '{col_name}' to products table.")
     except Exception as e:
-        logging.warning(f"Database products table migration failed: {e}")
+        logging.warning(f"[Migration] Database products table migration failed: {e}")
 
