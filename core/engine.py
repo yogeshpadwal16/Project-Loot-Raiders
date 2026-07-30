@@ -814,6 +814,9 @@ def main():
                     scraper_state["scan_trigger"] = False
                 
             try:
+                # Kill any leftover Chrome/Playwright processes older than 5 minutes before starting a new cycle
+                run_zombie_cleanup(max_age_seconds=300)
+
                 db = SessionLocal()
                 try:
                     # Query active platform matrices from SQLite

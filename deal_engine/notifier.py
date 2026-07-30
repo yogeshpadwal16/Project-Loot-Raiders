@@ -12,6 +12,7 @@ from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory
 from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
+from deal_engine.wishlist import check_deal_against_keyword_alerts
 
 notification_queue = queue.PriorityQueue()
 queue_counter = 0
@@ -61,14 +62,14 @@ def log_failure(component: str, context: str, err: Exception, severity: str = "E
     )
     logging.error(msg)
 
+
 def generate_smart_caption(title: str, price: int, mrp: int, discount: float, final_url: str, is_verified_low: bool, deal_score: float, platform: str, comparison: str, price_stats: dict = None,
                             bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A",
                             effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "",
-                            buying_advice: dict = None) -> str:
+                            buying_advice: dict = None, unique_id: str = None) -> str:
     """
-    Smart template-based caption generator for Telegram deal posts.
-    Uses randomized headlines, emoji patterns, urgency triggers,
-    and Predictive Price Intelligence (PPIE) badges to create varied, engaging posts.
+    Smart template-based caption generator for Telegram deal posts with A/B testing.
+    Supports CARD_BLOCKQUOTE (detailed blockquote layout) and COMPACT_LIST (concise height-optimized layout).
     """
     import random
     import hashlib
@@ -115,68 +116,117 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
         f"🔥 <b>{platform_upper} LOOT DROP!</b> {discount:.0f}% OFF detected!",
     ]
     
-    # Build the caption
+    clean_title = title.split('\n')[0].strip()
+    truncated = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
+    
+    # Determine A/B variant
+    ab_variant = "CARD_BLOCKQUOTE"
+    tracking_tag = "ab_variant_card_blockquote"
+    if unique_id:
+        try:
+            from utils.ab_testing import select_ab_template
+            ab_variant, tracking_tag = select_ab_template(unique_id)
+        except Exception:
+            pass
+            
     parts = []
     
-    # Excitement opener
+    # 1. Excitement opener
     parts.append(rng.choice(excitement_openers))
     parts.append("")
     
-    # Product title
-    clean_title = title.split('\n')[0].strip()
-    truncated = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
-    parts.append(f"🛍️ <b>{truncated}</b>")
-    parts.append("")
-    
-    # Predictive Buying Intelligence Badge
-    if buying_advice and buying_advice.get("badge"):
-        badge = buying_advice["badge"]
-        conf = buying_advice.get("confidence", 85)
-        reason = buying_advice.get("reason", "")
-        parts.append(f"🧠 <b>[ {badge} ]</b> (<i>{conf}% AI Confidence</i>)")
-        if reason:
-            parts.append(f"💡 <i>{reason}</i>")
-    elif is_verified_low:
-        parts.append("🏆 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
-    
-    # Price block
-    parts.append(f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>")
-    parts.append(f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>")
-    parts.append(f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>")
-    parts.append(f"💰 <b>You Save:</b>     <code>₹{savings:,}</code>")
-    parts.append("")
-    
-    # Effective cashback
-    if effective_cashback:
-        parts.append(f"🪙 <b>Effective:</b> {effective_cashback}")
-    
-    # UPI offer
-    if upi_offer:
-        parts.append(f"📱 <b>UPI Bonus:</b> {upi_offer}")
-    
-    # Offline comparison
-    if offline_compare:
-        parts.append(f"🏬 <b>Offline:</b> {offline_compare}")
-    
-    # Coupon & bank offers
-    if coupon_detail:
-        parts.append(f"🏷️ <b>Coupon:</b>      <code>{coupon_detail}</code>")
-    if bank_offers:
-        parts.append(f"💳 <b>Bank Offer:</b>  <code>{', '.join(bank_offers[:2])}</code>")
-    
-    # Review grade
-    if review_grade and review_grade != "N/A":
-        parts.append(f"⭐ <b>Review Trust:</b> <code>Grade {review_grade}</code>")
-    
-    # Price stats
+    if ab_variant == "CARD_BLOCKQUOTE":
+        card_content = []
+        card_content.append(f"🛍️ <b>{truncated}</b>")
+        card_content.append("")
+        
+        # Predictive Buying Intelligence Badge
+        if buying_advice and buying_advice.get("badge"):
+            badge = buying_advice["badge"]
+            conf = buying_advice.get("confidence", 85)
+            reason = buying_advice.get("reason", "")
+            card_content.append(f"🧠 <b>[ {badge} ]</b> (<i>{conf}% AI Confidence</i>)")
+            if reason:
+                card_content.append(f"💡 <i>{reason}</i>")
+        elif is_verified_low:
+            card_content.append("🏆 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
+            
+        card_content.append("")
+        card_content.append(f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>")
+        card_content.append(f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>")
+        card_content.append(f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>")
+        card_content.append(f"💰 <b>You Save:</b>     <code>₹{savings:,}</code>")
+        card_content.append("")
+        
+        if effective_cashback:
+            card_content.append(f"🪙 <b>Effective:</b> {effective_cashback}")
+        if upi_offer:
+            card_content.append(f"📱 <b>UPI Bonus:</b> {upi_offer}")
+        if offline_compare:
+            card_content.append(f"🏬 <b>Offline:</b> {offline_compare}")
+            
+        if coupon_detail:
+            card_content.append(f"🏷️ <b>Coupon:</b>      <code>{coupon_detail}</code>")
+        if bank_offers:
+            from utils.bank_offers import get_best_bank_effective_price
+            bank_eff_price, bank_summary = get_best_bank_effective_price(price, bank_offers)
+            card_content.append(f"💳 <b>Bank Offer:</b>  <code>{', '.join(bank_offers[:2])}</code>")
+            if bank_summary and bank_eff_price < price:
+                card_content.append(f"💎 <b>Effective Price:</b> <code>₹{bank_eff_price:,}</code> ({bank_summary})")
+                
+        if review_grade and review_grade != "N/A":
+            card_content.append(f"⭐ <b>Review Trust:</b> <code>Grade {review_grade}</code>")
+            
+        # Wrap details in blockquote
+        parts.append("<blockquote>" + "\n".join(card_content) + "</blockquote>")
+        parts.append("")
+        
+    else:  # COMPACT_LIST
+        parts.append(f"🛍️ <b>{truncated}</b>")
+        parts.append(f"💵 <b>₹{price:,}</b> (<s>₹{mrp:,}</s>) | 📉 <b>{discount:.0f}% OFF</b>")
+        
+        meta_items = []
+        if buying_advice and buying_advice.get("badge"):
+            meta_items.append(f"🧠 <b>{buying_advice['badge']}</b> ({buying_advice.get('confidence', 85)}% AI)")
+        elif is_verified_low:
+            meta_items.append("🏆 <b>Verified Low</b>")
+        if review_grade and review_grade != "N/A":
+            meta_items.append(f"⭐ Grade {review_grade}")
+            
+        if meta_items:
+            parts.append(" | ".join(meta_items))
+            
+        parts.append("")
+        
+        compact_offers = []
+        if coupon_detail:
+            compact_offers.append(f"🏷️ <b>Coupon:</b> {coupon_detail}")
+        if bank_offers:
+            from utils.bank_offers import get_best_bank_effective_price
+            bank_eff_price, bank_summary = get_best_bank_effective_price(price, bank_offers)
+            if bank_summary and bank_eff_price < price:
+                compact_offers.append(f"💳 <b>Bank:</b> ₹{bank_eff_price:,} ({bank_summary})")
+            else:
+                compact_offers.append(f"💳 <b>Bank Offer:</b> {bank_offers[0]}")
+        if effective_cashback:
+            compact_offers.append(f"🪙 <b>Cashback:</b> {effective_cashback}")
+        if upi_offer:
+            compact_offers.append(f"📱 <b>UPI:</b> {upi_offer}")
+        if offline_compare:
+            compact_offers.append(f"🏬 <b>Offline:</b> {offline_compare}")
+            
+        if compact_offers:
+            parts.append("\n".join(compact_offers))
+            parts.append("")
+            
+    # Price stats & comparisons (common to both)
     if price_stats and price_stats.get("points_count", 0) >= 3:
-        parts.append(f"\n📊 <b>Price History</b> ({price_stats['points_count']} checks):")
+        parts.append(f"📊 <b>Price History</b> ({price_stats['points_count']} checks):")
         parts.append(f"  📈 High: ₹{price_stats['highest']:,} → 📉 Low: ₹{price_stats['lowest']:,}")
-    
-    # Cross-platform comparison
+        
     if comparison:
         parts.append(comparison)
-    
+        
     parts.append("")
     
     # Deal score
@@ -189,11 +239,16 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     parts.append(rng.choice(urgency_hooks))
     parts.append("")
     
-    # CTA link
+    # CTA link with variant hash tag for tracking
     cta = rng.choice(cta_texts)
-    parts.append(f"<a href='{final_url}'>{cta}</a>")
+    cta_url = f"{final_url}#{tracking_tag}"
+    parts.append(f"<a href='{cta_url}'>{cta}</a>")
+    
+    # Subtle hashtag tag for analytics
+    parts.append(f"\n#{tracking_tag}")
     
     return "\n".join(parts)
+
 
 def send_n8n_webhook(webhook_url: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, short_url: str, deal_score: float) -> bool:
     """
@@ -478,32 +533,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     clean_title = title.split('\n')[0].strip()
     truncated_title = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
     
-    # Query database for price comparisons on other platforms
+    # Query database for price comparisons on other platforms (ArbitrageRadar)
     comparison_text = ""
-    db = SessionLocal()
     try:
-        words = [w.strip() for w in re.split(r'[^a-zA-Z0-9]', clean_title) if len(w) > 2]
-        if len(words) >= 2:
-            search_term = "%" + "%".join(words[:3]) + "%"
-            matches = db.query(Product).filter(
-                Product.title.like(search_term),
-                Product.id != unique_id
-            ).all()
-            
-            comparison_list = []
-            seen_platforms = set()
-            for match in matches:
-                lp = db.query(PriceHistory).filter_by(product_id=match.id).order_by(PriceHistory.timestamp.desc()).first()
-                if lp and match.platform != platform and match.platform not in seen_platforms:
-                    comparison_list.append(f"  • {match.platform.upper()}: ₹{lp.price:,}")
-                    seen_platforms.add(match.platform)
-                    
-            if comparison_list:
-                comparison_text = "\n\n📊 <b>Multi-Retailer Comparison:</b>\n" + "\n".join(comparison_list)
-    except Exception as db_err:
-        logging.error(f"Error querying comparisons in notifier: {db_err}")
-    finally:
-        db.close()
+        from deal_engine.arbitrage import get_cross_store_comparison
+        comparison_text = get_cross_store_comparison(clean_title, price, platform) or ""
+    except Exception as arb_err:
+        logging.error(f"ArbitrageRadar comparison failed: {arb_err}")
         
     savings = mrp - price
     rating_score = deal_score / 10.0
@@ -527,17 +563,25 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     finally:
         db.close()
         
-    # 1.5 Calculate Effective Prices (Feature 7: SuperCoin & Pay Cashback)
+    # 1.5 Calculate Effective Prices (Feature 7: Bank Offer Parser + Pay Cashback)
     effective_cashback_text = ""
     effective_cashback_prompt = ""
-    if "amazon" in platform.lower():
-        effective_price = int(price * 0.95)
-        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Amazon Pay Card 5% Cashback)\n"
-        effective_cashback_prompt = f"Effective Price (with 5% Amazon Pay Card Cashback): Rs. {effective_price}"
-    elif "flipkart" in platform.lower():
-        effective_price = int(price * 0.95)
-        effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Flipkart Axis Card / SuperCoins)\n"
-        effective_cashback_prompt = f"Effective Price (with Flipkart Axis Card or SuperCoins): Rs. {effective_price}"
+    if bank_offers:
+        from utils.bank_offers import get_best_bank_effective_price
+        bank_eff_price, bank_summary = get_best_bank_effective_price(price, bank_offers)
+        if bank_summary and bank_eff_price < price:
+            effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{bank_eff_price:,}</code> ({bank_summary})\n"
+            effective_cashback_prompt = f"Effective Price after bank discount: Rs. {bank_eff_price} ({bank_summary})"
+    if not effective_cashback_prompt:
+        # Fallback to platform-specific cashback estimate if no parseable bank offer
+        if "amazon" in platform.lower():
+            effective_price = int(price * 0.95)
+            effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Amazon Pay Card 5% Cashback)\n"
+            effective_cashback_prompt = f"Effective Price (with 5% Amazon Pay Card Cashback): Rs. {effective_price}"
+        elif "flipkart" in platform.lower():
+            effective_price = int(price * 0.95)
+            effective_cashback_text = f"🪙 <b>Effective Price:</b>  <code>₹{effective_price:,}</code> (with Flipkart Axis Card / SuperCoins)\n"
+            effective_cashback_prompt = f"Effective Price (with Flipkart Axis Card or SuperCoins): Rs. {effective_price}"
         
     # 1.6 UPI / RuPay Offer Matcher (Feature 8)
     upi_matcher_text = ""
@@ -566,7 +610,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     caption = generate_smart_caption(truncated_title, price, mrp, discount, buy_url, is_verified_low, deal_score, platform, comparison_text, price_stats,
                                       bank_offers=bank_offers, coupon_detail=coupon_detail, review_grade=review_grade,
                                       effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt,
-                                      buying_advice=buying_advice)
+                                      buying_advice=buying_advice, unique_id=unique_id)
     
     # Prepend the official branded header so the platform is ALWAYS clear
     caption = f"{header}\n\n{caption}"
@@ -635,29 +679,12 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if auto_cart_url and not auto_cart_url.startswith("http"):
         auto_cart_url = None  # Drop invalid auto-cart URL rather than crash
     
-    row_1 = [
-        {
-            "text": "🛍️ BUY NOW 🛍️",
-            "url": buy_url
-        }
-    ]
-    if auto_cart_url:
-        row_1.append({
-            "text": "🛒 AUTO-CART 🛒",
-            "url": auto_cart_url
-        })
-        
     reply_markup = {
         "inline_keyboard": [
-            row_1,
             [
                 {
-                    "text": f"🔥 Verified ({vote_verify_count})",
-                    "callback_data": f"vote:verify:{unique_id}"
-                },
-                {
-                    "text": f"❌ Expired ({vote_expire_count})",
-                    "callback_data": f"vote:expire:{unique_id}"
+                    "text": "🛍️ BUY NOW 🛍️",
+                    "url": buy_url
                 }
             ]
         ]
@@ -808,6 +835,15 @@ def update_telegram_message(product_id: str):
                 hotness = min(10.0, 5.0 + (recent_clicks * 0.5))
                 fires = "🔥" * min(3, max(1, int(hotness / 3)))
                 hotness_text = f"\n\n⚡¡ <b>{fires} Hotness: {hotness:.1f}/10</b> - <i>{recent_clicks} clicks in last 15m</i>"
+            
+            # Shlink Click velocity social proof badge
+            try:
+                from utils.shlink import check_loot_velocity
+                velocity_badge = check_loot_velocity(product_id)
+                if velocity_badge:
+                    hotness_text += f"\n\n{velocity_badge}"
+            except Exception as e:
+                logging.warning(f"Could not calculate Shlink velocity for {product_id}: {e}")
                 
             new_caption = f"{original_caption}{hotness_text}"
             reply_markup = {
@@ -816,16 +852,6 @@ def update_telegram_message(product_id: str):
                         {
                             "text": "🛍️ CLICK HERE TO BUY NOW 🛍️",
                             "url": buy_url
-                        }
-                    ],
-                    [
-                        {
-                            "text": f"🔥 Verified ({verifies})",
-                            "callback_data": f"vote:verify:{product_id}"
-                        },
-                        {
-                            "text": f"❌ Expired ({expires})",
-                            "callback_data": f"vote:expire:{product_id}"
                         }
                     ]
                 ]
@@ -1093,7 +1119,16 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
     
         settings = load_settings()
         bot_token = settings.get("telegram_bot_token")
-        chat_id = settings.get("telegram_chat_id")
+        
+        # Route to target Telegram channel dynamically based on keywords/category
+        try:
+            from utils.router import resolve_target_channel_id
+            chat_id = resolve_target_channel_id(title, settings)
+            logging.info(f"[Router] Resolved channel for '{title[:30]}': {chat_id}")
+        except Exception as router_err:
+            logging.warning(f"Channel routing failed: {router_err}")
+            chat_id = settings.get("telegram_chat_id")
+            
         discord_webhook = settings.get("discord_webhook_url")
     
         has_telegram = (bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token and bot_token.strip() != "")
@@ -1122,10 +1157,35 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                 recommended_action="Check database connection or query integrity."
             )
     
+        # Keyword-based wishlist alerts
+        try:
+            kw_deal = {"title": title, "price": price, "discount": discount, "url": short_url}
+            check_deal_against_keyword_alerts(bot_token or "", kw_deal)
+        except Exception as kw_err:
+            log_failure(
+                component="Keyword Wishlist Dispatcher",
+                context=f"Failed to match keyword wishlists for deal '{title[:30]}'",
+                err=kw_err,
+                severity="WARNING",
+                recovery_status="Ignored",
+                recommended_action="Check database connection or user_wishlists table integrity."
+            )
+    
         if has_telegram:
             if not img_url or img_url.strip() == "" or "base64" in img_url:
-                logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
-                return True # Finished, do not retry
+                # Last-resort: try OG image scrape before dropping the deal
+                try:
+                    from utils.og_scraper import fetch_opengraph_image, DEFAULT_BANNER
+                    og_img = fetch_opengraph_image(final_url)
+                    if og_img and og_img != DEFAULT_BANNER:
+                        img_url = og_img
+                        logging.info(f"[Notifier] OG fallback rescued image for '{title[:30]}'")
+                    else:
+                        logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
+                        return True  # Finished, do not retry
+                except Exception:
+                    logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
+                    return True  # Finished, do not retry
             
             try:
                 telegram_ok = send_telegram_alert(

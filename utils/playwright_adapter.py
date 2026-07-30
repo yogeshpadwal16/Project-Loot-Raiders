@@ -244,7 +244,17 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-accelerated-2d-canvas",
-            "--disable-gpu"
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-translate",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--single-process",  # Reduces CPU on low-core VPS (1-2 cores)
+            "--memory-pressure-off",
         ]
         
         proxy_config = None
@@ -277,7 +287,7 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
         
         context = browser.new_context(
             user_agent=selected_ua,
-            viewport={"width": 1920, "height": 1080},
+            viewport={"width": 1280, "height": 720},  # Reduced from 1920x1080 to save render memory
             proxy=proxy_config,
             ignore_https_errors=True
         )

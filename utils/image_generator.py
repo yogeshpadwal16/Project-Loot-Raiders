@@ -10,6 +10,56 @@ from knowledge_base.models import PriceHistory
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRATCH_DIR = os.path.join(BASE_DIR, "scratch")
 
+
+def draw_sparkline_overlay(
+    prod_img: Image.Image, price_history: list,
+) -> Image.Image:
+    """Draws a mini sparkline graph on the product thumbnail showing 90-day price trajectory."""
+    img = prod_img.convert("RGBA")
+    width, height = img.size
+
+    if width < 80 or height < 80:
+        return img  # Image too small for a meaningful overlay
+
+    overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    # Chart box dimensions (bottom-right corner)
+    box_w = int(width * 0.35)
+    box_h = int(height * 0.2)
+    pad = 10
+    x_off = width - box_w - pad
+    y_off = height - box_h - pad
+
+    # Semi-transparent dark background matching card theme (slate-900)
+    draw.rounded_rectangle(
+        [(x_off, y_off), (x_off + box_w, y_off + box_h)],
+        radius=6, fill=(15, 23, 42, 200),
+    )
+
+    if len(price_history) >= 2:
+        min_p, max_p = min(price_history), max(price_history)
+        p_range = (max_p - min_p) if max_p != min_p else 1
+
+        # Green if price dropped, red if it rose
+        trending_down = price_history[-1] <= price_history[0]
+        line_color = (16, 185, 129, 255) if trending_down else (239, 68, 68, 255)
+
+        margin = 5
+        points = []
+        for i, p in enumerate(price_history):
+            px = x_off + margin + int((i / (len(price_history) - 1)) * (box_w - 2 * margin))
+            py = y_off + box_h - margin - int(((p - min_p) / p_range) * (box_h - 2 * margin))
+            points.append((px, py))
+
+        draw.line(points, fill=line_color, width=2)
+
+        # End dot highlighting current price
+        lx, ly = points[-1]
+        draw.ellipse([lx - 3, ly - 3, lx + 3, ly + 3], fill=line_color)
+
+    return Image.alpha_composite(img, overlay)
+
 def generate_deal_image(unique_id: str, platform: str, title: str, price: int, mrp: int, discount: float, original_image_url: str, is_verified_low: bool, deal_score: float) -> str:
     """
     Downloads the product image, queries 90-day price history, overlays deal details,
@@ -75,6 +125,22 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
         else:
             original_image_url = "https://www.flipkart.com" + original_image_url
 
+    # Query price history early so it can be used for both thumbnail overlay and bottom graph
+    db = SessionLocal()
+    prices_history = []
+    try:
+        history = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.asc()).all()
+        prices_history = [h.price for h in history]
+    except Exception as db_err:
+        logging.error(f"Error querying price history for image: {db_err}")
+    finally:
+        db.close()
+
+    if not prices_history:
+        prices_history = [mrp, price]
+    elif len(prices_history) == 1:
+        prices_history = [mrp, prices_history[0]]
+
     img_loaded = False
     if original_image_url and original_image_url.strip() != "":
         try:
@@ -95,7 +161,15 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
                 
                 # Resize product image to fill space beautifully (up to 620 x 420)
                 prod_img.thumbnail((620, 420), Image.Resampling.LANCZOS)
-                
+
+                # Apply sparkline price history overlay on product thumbnail
+                if len(prices_history) >= 2:
+                    try:
+                        prod_img = draw_sparkline_overlay(prod_img, prices_history)
+                        prod_img = prod_img.convert('RGB')
+                    except Exception as overlay_err:
+                        logging.error(f"Sparkline thumbnail overlay failed: {overlay_err}")
+
                 # Center inside the image container
                 x_pos = 50 + (700 - prod_img.width) // 2
                 y_pos = 95 + (460 - prod_img.height) // 2
@@ -145,21 +219,7 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
         clean_title = clean_title[:57] + "..."
     draw.text((80, 765), clean_title, font=meta_font, fill="#ffffff")
     
-    # 7. Price History Graph
-    db = SessionLocal()
-    prices_history = []
-    try:
-        history = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.asc()).all()
-        prices_history = [h.price for h in history]
-    except Exception as db_err:
-        logging.error(f"Error querying price history for image: {db_err}")
-    finally:
-        db.close()
-        
-    if not prices_history:
-        prices_history = [mrp, price]
-    elif len(prices_history) == 1:
-        prices_history = [mrp, prices_history[0]]
+    # 7. Price History Graph (prices_history already queried above for thumbnail overlay)
         
     # Scale and draw graph (y = 840 to 940, height = 100)
     graph_x_start = 140

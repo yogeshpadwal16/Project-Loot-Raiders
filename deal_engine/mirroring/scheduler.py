@@ -5,7 +5,7 @@ import psutil
 from apscheduler.schedulers.background import BackgroundScheduler
 from database.db_session import SessionLocal
 from knowledge_base.models import SystemHealth, ProcessingLog
-from deal_engine.mirroring.queue import RedisMessageQueue
+from deal_engine.mirroring.redis_queue import RedisMessageQueue
 
 class MirrorScheduler:
     def __init__(self, queue: RedisMessageQueue):

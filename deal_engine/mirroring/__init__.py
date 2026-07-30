@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import threading
-from deal_engine.mirroring.queue import RedisMessageQueue
+from deal_engine.mirroring.redis_queue import RedisMessageQueue
 from deal_engine.mirroring.listener import MultiClientMirrorListener
 from deal_engine.mirroring.processor import DealMirrorProcessor
 from deal_engine.mirroring.scheduler import MirrorScheduler
