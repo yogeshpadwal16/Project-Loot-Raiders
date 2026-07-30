@@ -484,6 +484,22 @@
                               </div>
                               
                               <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
+                              
+                              <h4 style="margin: 0 0 10px 0; color: var(--accent-blue); font-size: 0.95rem; font-weight: 700;"><i class="fa-solid fa-puzzle-piece"></i> 🧩 Extensions: Smart Filter Engine</h4>
+                              <div class="input-group-checkbox" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; margin-top: 10px;">
+                                  <input type="checkbox" id="ext-filter-enabled" style="width: auto; cursor: pointer; height: auto;">
+                                  <label for="ext-filter-enabled" style="cursor: pointer; font-weight: 600; margin: 0; font-size: 0.85rem;">Enable Smart Filter Extension</label>
+                              </div>
+                              <div class="input-group" style="margin-bottom: 12px;">
+                                  <label for="ext-filter-allowlist">Allowlist Keywords (Comma-separated, e.g. laptop, phone)</label>
+                                  <input type="text" id="ext-filter-allowlist" placeholder="Enter keywords to keep...">
+                              </div>
+                              <div class="input-group" style="margin-bottom: 12px;">
+                                  <label for="ext-filter-blocklist-regex">Blocklist Regular Expression (Regex matching, e.g. Refurbished|Used|Clone)</label>
+                                  <input type="text" id="ext-filter-blocklist-regex" placeholder="Enter regex pattern to exclude...">
+                              </div>
+                              
+                              <div class="settings-divider" style="margin: 15px 0; border-top: 1px dashed var(--md-sys-color-outline-variant);"></div>
                              
                               <div class="input-group-checkbox" style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; margin-top: 10px;">
                                  <input type="checkbox" id="set-proxies-enabled" style="width: auto; cursor: pointer; height: auto;">

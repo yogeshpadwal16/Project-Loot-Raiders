@@ -3,6 +3,7 @@ import logging
 import threading
 import uuid
 import re
+import requests
 from typing import List, Optional, Tuple
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -100,10 +101,12 @@ class DealMirrorProcessor:
     def _execute_pipeline(self, message: NormalizedMessage):
         """Decoupled processing pipeline steps matching the required architecture."""
         correlation_id = message.correlation_id
+        from config.settings import load_settings
+        settings = load_settings()
         
         # 1. Verify links exist in message
         if not message.extracted_urls:
-            logging.info(f"[Mirror Pipeline] No URLs in message {message.message_id}. Skipping.")
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] No URLs in message {message.message_id}. Skipping.")
             return
 
         db = SessionLocal()
@@ -112,43 +115,132 @@ class DealMirrorProcessor:
                 # Skip known bad paths
                 from deal_engine.channel_mirror import _should_skip_url
                 if _should_skip_url(raw_url):
-                    logging.info(f"[Mirror Pipeline] Skipping non-deal link: {raw_url}")
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipping non-deal link: {raw_url}")
                     continue
                 
                 # 2. Expand link
-                expanded_url = self._expand_url_with_retry(raw_url)
+                expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
                 
                 # Resolve competitor landing pages
                 platform, unique_id = self._parse_url_metadata(expanded_url)
                 if not platform or not unique_id:
                     # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
-                    logging.info(f"[Mirror Pipeline] Non-store URL: {expanded_url}. Scanning landing page...")
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
                     candidates = extract_store_url_from_competitor_landing_page(expanded_url)
                     if candidates:
                         expanded_url = candidates
                         platform, unique_id = self._parse_url_metadata(expanded_url)
                 
                 if not platform or not unique_id:
-                    logging.warning(f"[Mirror Pipeline] Could not resolve store identifier for: {expanded_url}")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not resolve store identifier for: {expanded_url}")
                     continue
                     
                 # 4. Scrape details
-                scraped = scrape_product_details(expanded_url)
-                title = scraped.get("title", "Product Deal")
-                price = scraped.get("price", 0)
-                mrp = scraped.get("mrp", 0)
-                img_url = scraped.get("image_url", "")
-                rating = scraped.get("rating")
-                reviews = scraped.get("reviews")
-                has_bank_offer = scraped.get("has_bank_offer", False)
+                # Priority A: Parse from Telegram message text (message.raw_text)
+                # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
+                title, price, mrp, img_url = "", 0, 0, ""
+                
+                if message.raw_text and message.raw_text.strip():
+                    import re
+                    def extract_deal_number(pattern: str, text: str) -> int:
+                        m = re.search(pattern, text.replace(',', ''), flags=re.IGNORECASE)
+                        if m:
+                            try:
+                                return int(m.group(1))
+                            except (ValueError, IndexError):
+                                pass
+                        return 0
+                    
+                    price_patterns = [
+                        r'(?:price|deal\s+price|deal|now|at\s+just|at|for)\s*:?\s*(?:rs\.?|₹)\s*(\d+)',
+                        r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-)\s*(?:rs\.?|₹)?\s*\d+',
+                        r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
+                    ]
+                    mrp_patterns = [
+                        r'(?:mrp|original\s+price|was|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
+                    ]
+                    
+                    msg_clean = message.raw_text.replace(',', '')
+                    for pat in price_patterns:
+                        extracted = extract_deal_number(pat, msg_clean)
+                        if extracted > 0:
+                            price = extracted
+                            break
+                            
+                    for pat in mrp_patterns:
+                        extracted = extract_deal_number(pat, msg_clean)
+                        if extracted > 0 and extracted != price:
+                            mrp = extracted
+                            break
+                            
+                    if price > 0 and mrp == 0:
+                        all_prices = [int(n) for n in re.findall(r'(?:rs\.?|₹)\s*(\d+)', msg_clean, flags=re.IGNORECASE)]
+                        larger = [p for p in all_prices if p > price]
+                        if larger:
+                            mrp = min(larger)
+                        else:
+                            mrp = int(price * 1.4)
+                            
+                    if price > 0:
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
+                        lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
+                        for line in lines:
+                            if (len(line) >= 10 and 'http' not in line and
+                                    not line.startswith('#') and
+                                    not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
+                                title = line[:120]
+                                break
+                        if not title:
+                            title = "Competitor Deal"
+                
+                # Fallback to lightweight scraper if needed
+                scraped = {}
+                if price == 0:
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] No price from message text — attempting lightweight HTTP scrape")
+                    from deal_engine.deal_processor import scrape_product_lightweight
+                    scraped_data = scrape_product_lightweight(expanded_url)
+                    if scraped_data:
+                        scraped = scraped_data
+                        if not title or title == "Competitor Deal":
+                            title = scraped_data.get("title", "Product Deal")
+                        price = scraped_data.get("price", 0)
+                        mrp = scraped_data.get("mrp", 0)
+                        img_url = scraped_data.get("image_url", "")
                 
                 if price == 0:
-                    logging.warning(f"[Mirror Pipeline] Scraped price is 0. Skipping.")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not extract price. Skipping.")
                     continue
                     
                 discount = 0.0
                 if mrp > price:
                     discount = ((mrp - price) / mrp) * 100.0
+                    
+                rating = scraped.get("rating")
+                reviews = scraped.get("reviews")
+                has_bank_offer = scraped.get("has_bank_offer", False)
+                # 4.5. Extensions: Smart Filter Engine
+                extensions = settings.get("extensions", {}) if settings else {}
+                smart_filter = extensions.get("smart_filter", {}) if extensions else {}
+                if smart_filter and smart_filter.get("enabled", False):
+                    # Blocklist Regex Check
+                    block_regex = smart_filter.get("blocklist_regex", "")
+                    if block_regex:
+                        import re
+                        try:
+                            if re.search(block_regex, title, flags=re.IGNORECASE):
+                                logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (Regex matched '{block_regex}')")
+                                continue
+                        except Exception as regex_err:
+                            logging.error(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter invalid regex '{block_regex}': {regex_err}")
+                    
+                    # Allowlist Keywords Check
+                    allow_keywords = smart_filter.get("allowlist_keywords", [])
+                    if allow_keywords:
+                        if not any(kw.strip().lower() in title.lower() for kw in allow_keywords if kw.strip()):
+                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (No allowlist keywords matched)")
+                            continue
                     
                 # 5. Duplicate Detection (Intelligent RapidFuzz check)
                 is_dup, matched_id = IntelligentDeduplicator.find_duplicate(
@@ -160,33 +252,27 @@ class DealMirrorProcessor:
                     text=message.raw_text
                 )
                 
-                is_price_drop = True
                 if is_dup:
                     if matched_id == "in-flight":
-                        logging.info(f"[Mirror Pipeline] Skipping concurrent in-flight deal: {title[:35]}")
+                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping concurrent in-flight deal: {title[:35]}")
                         continue
                         
-                    logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
-                    unique_id = matched_id
-                    
-                    # Fetch latest price from DB to see if the price actually dropped
-                    db_session = SessionLocal()
+                    price_changed = True
                     try:
-                        latest = db_session.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
-                        if latest:
-                            # If the price is the same or higher, we do NOT alert it again (avoids subscriber spam)
-                            if price >= latest.price:
-                                is_price_drop = False
-                                logging.info(f"[Mirror Pipeline] Skipping duplicate deal: {title[:35]}... (Price ₹{price} >= latest ₹{latest.price})")
+                        latest = db.query(PriceHistory).filter_by(product_id=matched_id).order_by(PriceHistory.timestamp.desc()).first()
+                        if latest and price >= latest.price:
+                            price_changed = False
                     except Exception as db_err:
-                        logging.error(f"[Mirror Pipeline] Error querying latest price for duplicate check: {db_err}")
-                    finally:
-                        db_session.close()
+                        logging.error(f"[DEDUP] [CorrID: {correlation_id}] Price duplicate check error: {db_err}")
 
-                if not is_price_drop:
-                    from utils.deduplicator import release_in_flight_deal
-                    release_in_flight_deal(title, platform, expanded_url)
-                    continue
+                    if not price_changed:
+                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate deal: {title[:30]} (Price ₹{price} >= latest ₹{latest.price if latest else 0})")
+                        continue
+
+                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
+                    unique_id = matched_id
+
+
 
                     
                 # 6. Check price trends
@@ -203,7 +289,7 @@ class DealMirrorProcessor:
                     else:
                         is_verified_low = verify_historical_low(None, expanded_url, price, unique_id, discount)
                 except Exception as verify_err:
-                    logging.warning(f"[Mirror Pipeline] Historical check failed, defaulting to True: {verify_err}")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Historical check failed, defaulting to True: {verify_err}")
                     
                 # 7. Scorer & Database Commit
                 deal_score = calculate_deal_score(
@@ -237,20 +323,21 @@ class DealMirrorProcessor:
                     auto_cart_url=auto_cart_url,
                     is_mirror=True
                 )
-                logging.info(f"[Mirror Pipeline] Deal alerts enqueued for publishing: {title[:30]}")
+                logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
         finally:
             db.close()
 
-    def _expand_url_with_retry(self, url: str) -> str:
+    def _expand_url_with_retry(self, url: str, correlation_id: str = "") -> str:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         expanded = url
         try:
-            res = requests.head(url, headers=headers, allow_redirects=True, timeout=10)
+            res = requests.head(url, headers=headers, allow_redirects=True, timeout=(3, 5))
             if res.status_code >= 400 or res.url == url:
-                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=10)
+                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=(3, 5))
             expanded = res.url
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Short link expansion failed for {url}: {e}")
+
             
         # If it's still a non-store URL, use Playwright to resolve JS redirects
         store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
@@ -264,12 +351,12 @@ class DealMirrorProcessor:
                     time.sleep(5)  # Wait for JS redirects to settle
                     final_url = temp_driver.page.url
                     if any(d in final_url.lower() for d in store_domains):
-                        logging.info(f"[Mirror Pipeline] Playwright resolved JS redirect: {url} -> {final_url}")
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Playwright resolved JS redirect: {url} -> {final_url}")
                         expanded = final_url
                 finally:
                     temp_driver.quit()
             except Exception as e:
-                logging.warning(f"[Mirror Pipeline] Playwright redirect resolution failed: {e}")
+                logging.warning(f"[PARSE] [CorrID: {correlation_id}] Playwright redirect resolution failed: {e}")
                 
         return expanded
 

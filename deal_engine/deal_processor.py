@@ -312,3 +312,181 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
         with processing_lock:
             if unique_id in processing_products:
                 processing_products.remove(unique_id)
+
+def scrape_product_lightweight(url: str) -> dict:
+    """
+    Performs a fast browser-less HTTP request to scrape product title, price, mrp, and image.
+    Uses selectolax and curl_cffi to bypass simple blocks.
+    """
+    result = {
+        "title": "Product Deal",
+        "price": 0,
+        "mrp": 0,
+        "image_url": "",
+        "rating": None,
+        "reviews": None,
+        "has_bank_offer": False,
+        "bank_offers": [],
+        "coupon_detail": "",
+        "review_grade": "N/A"
+    }
+    
+    if not url:
+        return result
+        
+    try:
+        from curl_cffi import requests as curl_requests
+        from selectolax.parser import HTMLParser
+        import json
+        import re
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+        }
+        
+        try:
+            res = curl_requests.get(url, headers=headers, impersonate="chrome110", timeout=8)
+        except Exception:
+            import requests as std_requests
+            res = std_requests.get(url, headers=headers, timeout=8)
+            
+        if res.status_code == 200:
+            tree = HTMLParser(res.text)
+            
+            def clean_number(txt):
+                if not txt:
+                    return 0
+                txt = txt.replace(',', '').split('.')[0]
+                nums = re.findall(r'\d+', txt)
+                if nums:
+                    return int(nums[0])
+                return 0
+
+            # 1. Platform Detection
+            url_lower = url.lower()
+            
+            if "amazon" in url_lower:
+                # Title
+                title_el = tree.css_first("span#productTitle")
+                if title_el:
+                    result["title"] = title_el.text().strip()
+                
+                # Price
+                price_el = None
+                for sel in ["span.a-price-whole", "span#priceblock_ourprice", "span#priceblock_dealprice", "span.a-price .a-offscreen"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        price_el = el
+                        break
+                if price_el:
+                    result["price"] = clean_number(price_el.text())
+                    
+                # MRP
+                mrp_el = None
+                for sel in ["span.a-price.a-text-price span.a-offscreen", "span.basisPrice span.a-offscreen", "span#listPrice"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        mrp_el = el
+                        break
+                if mrp_el:
+                    result["mrp"] = clean_number(mrp_el.text())
+                else:
+                    if result["price"] > 0:
+                        result["mrp"] = int(result["price"] * 1.3) # Fallback
+
+                # Image
+                for sel in ["img#landingImage", "img#imgBlkFront", "img#main-image", "div#imgTagWrapperId img"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        dyn = el.attributes.get("data-a-dynamic-image")
+                        if dyn:
+                            try:
+                                urls = list(json.loads(dyn).keys())
+                                if urls:
+                                    result["image_url"] = urls[0]
+                                    break
+                            except Exception:
+                                pass
+                        src = el.attributes.get("src")
+                        if src and src.startswith("http") and "spinner" not in src:
+                            result["image_url"] = src
+                            break
+                            
+            elif "flipkart" in url_lower:
+                # Title
+                title_el = tree.css_first("span.B_NuCI") or tree.css_first("h1")
+                if title_el:
+                    result["title"] = title_el.text().strip()
+                    
+                # Price
+                price_el = tree.css_first("div._30jeq3._16Jk6d") or tree.css_first("div.Nx9z3S") or tree.css_first("div._30jeq3")
+                if price_el:
+                    result["price"] = clean_number(price_el.text())
+                    
+                # MRP
+                mrp_el = tree.css_first("div._3I9_ww") or tree.css_first("div.yC0YEv") or tree.css_first("div._2pLDXM")
+                if mrp_el:
+                    result["mrp"] = clean_number(mrp_el.text())
+                else:
+                    if result["price"] > 0:
+                        result["mrp"] = int(result["price"] * 1.3)
+                        
+                # Image
+                for img in tree.css("img"):
+                    src = img.attributes.get("src") or img.attributes.get("data-src")
+                    if src and "rukminim2.flixcart.com/image/" in src:
+                        src = src.replace("/128/128/", "/832/832/").replace("/416/416/", "/832/832/")
+                        result["image_url"] = src
+                        break
+                        
+            else:
+                # Generic scrape fallback
+                title_el = tree.css_first("h1")
+                if title_el:
+                    result["title"] = title_el.text().strip()
+                # Try finding some prices
+                for el in tree.css("*"):
+                    try:
+                        text = el.text().strip()
+                        if text.startswith("₹") or "rs." in text.lower():
+                            val = clean_number(text)
+                            if val > 10:
+                                if result["price"] == 0:
+                                    result["price"] = val
+                                elif val > result["price"]:
+                                    result["mrp"] = val
+                    except Exception:
+                        pass
+                for img in tree.css("img"):
+                    src = img.attributes.get("src") or img.attributes.get("data-src")
+                    if src and src.startswith("http") and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                        if not any(x in src.lower() for x in ["icon", "logo", "avatar", "loader", "spinner"]):
+                            result["image_url"] = src
+                            break
+                            
+            # Calculate review grade if we have rating
+            rating_el = tree.css_first("span.a-icon-alt")
+            if rating_el:
+                try:
+                    match = re.search(r'([0-9.]+)\s*out', rating_el.text())
+                    if match:
+                        result["rating"] = float(match.group(1))
+                        rating = result["rating"]
+                        if rating >= 4.3:
+                            result["review_grade"] = "A"
+                        elif rating >= 4.0:
+                            result["review_grade"] = "B"
+                        elif rating >= 3.7:
+                            result["review_grade"] = "C"
+                        elif rating >= 3.3:
+                            result["review_grade"] = "D"
+                        else:
+                            result["review_grade"] = "F"
+                except Exception:
+                    pass
+    except Exception as e:
+        logging.warning(f"Lightweight scrape exception for {url}: {e}")
+        
+    return result

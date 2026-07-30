@@ -255,6 +255,41 @@ def scrape_platform(platform: str, config: dict, history: set):
                     logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
                     release_in_flight_deal(title, platform, final_url)
                     continue
+                
+                # Publication Frequency Guard — suppress re-posts within 6h at same price
+                # This directly fixes the 3x-same-product-in-8-seconds spam bug
+                import datetime as _dt
+                db_freq = SessionLocal()
+                try:
+                    prod_freq = db_freq.query(Product).filter_by(id=unique_id).first()
+                    if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
+                        hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
+                        price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
+                        today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                        daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
+                        daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
+                        if daily_date != today_str:
+                            daily_count = 0
+                        
+                        if hours_ago < 6.0 and price >= price_at_last:
+                            logging.info(
+                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                                f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
+                            )
+                            release_in_flight_deal(title, platform, final_url)
+                            continue
+                        
+                        if daily_count >= 3:
+                            logging.info(
+                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                                f"already posted {daily_count}x today (cap: 3/day)"
+                            )
+                            release_in_flight_deal(title, platform, final_url)
+                            continue
+                except Exception as freq_err:
+                    logging.error(f"[Publication Guard] DB check error: {freq_err}")
+                finally:
+                    db_freq.close()
                     
                 bank_offers = []
                 coupon_detail = ""
@@ -295,6 +330,27 @@ def scrape_platform(platform: str, config: dict, history: set):
                     auto_cart_url=auto_cart_url
                 )
                 time.sleep(0.5)
+                
+                # Update publication tracking so this product won't be spammed again
+                import datetime as _dt
+                db_pub = SessionLocal()
+                try:
+                    today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                    prod_record = db_pub.query(Product).filter_by(id=unique_id).first()
+                    if prod_record:
+                        prod_record.last_published_at = time.time()
+                        prod_record.last_published_price = price
+                        if getattr(prod_record, 'daily_post_date', '') == today_str:
+                            prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
+                        else:
+                            prod_record.daily_post_count = 1
+                            prod_record.daily_post_date = today_str
+                        db_pub.commit()
+                except Exception as pub_upd_err:
+                    db_pub.rollback()
+                    logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
+                finally:
+                    db_pub.close()
             else:
                 if not should_publish_deal(platform, deal_score):
                     logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
@@ -564,7 +620,12 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 
             for selector in selectors:
                 try:
-                    p_text = driver.find_element(By.CSS_SELECTOR, selector).get_attribute("textContent")
+                    el = driver.find_element(By.CSS_SELECTOR, selector)
+                    p_text = el.get_attribute("textContent")
+                    # Ignore coupon alerts and discount banners styled as prices
+                    lower_text = p_text.lower()
+                    if any(x in lower_text for x in ["coupon", "save", "off", "discount", "%"]):
+                        continue
                     price = clean_number(p_text)
                     if price > 0: break
                 except: pass
@@ -629,11 +690,29 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 images = driver.find_elements(By.TAG_NAME, "img")
                 for img in images:
                     src = img.get_attribute("src")
+                    if not src or not src.startswith("http"):
+                        continue
+                    src_lower = src.lower()
+                    # Skip common logo, banner, and advertisement keywords
+                    if any(x in src_lower for x in ["/logo", "ad-", "banner", "sprite", "icon", "advertisement", "header", "footer"]):
+                        continue
+                        
                     w = int(img.get_attribute("width") or 0)
                     h = int(img.get_attribute("height") or 0)
-                    if src and ("product" in src.lower() or "media" in src.lower() or "dp" in src.lower() or w > 200 or h > 200):
-                        image_url = src
-                        break
+                    # If attributes are missing, extract natural dimensions via javascript
+                    if w == 0 or h == 0:
+                        try:
+                            size = driver.execute_script("return [arguments[0].naturalWidth, arguments[0].naturalHeight];", img)
+                            w, h = size[0], size[1]
+                        except:
+                            pass
+                            
+                    if w >= 250 and h >= 250:
+                        aspect_ratio = w / h
+                        # Main product images are generally square-ish (filters out wide banners and tall towers)
+                        if 0.7 <= aspect_ratio <= 1.4:
+                            image_url = src
+                            break
             except: pass
             
         # 5. Clean up & validate data values
@@ -797,6 +876,13 @@ def main():
                 logging.error(f"Failed to start Supermarket Monitor: {supermarket_err}")
         else:
             logging.info("Supermarket monitor disabled (conserving CPU resources).")
+            
+        # 5.8 Start Background Expiration Daemon
+        try:
+            from deal_engine.expiration_daemon import start_expiration_daemon
+            start_expiration_daemon()
+        except Exception as expiration_err:
+            logging.error(f"Failed to start Expiration Daemon: {expiration_err}")
             
         logging.info("Master Engine Activated. Scanners operating.")
     else:

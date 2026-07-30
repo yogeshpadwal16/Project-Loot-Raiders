@@ -58,12 +58,12 @@ class RedisMessageQueue:
                 return False
 
         if not self.is_connected():
-            logging.error("[Redis Queue] Redis not connected. Message lost!")
+            logging.error(f"[QUEUE] [CorrID: {message.correlation_id}] Redis not connected. Message lost!")
             return False
         try:
             data = message.model_dump_json()
             self.client.lpush(QUEUE_PENDING, data)
-            logging.info(f"[Redis Queue] Enqueued message {message.message_id} from {message.channel_name} (CorrID: {message.correlation_id})")
+            logging.info(f"[QUEUE] Enqueued message {message.message_id} from {message.channel_name} (CorrID: {message.correlation_id})")
             return True
         except Exception as e:
             logging.error(f"[Redis Queue] Enqueue failed: {e}")

@@ -4,6 +4,10 @@ import logging
 import time
 from typing import List, Dict, Any, Union, Optional
 from aiolimiter import AsyncLimiter
+from concurrent.futures import ThreadPoolExecutor
+
+# Limit to maximum 3 parallel inline browsers to save VPS CPU
+inline_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="inline_scraper")
 
 # Import Pyrogram
 import pyrogram
@@ -173,13 +177,15 @@ class MultiClientMirrorListener:
             # Check authorization
             try:
                 me = await client.get_me()
-                is_authorized = me is not None
+                is_authorized = me is not None and not me.is_bot
+                if me and me.is_bot:
+                    logging.warning("[Mirror Listener] Connected as Bot (@" + getattr(me, 'username', 'unknown') + ") instead of User. Pyrogram listener needs a User session to read competitor channels. Aborting Pyrogram to trigger Telethon fallback...")
             except Exception as auth_err:
                 logging.warning(f"[Mirror Listener] Pyrogram authorization check failed: {auth_err}")
                 is_authorized = False
 
             if not is_authorized:
-                logging.warning("[Mirror Listener] Pyrogram session is not authorized. Pyrogram start aborted.")
+                logging.warning("[Mirror Listener] Pyrogram session is not authorized or is a bot. Pyrogram start aborted.")
                 await client.disconnect()
                 self.pyro_client = None
                 return False
@@ -207,20 +213,20 @@ class MultiClientMirrorListener:
                 async with self.limiter:
                     # Stage 2: Message Reception
                     chat_name = message.chat.username or message.chat.title or str(message.chat.id)
-                    logging.info(f"[STAGE 2: Message Reception] Pyrogram received message {message.id} from {chat_name}")
+                    logging.info(f"[INGEST] Pyrogram received message {message.id} from {chat_name}")
                     
                     try:
                         # Stage 5: Message Normalization
                         normalized = MessageNormalizer.from_pyrogram(message)
-                        logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                        logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
                         
                         # Stage 3: Queue Insertion
-                        logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                        success = self.queue.enqueue(normalized)
+                        logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                        success = await asyncio.to_thread(self.queue.enqueue, normalized)
                         if success:
-                            logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                            logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
-                            logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                            logging.warning(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
                             asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                     except Exception as err:
                         logging.error(f"[Listener Exception] [Pyrogram pyro_handler] Error processing message {message.id}: {err}", exc_info=True)
@@ -287,20 +293,20 @@ class MultiClientMirrorListener:
                 async with self.limiter:
                     # Stage 2: Message Reception
                     chat_name = getattr(event.chat, 'username', None) or str(event.chat_id)
-                    logging.info(f"[STAGE 2: Message Reception] Telethon received message {event.message.id} from {chat_name}")
+                    logging.info(f"[INGEST] Telethon received message {event.message.id} from {chat_name}")
                     
                     try:
                         # Stage 5: Message Normalization
                         normalized = MessageNormalizer.from_telethon(event.message)
-                        logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                        logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
                         
                         # Stage 3: Queue Insertion
-                        logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                        success = self.queue.enqueue(normalized)
+                        logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                        success = await asyncio.to_thread(self.queue.enqueue, normalized)
                         if success:
-                            logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                            logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                         else:
-                            logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                            logging.warning(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
                             asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                     except Exception as err:
                         logging.error(f"[Listener Exception] [Telethon tele_handler] Error processing message {event.message.id}: {err}", exc_info=True)
@@ -321,10 +327,10 @@ class MultiClientMirrorListener:
 
     def _process_inline(self, normalized: NormalizedMessage):
         """Processes a normalized message directly without pushing to Redis queue (fallback/single-run)."""
-        logging.info(f"[STAGE 4: Queue Consumption] [CorrID: {normalized.correlation_id}] Bypassing Redis queue (Processing inline)")
+        logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Bypassing Redis queue (Processing inline)")
         from deal_engine.mirroring.processor import DealMirrorProcessor
         processor = DealMirrorProcessor(self.queue)
-        processor._execute_pipeline(normalized)
+        inline_executor.submit(processor._execute_pipeline, normalized)
 
     async def run_single_run_scan(self, limit: int = 20):
         """Performs a one-time sweep of recent messages (CI/GitHub Actions support)."""
@@ -341,10 +347,10 @@ class MultiClientMirrorListener:
                         async for message in self.pyro_client.get_chat_history(ch, limit=limit):
                             async with self.limiter:
                                 # Stage 2: Message Reception
-                                logging.info(f"[STAGE 2: Message Reception] Pyrogram swept message {message.id} from {ch}")
+                                logging.info(f"[INGEST] Pyrogram swept message {message.id} from {ch}")
                                 # Stage 5: Message Normalization
                                 normalized = MessageNormalizer.from_pyrogram(message)
-                                logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
+                                logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS.")
                                 # Stage 3: Queue Insertion / Consumption (Processing Inline)
                                 try:
                                     await asyncio.to_thread(self._process_inline, normalized)
@@ -368,10 +374,10 @@ class MultiClientMirrorListener:
                             async for message in self.tele_client.iter_messages(entity, limit=limit):
                                 async with self.limiter:
                                     # Stage 2: Message Reception
-                                    logging.info(f"[STAGE 2: Message Reception] Telethon swept message {message.id} from {ch}")
+                                    logging.info(f"[INGEST] Telethon swept message {message.id} from {ch}")
                                     # Stage 5: Message Normalization
                                     normalized = MessageNormalizer.from_telethon(message)
-                                    logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS.")
+                                    logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS.")
                                     # Stage 3: Queue Insertion / Consumption (Processing Inline)
                                     try:
                                         await asyncio.to_thread(self._process_inline, normalized)
@@ -475,7 +481,7 @@ class MultiClientMirrorListener:
                             
                             for msg_id, msg in new_messages:
                                 # Stage 2: Message Reception
-                                logging.info(f"[STAGE 2: Message Reception] Web Scraper received message {msg_id} from {ch}")
+                                logging.info(f"[INGEST] Web Scraper received message {msg_id} from {ch}")
                                 
                                 # Extract content
                                 text_elem = msg.find("div", class_="tgme_widget_message_text")
@@ -536,15 +542,15 @@ class MultiClientMirrorListener:
                                         "photo_url": photo_url
                                     }
                                 )
-                                logging.info(f"[STAGE 5: Message Normalization] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                                logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
                                 
                                 # Stage 3: Queue Insertion
-                                logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                                success = self.queue.enqueue(normalized)
+                                logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                                success = await asyncio.to_thread(self.queue.enqueue, normalized)
                                 if success:
-                                    logging.info(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                                    logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
                                 else:
-                                    logging.warning(f"[STAGE 3: Queue Insertion] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                                    logging.warning(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
                                     asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                                     
                                 last_seen_msg_ids[ch] = msg_id
