@@ -35,9 +35,20 @@ def get_source_channels() -> List[str]:
     settings = load_mirror_settings()
     return settings.get("source_channels", DEFAULT_SOURCE_CHANNELS)
 
+# Load environment settings to ensure os.environ is populated
+try:
+    from config.settings import load_settings
+    settings = load_settings()
+except Exception as e:
+    logging.error(f"[Mirror Config] Failed to load settings from config.settings: {e}")
+    settings = {}
+
 # Telegram Client credentials
-TELEGRAM_API_ID = os.environ.get("TELEGRAM_API_ID", "39413198")
-TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH", "d648fd457db96dffa53ae18d3d1869d8")
+TELEGRAM_API_ID = os.environ.get("TELEGRAM_API_ID") or settings.get("telegram_api_id") or "39413198"
+TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH") or settings.get("telegram_api_hash") or "d648fd457db96dffa53ae18d3d1869d8"
+if not os.environ.get("TELEGRAM_API_ID") or not os.environ.get("TELEGRAM_API_HASH"):
+    logging.info("[Mirror Config] Loaded fallback/configured TELEGRAM_API_ID and TELEGRAM_API_HASH.")
+
 
 def load_string_session() -> str:
     session_str = os.environ.get("TELEGRAM_STRING_SESSION", "").strip()

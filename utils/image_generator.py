@@ -85,7 +85,7 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
                 data = base64.b64decode(encoded)
                 prod_img = Image.open(BytesIO(data))
             else:
-                r = requests.get(original_image_url, timeout=10)
+                r = requests.get(original_image_url, timeout=(3, 5))
                 if r.status_code == 200:
                     prod_img = Image.open(BytesIO(r.content))
                     

@@ -3,6 +3,7 @@ import logging
 import threading
 import uuid
 import re
+import requests
 from typing import List, Optional, Tuple
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -181,7 +182,7 @@ class DealMirrorProcessor:
                             mrp = int(price * 1.4)
                             
                     if price > 0:
-                        logging.info(f"[Mirror Pipeline] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
                         lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
                         for line in lines:
                             if (len(line) >= 10 and 'http' not in line and
@@ -195,7 +196,7 @@ class DealMirrorProcessor:
                 # Fallback to lightweight scraper if needed
                 scraped = {}
                 if price == 0:
-                    logging.info(f"[Mirror Pipeline] No price from message text — attempting lightweight HTTP scrape")
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] No price from message text — attempting lightweight HTTP scrape")
                     from deal_engine.deal_processor import scrape_product_lightweight
                     scraped_data = scrape_product_lightweight(expanded_url)
                     if scraped_data:
@@ -207,7 +208,7 @@ class DealMirrorProcessor:
                         img_url = scraped_data.get("image_url", "")
                 
                 if price == 0:
-                    logging.warning(f"[Mirror Pipeline] Could not extract price. Skipping.")
+                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not extract price. Skipping.")
                     continue
                     
                 discount = 0.0
@@ -233,8 +234,21 @@ class DealMirrorProcessor:
                         logging.info(f"[Mirror Pipeline] Skipping concurrent in-flight deal: {title[:35]}")
                         continue
                         
+                    price_changed = True
+                    try:
+                        latest = db.query(PriceHistory).filter_by(product_id=matched_id).order_by(PriceHistory.timestamp.desc()).first()
+                        if latest and price >= latest.price:
+                            price_changed = False
+                    except Exception as db_err:
+                        logging.error(f"[Mirror Pipeline] Price duplicate check error: {db_err}")
+
+                    if not price_changed:
+                        logging.info(f"[Mirror Pipeline] Skipping duplicate deal: {title[:30]} (Price ₹{price} >= latest ₹{latest.price if latest else 0})")
+                        continue
+
                     logging.info(f"[Mirror Pipeline] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
                     unique_id = matched_id
+
 
 
                     
@@ -294,12 +308,13 @@ class DealMirrorProcessor:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         expanded = url
         try:
-            res = requests.head(url, headers=headers, allow_redirects=True, timeout=10)
+            res = requests.head(url, headers=headers, allow_redirects=True, timeout=(3, 5))
             if res.status_code >= 400 or res.url == url:
-                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=10)
+                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=(3, 5))
             expanded = res.url
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"[Mirror Pipeline] Short link expansion failed for {url}: {e}")
+
             
         # If it's still a non-store URL, use Playwright to resolve JS redirects
         store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
