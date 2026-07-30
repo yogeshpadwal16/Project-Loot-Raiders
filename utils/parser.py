@@ -1,4 +1,4 @@
-﻿import re
+import re
 import urllib.parse
 
 def extract_amazon_asin(url: str) -> str:
@@ -24,6 +24,10 @@ def calculate_true_discount(text_content: str):
     # 1. Clean up commas and spaces
     clean_text = text_content.replace(',', '')
     
+    # 1.5. Strip coupon and discount currency values (e.g. ₹2000 coupon, save ₹2000)
+    clean_text = re.sub(r'(?:coupon|save|discount|extra|flat|apply)\s+(?:flat\s+)?(?:of\s+)?(?:₹|Rs\.?)\s*[0-9]+(?:\s*(?:off|discount|coupon))?', ' ', clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r'(?:₹|Rs\.?)\s*[0-9]+\s*(?:coupon|save|off|discount|extra|flat)', ' ', clean_text, flags=re.IGNORECASE)
+    
     # 2. Strip percentage discounts (e.g. 50% OFF, 50%off) so they don't get matched
     clean_text = re.sub(r'[0-9]{1,3}\s*%\s*(?:off)?', ' ', clean_text, flags=re.IGNORECASE)
     
@@ -35,8 +39,8 @@ def calculate_true_discount(text_content: str):
     clean_text = re.sub(r'\b[0-9]+(?:\.[0-9]+)?\s*(?:rating|review|bought|sold|view|people|size|pack|pcs|item|qty|ml|l|w|v|ah|mah|gb|tb|mb|kb|hz|khz|mhz|cm|m|inch|in|ft|yd|g|kg|mg|oz|lbs|delivery|shipping|day|hour|min|sec|wk|yr)s?\b', ' ', clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r'\b[0-9]+(?:\.[0-9]+)?\s*(?:\*|star|stars)\b', ' ', clean_text, flags=re.IGNORECASE)
     
-    # 5. Extract currency-prefixed numbers first (â‚¹ or Rs.)
-    currency_numbers = [int(n) for n in re.findall(r'(?:â‚¹|Rs\.?)\s*([0-9]+)', clean_text, flags=re.IGNORECASE)]
+    # 5. Extract currency-prefixed numbers first (₹, \u20b9, â‚¹ or Rs.)
+    currency_numbers = [int(n) for n in re.findall(r'(?:\u20b9|₹|â‚¹|Rs\.?)\s*([0-9]+)', clean_text, flags=re.IGNORECASE)]
     
     # If we have 2 or more currency numbers, use them!
     if len(currency_numbers) >= 2:
