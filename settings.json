@@ -12,8 +12,8 @@
   "notification_uris": [
     "tgram://8888375196:AAEXd53Yhz-ZSTQjZoIhX5UqEyQcB2x7TRU/@LootRaidersDeals"
   ],
-  "shlink_api_url": "",
-  "shlink_api_key": "",
+  "shlink_api_url": "YOUR_SHLINK_API_URL",
+  "shlink_api_key": "YOUR_SHLINK_API_KEY",
   "n8n_webhook_url": "",
   "scraper_loop_interval": 300,
   "channel_mirror_enabled": true,
@@ -74,8 +74,9 @@
       "flipkart_clearance_master_feed": 85
     }
   },
+  "force_web_scraper": true,
   "last_digest_date": "2026-07-19",
-  "last_growth_check_time": 1785178079.4437144,
+  "last_growth_check_time": 1785439533.6742246,
   "cloaker_domain": null,
   "extensions": {
     "smart_filter": {

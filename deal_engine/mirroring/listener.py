@@ -20,12 +20,13 @@ from telethon import TelegramClient, events
 from telethon.sessions import StringSession
 
 # Import pipeline components
-from deal_engine.mirroring.config import (
+from deal_engine.mirroring.mirror_config import (
     TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_STRING_SESSION,
-    get_source_channels, RATE_LIMIT_REQUESTS, RATE_LIMIT_PERIOD
+    get_source_channels, RATE_LIMIT_REQUESTS, RATE_LIMIT_PERIOD,
+    load_mirror_settings
 )
 from deal_engine.mirroring.schemas import NormalizedMessage
-from deal_engine.mirroring.queue import RedisMessageQueue
+from deal_engine.mirroring.redis_queue import RedisMessageQueue
 from deal_engine.mirroring.normalizer import MessageNormalizer
 
 class MultiClientMirrorListener:
@@ -73,31 +74,52 @@ class MultiClientMirrorListener:
         while self.should_run:
             try:
                 if self.active_client_name is None:
-                    # 1. Attempt to start Primary Client (Pyrogram)
-                    logging.info("[Mirror Listener] Attempting to start Primary client (Pyrogram)...")
-                    success = await self._start_pyrogram()
-                    
-                    if success:
-                        self.active_client_name = "pyrogram"
-                        logging.info("[Mirror Listener] Primary client (Pyrogram) is now active.")
-                    else:
-                        # 2. Fall back to Telethon if Pyrogram fails to initialize/authenticate
-                        logging.warning("[Mirror Listener] Pyrogram initialization failed. Falling back to Telethon...")
-                        success = await self._start_telethon()
+                    # Check if Web Scraper mode is explicitly forced (Feature for 0% ban risk)
+                    force_scraper = os.environ.get("FORCE_WEB_SCRAPER", "false").lower() == "true"
+                    if not force_scraper:
+                        try:
+                            settings = load_mirror_settings()
+                            if settings.get("force_web_scraper", False):
+                                force_scraper = True
+                        except Exception:
+                            pass
+
+                    if force_scraper:
+                        logging.info("[Mirror Listener] FORCE_WEB_SCRAPER option enabled. Skipping Userbots and launching Web Scraper...")
+                        success = await self._start_web_scraper()
                         if success:
-                            self.active_client_name = "telethon"
-                            logging.info("[Mirror Listener] Fallback client (Telethon) is now active.")
+                            self.active_client_name = "web_scraper"
+                            logging.info("[Mirror Listener] Public Web Scraper is now active as primary.")
                         else:
-                            # 3. Fall back to public session-less web scraper
-                            logging.warning("[Mirror Listener] Both primary and fallback clients failed to start. Falling back to public session-less Web Scraper...")
-                            success = await self._start_web_scraper()
+                            logging.error("[Mirror Listener] Public Web Scraper failed to start. Re-trying in 30s...")
+                            await asyncio.sleep(30)
+                            continue
+                    else:
+                        # 1. Attempt to start Primary Client (Pyrogram)
+                        logging.info("[Mirror Listener] Attempting to start Primary client (Pyrogram)...")
+                        success = await self._start_pyrogram()
+                        
+                        if success:
+                            self.active_client_name = "pyrogram"
+                            logging.info("[Mirror Listener] Primary client (Pyrogram) is now active.")
+                        else:
+                            # 2. Fall back to Telethon if Pyrogram fails to initialize/authenticate
+                            logging.warning("[Mirror Listener] Pyrogram initialization failed. Falling back to Telethon...")
+                            success = await self._start_telethon()
                             if success:
-                                self.active_client_name = "web_scraper"
-                                logging.info("[Mirror Listener] Public Web Scraper fallback is now active.")
+                                self.active_client_name = "telethon"
+                                logging.info("[Mirror Listener] Fallback client (Telethon) is now active.")
                             else:
-                                logging.error("[Mirror Listener] All client layers (Pyrogram, Telethon, Web Scraper) failed to start. Re-trying in 30s...")
-                                await asyncio.sleep(30)
-                                continue
+                                # 3. Fall back to public session-less web scraper
+                                logging.warning("[Mirror Listener] Both primary and fallback clients failed to start. Falling back to public session-less Web Scraper...")
+                                success = await self._start_web_scraper()
+                                if success:
+                                    self.active_client_name = "web_scraper"
+                                    logging.info("[Mirror Listener] Public Web Scraper fallback is now active.")
+                                else:
+                                    logging.error("[Mirror Listener] All client layers (Pyrogram, Telethon, Web Scraper) failed to start. Re-trying in 30s...")
+                                    await asyncio.sleep(30)
+                                    continue
                 
                 # Health Check Checkpoint
                 await asyncio.sleep(15)

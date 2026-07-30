@@ -9,9 +9,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory
-from deal_engine.mirroring.config import WORKER_COUNT, SIMILARITY_THRESHOLD
+from deal_engine.mirroring.mirror_config import WORKER_COUNT, SIMILARITY_THRESHOLD
 from deal_engine.mirroring.schemas import NormalizedMessage
-from deal_engine.mirroring.queue import RedisMessageQueue
+from deal_engine.mirroring.redis_queue import RedisMessageQueue
 from deal_engine.mirroring.deduplicator import IntelligentDeduplicator
 
 # Import core business logic from other modules

@@ -138,6 +138,9 @@ def load_settings() -> dict:
     env_shlink_key = os.environ.get("SHLINK_API_KEY")
     if env_shlink_key:
         saved["shlink_api_key"] = env_shlink_key
+    env_n8n_url = os.environ.get("N8N_WEBHOOK_URL")
+    if env_n8n_url:
+        saved["n8n_webhook_url"] = env_n8n_url
         
     # SMTP email configuration overrides
     env_smtp_server = os.environ.get("SMTP_SERVER")
@@ -234,6 +237,7 @@ def save_settings(settings: dict):
             ("NOTIFICATION_URIS", "notification_uris"),
             ("SHLINK_API_URL", "shlink_api_url"),
             ("SHLINK_API_KEY", "shlink_api_key"),
+            ("N8N_WEBHOOK_URL", "n8n_webhook_url"),
         ]:
             if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):
                 to_save[setting_key] = f"YOUR_{env_key}"
