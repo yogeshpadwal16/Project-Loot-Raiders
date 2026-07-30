@@ -101,6 +101,8 @@ class DealMirrorProcessor:
     def _execute_pipeline(self, message: NormalizedMessage):
         """Decoupled processing pipeline steps matching the required architecture."""
         correlation_id = message.correlation_id
+        from config.settings import load_settings
+        settings = load_settings()
         
         # 1. Verify links exist in message
         if not message.extracted_urls:
@@ -218,6 +220,27 @@ class DealMirrorProcessor:
                 rating = scraped.get("rating")
                 reviews = scraped.get("reviews")
                 has_bank_offer = scraped.get("has_bank_offer", False)
+                # 4.5. Extensions: Smart Filter Engine
+                extensions = settings.get("extensions", {}) if settings else {}
+                smart_filter = extensions.get("smart_filter", {}) if extensions else {}
+                if smart_filter and smart_filter.get("enabled", False):
+                    # Blocklist Regex Check
+                    block_regex = smart_filter.get("blocklist_regex", "")
+                    if block_regex:
+                        import re
+                        try:
+                            if re.search(block_regex, title, flags=re.IGNORECASE):
+                                logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (Regex matched '{block_regex}')")
+                                continue
+                        except Exception as regex_err:
+                            logging.error(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter invalid regex '{block_regex}': {regex_err}")
+                    
+                    # Allowlist Keywords Check
+                    allow_keywords = smart_filter.get("allowlist_keywords", [])
+                    if allow_keywords:
+                        if not any(kw.strip().lower() in title.lower() for kw in allow_keywords if kw.strip()):
+                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (No allowlist keywords matched)")
+                            continue
                     
                 # 5. Duplicate Detection (Intelligent RapidFuzz check)
                 is_dup, matched_id = IntelligentDeduplicator.find_duplicate(
