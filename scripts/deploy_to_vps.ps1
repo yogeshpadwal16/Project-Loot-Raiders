@@ -12,7 +12,7 @@ if (Test-Path $TAR_PATH) { Remove-Item $TAR_PATH -Force }
 
 # Change to project root directory to ensure relative paths in tar are correct
 $OriginalLocation = Get-Location
-Set-Location "C:\Users\yoges\Projects\Project-Loot-Raiders"
+Set-Location "C:\Users\yoges\Desktop\Project Loot Raiders"
 
 # Create a tar.gz archive including essential directories and files (added 'web' folder, 'docker' folder, and 'check_health.py')
 tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n docker loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py
