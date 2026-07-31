@@ -823,8 +823,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
 
     # Fallback to local PIL card if raw image send was not successful
     if not photo_sent and local_card_path and os.path.exists(local_card_path):
-        import concurrent.futures
-        def _upload_local_card():
+        try:
             endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
             with open(local_card_path, "rb") as f:
                 files = {"photo": f}
@@ -834,20 +833,15 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                     "parse_mode": "HTML",
                     "reply_markup": reply_markup_json
                 }
-                return requests.post(endpoint, data=payload, files=files, timeout=25)
-        try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-                future = ex.submit(_upload_local_card)
-                try:
-                    res = future.result(timeout=40)  # hard 40s wall-clock limit incl. upload body
-                    if res.status_code == 200:
-                        logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
-                        photo_sent = True
-                        save_telegram_message_info(unique_id, res, caption)
-                    else:
-                        logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}).")
-                except concurrent.futures.TimeoutError:
-                    logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out (>40s). Falling back to text-only.")
+                res = requests.post(endpoint, data=payload, files=files, timeout=30)
+            if res.status_code == 200:
+                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
+                photo_sent = True
+                save_telegram_message_info(unique_id, res, caption)
+            else:
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}).")
+        except requests.exceptions.Timeout:
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out. Falling back to text-only.")
         except Exception as upload_err:
             logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to upload photo card: {upload_err}")
         finally:
