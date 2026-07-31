@@ -1,83 +1,73 @@
 import os
-import time
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, ForeignKey, event
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+import logging
+from datetime import datetime
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, Text, DateTime, event
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "loot_raiders.db")
+logger = logging.getLogger("loot_raiders.database")
+
+Base = declarative_base()
+
+class Deal(Base):
+    __tablename__ = 'deals'
+    
+    id = Column(Integer, primary_key=True)
+    original_message_id = Column(Integer, unique=True, nullable=False)
+    mirrored_message_id = Column(Integer, nullable=True)
+    source_channel = Column(String(100), nullable=False)
+    target_channel = Column(String(100), nullable=True)
+    title = Column(String(500), nullable=True)
+    url = Column(String(1000), nullable=True)
+    price = Column(Float, nullable=True)
+    mrp = Column(Float, nullable=True)
+    discount = Column(Float, nullable=True)
+    summary = Column(Text, nullable=True)
+    is_expired = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Briefing(Base):
+    __tablename__ = 'briefings'
+    
+    id = Column(Integer, primary_key=True)
+    date = Column(String(10), unique=True, nullable=False) # YYYY-MM-DD
+    english_text = Column(Text, nullable=False)
+    marathi_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# SQLite database file path
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "loot_raiders_new.db")
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"timeout": 15, "check_same_thread": False}
+    connect_args={"timeout": 30} # Avoid database locked errors
 )
 
-# Enable SQLite WAL (Write-Ahead Logging) and Foreign Keys
+# SQLite WAL mode configurations using SQLAlchemy event listener
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.close()
+    except Exception as e:
+        logger.error(f"Error setting SQLite WAL PRAGMAs: {e}")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-class Product(Base):
-    __tablename__ = "products"
-
-    id = Column(String, primary_key=True, index=True) # ASIN or PID
-    platform = Column(String, nullable=False)
-    title = Column(String, nullable=False)
-    image_url = Column(String)
-    url = Column(String, nullable=False)
-    telegram_message_id = Column(Integer)
-    created_at = Column(Float, default=time.time)
-
-    prices = relationship("PriceHistory", back_populates="product", cascade="all, delete-orphan")
-
-
-class PriceHistory(Base):
-    __tablename__ = "price_history"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    product_id = Column(String, ForeignKey("products.id"), nullable=False, index=True)
-    price = Column(Integer, nullable=False)
-    mrp = Column(Integer, nullable=False)
-    discount = Column(Float, default=0.0)
-    is_verified_low = Column(Boolean, default=False)
-    deal_score = Column(Float, default=50.0)
-    timestamp = Column(Float, default=time.time)
-
-    product = relationship("Product", back_populates="prices")
-
-
-class WishlistItem(Base):
-    __tablename__ = "user_wishlists"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, index=True, nullable=False)
-    keyword = Column(String, index=True, nullable=False)
-    target_price = Column(Integer, nullable=False)
-    created_at = Column(Float, default=time.time)
-
-
-class AlertSubscription(Base):
-    __tablename__ = "alert_subscriptions"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_chat_id = Column(Integer, index=True, nullable=False)
-    product_id = Column(String, nullable=False, index=True)
-    platform = Column(String, nullable=False)
-    target_price = Column(Integer, nullable=False)
-    timestamp = Column(Float, default=time.time)
-
 
 def init_db():
+    """Initializes the database schema."""
+    logger.info("Initializing database tables...")
     Base.metadata.create_all(bind=engine)
-    print(f"Database initialized at: {DB_PATH}")
+    logger.info("Database schema initialized successfully.")
 
-
-if __name__ == "__main__":
-    init_db()
+def get_db():
+    """DB session generator helper."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

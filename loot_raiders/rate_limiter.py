@@ -1,52 +1,82 @@
-import asyncio
 import logging
+import asyncio
 import time
+from typing import Any, Callable, Coroutine, Tuple
 
 logger = logging.getLogger("loot_raiders.rate_limiter")
 
+class PrioritizedTask:
+    def __init__(self, priority: int, func: Callable[[], Coroutine[Any, Any, Any]], description: str = ""):
+        self.priority = priority
+        self.func = func
+        self.description = description
+        self.created_at = time.time()
+        
+    def __lt__(self, other: 'PrioritizedTask') -> bool:
+        # Lower number = higher priority. If priorities are equal, compare arrival time.
+        if self.priority == other.priority:
+            return self.created_at < other.created_at
+        return self.priority < other.priority
 
-class PriorityRateLimiter:
-    """
-    Priority Queue combined with rate limit pacing to respect Telegram FloodWait thresholds.
-    Ensures high-value price errors (Priority 1) are posted instantly,
-    while generic feed updates (Priority 3) are queued and paced at 2.5s gaps.
-    """
-    def __init__(self, min_gap_seconds: float = 2.5):
+class TeleRateLimiter:
+    def __init__(self, min_interval: float = 2.5):
         self.queue = asyncio.PriorityQueue()
-        self.min_gap_seconds = min_gap_seconds
+        self.min_interval = min_interval
         self.last_sent_time = 0.0
         self.lock = asyncio.Lock()
+        self._running = False
+        self._worker_task: Optional[asyncio.Task] = None
+        
+    async def enqueue(self, priority: int, func: Callable[[], Coroutine[Any, Any, Any]], description: str = ""):
+        """Enqueues a Telegram task with a specific priority."""
+        task = PrioritizedTask(priority, func, description)
+        await self.queue.put(task)
+        logger.debug(f"Enqueued task '{description}' with priority {priority}")
 
-    async def add_task(self, priority: int, task_callable, *args, **kwargs):
-        """
-        Enqueues a posting task.
-        Priority values: 1 (High/Glitch), 2 (Medium/verified drop), 3 (Low/General)
-        """
-        entry_time = time.time()
-        # priority, entry_time, callback, args, kwargs
-        await self.queue.put((priority, entry_time, task_callable, args, kwargs))
-        logger.info(f"[Limiter] Task enqueued at priority {priority}.")
+    def start(self):
+        """Starts the background dispatching worker."""
+        if not self._running:
+            self._running = True
+            self._worker_task = asyncio.create_task(self._worker_loop())
+            logger.info("Telegram Rate Limiter worker started.")
 
-    async def run_limiter_worker(self):
-        """Continuously pulls tasks from queue and executes them with paced rate limits."""
-        while True:
-            # wait for task
-            priority, _, task_callable, args, kwargs = await self.queue.get()
+    async def stop(self):
+        """Gracefully stops the worker."""
+        self._running = False
+        if self._worker_task:
+            self._worker_task.cancel()
             try:
+                await self._worker_task
+            except asyncio.CancelledError:
+                pass
+            logger.info("Telegram Rate Limiter worker stopped.")
+
+    async def _worker_loop(self):
+        while self._running:
+            try:
+                task: PrioritizedTask = await self.queue.get()
+                
+                # Enforce the 2.5 seconds minimum interval between dispatches
                 async with self.lock:
                     now = time.time()
                     elapsed = now - self.last_sent_time
-                    
-                    # Pace posting frequency
-                    if elapsed < self.min_gap_seconds:
-                        delay = self.min_gap_seconds - elapsed
-                        logger.info(f"[Limiter] Pacing output: sleeping for {delay:.2f}s (Telegram FloodWait guard)")
-                        await asyncio.sleep(delay)
-                    
+                    if elapsed < self.min_interval:
+                        sleep_time = self.min_interval - elapsed
+                        logger.debug(f"Rate limit enforcement: sleeping {sleep_time:.2f}s before sending.")
+                        await asyncio.sleep(sleep_time)
+                        
                     # Execute task
-                    await task_callable(*args, **kwargs)
-                    self.last_sent_time = time.time()
+                    try:
+                        logger.info(f"Executing task: {task.description} (Priority: {task.priority})")
+                        await task.func()
+                        self.last_sent_time = time.time()
+                    except Exception as e:
+                        logger.error(f"Error executing rate-limited task '{task.description}': {e}", exc_info=True)
+                    finally:
+                        self.queue.task_done()
+                        
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                logger.error(f"[Limiter] Task execution failed: {e}")
-            finally:
-                self.queue.task_done()
+                logger.error(f"Exception in Rate Limiter worker loop: {e}", exc_info=True)
+                await asyncio.sleep(1)

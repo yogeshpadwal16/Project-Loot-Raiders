@@ -1,63 +1,81 @@
-import os
-import requests
 import logging
+import asyncio
+import google.generativeai as genai
 
-logger = logging.getLogger("loot_raiders.summarizer")
+logger = logging.getLogger("loot_raiders.ai_summarizer")
 
+class DealSummarizer:
+    def __init__(self, gemini_api_key: str):
+        self.api_key = gemini_api_key
+        self.enabled = False
+        
+        if gemini_api_key and "YOUR_" not in gemini_api_key and gemini_api_key.strip() != "":
+            try:
+                genai.configure(api_key=self.api_key)
+                self.model = genai.GenerativeModel("gemini-1.5-flash")
+                self.enabled = True
+                logger.info("Gemini Deal Summarizer configured successfully.")
+            except Exception as e:
+                logger.error(f"Error configuring Gemini AI: {e}")
 
-def generate_ai_summary(product_title: str, api_key: str = None) -> list[str]:
-    """
-    Invokes Google Gemini 1.5 Flash API (free-tier endpoints) to summarize
-    product titles and details into 3 high-impact, conversion-focused bullet points.
-    Returns list of 3 strings. If API fails, returns fallback bullet points.
-    """
-    if not api_key:
-        api_key = os.environ.get("GEMINI_API_KEY", "")
+    async def summarize_deal(self, title: str, raw_details: str) -> str:
+        """
+        Uses Gemini API to summarize raw product details into exactly 3 punchy, high-conversion bullet points.
+        Includes a robust heuristic fallback if Gemini is disabled or fails.
+        """
+        if not self.enabled:
+            return self._heuristic_fallback(title, raw_details)
+            
+        prompt = f"""
+        You are a high-conversion affiliate copywriter. 
+        Create exactly 3 punchy, short, compelling bullet points summarizing the key selling points of this product.
+        Focus on value, specifications, and savings. Keep each bullet point under 12 words. Do not use markdown bold/italic inside bullets.
+        
+        Product Title: {title}
+        Raw Details/Specs: {raw_details}
+        
+        Format:
+        • [Bullet 1]
+        • [Bullet 2]
+        • [Bullet 3]
+        """
+        
+        try:
+            # Run blocking API call in a separate thread
+            response = await asyncio.to_thread(self.model.generate_content, prompt)
+            summary = response.text.strip()
+            
+            # Basic validation of bullet points
+            lines = [l.strip() for l in summary.splitlines() if l.strip().startswith("•") or l.strip().startswith("-")]
+            if len(lines) >= 3:
+                return "\n".join(lines[:3])
+            
+            # If not formatted as expected, return raw stripped text
+            return summary
+        except Exception as e:
+            logger.error(f"Gemini summarization failed: {e}")
+            return self._heuristic_fallback(title, raw_details)
 
-    fallback = [
-        "🔥 Lowest price ever recorded in history.",
-        "✨ Top-rated category product with verified feedback.",
-        "⚡ Massive discount active — grab before stock runs out!"
-    ]
-
-    if not api_key or "example" in api_key.lower() or api_key.strip() == "":
-        return fallback
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    prompt = (
-        f"Analyze this product: '{product_title}'.\n"
-        f"Create exactly 3 concise, high-impact marketing bullet points (no formatting, no markdown prefix, just text) "
-        f"highlighting the best reasons to purchase. Return each point on a new line."
-    )
-
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": prompt}
-                ]
-            }
-        ],
-        "generationConfig": {
-            "maxOutputTokens": 150,
-            "temperature": 0.3
-        }
-    }
-
-    try:
-        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=8)
-        if res.status_code == 200:
-            data = res.json()
-            # Parse Gemini response structure
-            candidates = data.get("candidates", [])
-            if candidates:
-                text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                bullets = [b.strip().strip("*-• ") for b in text.split("\n") if b.strip()]
+    def _heuristic_fallback(self, title: str, raw_details: str) -> str:
+        """Heuristic rule-based fallback when Gemini API is unavailable."""
+        logger.debug("Executing heuristic fallback for deal summary.")
+        bullets = []
+        
+        # Heuristic 1: Extract features if available
+        if raw_details:
+            lines = [l.strip() for l in raw_details.splitlines() if len(l.strip()) > 10]
+            for line in lines:
+                if any(c in line.lower() for c in ["warranty", "display", "battery", "camera", "fast charge", "off", "free"]):
+                    bullets.append(f"• {line[:50]}...")
                 if len(bullets) >= 3:
-                    return bullets[:3]
-                # Pad with fallback if fewer bullets returned
-                return (bullets + fallback)[:3]
-    except Exception as e:
-        logger.warning(f"Gemini API summarization failed: {e}")
-
-    return fallback
+                    break
+                    
+        # Heuristic 2: Fallback to basic details
+        if len(bullets) < 3:
+            bullets.append(f"• Premium quality product with verified discount.")
+        if len(bullets) < 3:
+            bullets.append(f"• Top rated retailer with fast doorstep delivery.")
+        if len(bullets) < 3:
+            bullets.append(f"• Hurry! Price drop might expire soon.")
+            
+        return "\n".join(bullets[:3])

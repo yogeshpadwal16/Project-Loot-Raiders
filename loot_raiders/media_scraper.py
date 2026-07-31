@@ -1,43 +1,67 @@
 import logging
-import requests
+import httpx
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger("loot_raiders.media_scraper")
 
-DEFAULT_BANNER = "https://lootraiders.com/assets/default_banner.jpg"
-_session = requests.Session()
-_session.headers.update({
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/122.0.0.0 Safari/537.36"
-    )
-})
+class MediaScraper:
+    def __init__(self, timeout_seconds: float = 4.0):
+        self.timeout = timeout_seconds
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5"
+        }
 
+    async def scrape_opengraph_data(self, url: str) -> dict:
+        """
+        Scrapes the target URL to extract OpenGraph metadata (image, title, description).
+        Enforces a strict 4.0 second timeout limit to prevent blocking.
+        """
+        result = {
+            "image_url": None,
+            "title": None,
+            "description": None,
+            "success": False
+        }
+        
+        if not url or not (url.startswith("http://") or url.startswith("https://")):
+            return result
 
-def fetch_opengraph_image(product_url: str, timeout: float = 4.0) -> str:
-    """
-    Scrapes <meta property="og:image"> or twitter:image with a hard timeout
-    to prevent blocking ingestion pipelines.
-    """
-    if not product_url or not product_url.startswith("http"):
-        return DEFAULT_BANNER
-
-    try:
-        res = _session.get(product_url, timeout=timeout, allow_redirects=True)
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.text, "html.parser")
-            tag = (
-                soup.find("meta", property="og:image")
-                or soup.find("meta", attrs={"name": "og:image"})
-                or soup.find("meta", attrs={"name": "twitter:image"})
-            )
-            if tag and tag.get("content"):
-                img_url = tag["content"].strip()
-                if img_url and not img_url.startswith("data:"):
-                    logger.info(f"[OG_SCRAPER] Recovered image URL: {img_url[:80]}")
-                    return img_url
-    except Exception as e:
-        logger.warning(f"[OG_SCRAPER_TIMEOUT] Failed or timed out fetching {product_url}: {e}")
-
-    return DEFAULT_BANNER
+        logger.info(f"Scraping OG metadata for URL: {url} (Timeout: {self.timeout}s)")
+        
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout, headers=self.headers, follow_redirects=True) as client:
+                resp = await client.get(url)
+                
+                if resp.status_code == 200:
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    
+                    # 1. Extract image
+                    og_image = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "twitter:image"})
+                    if og_image and og_image.get("content"):
+                        result["image_url"] = og_image.get("content").strip()
+                        
+                    # 2. Extract title
+                    og_title = soup.find("meta", property="og:title") or soup.find("title")
+                    if og_title:
+                        # meta tags have 'content', title tag has text content
+                        content = og_title.get("content") or og_title.text
+                        if content:
+                            result["title"] = content.strip()
+                            
+                    # 3. Extract description
+                    og_desc = soup.find("meta", property="og:description") or soup.find("meta", attrs={"name": "description"})
+                    if og_desc and og_desc.get("content"):
+                        result["description"] = og_desc.get("content").strip()
+                        
+                    result["success"] = True
+                    logger.info("Successfully scraped OG metadata.")
+                else:
+                    logger.warning(f"Failed to scrape URL (Status {resp.status_code}): {url}")
+        except httpx.TimeoutException:
+            logger.warning(f"Timeout occurred ({self.timeout}s limit reached) scraping URL: {url}")
+        except Exception as e:
+            logger.error(f"Error scraping OG metadata from {url}: {e}")
+            
+        return result

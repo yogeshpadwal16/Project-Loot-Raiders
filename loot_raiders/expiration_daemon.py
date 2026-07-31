@@ -1,113 +1,131 @@
-import asyncio
 import logging
-import time
-import requests
-from database import SessionLocal, Product, PriceHistory
+import asyncio
+from datetime import datetime, timedelta
+from sqlalchemy.orm import Session
+from loot_raiders.database import SessionLocal, Deal
 
-logger = logging.getLogger("loot_raiders.expiration")
-
+logger = logging.getLogger("loot_raiders.expiration_daemon")
 
 class ExpirationDaemon:
-    """
-    Background daemon loop that periodically scans SQLite database records
-    to check if active deals have expired, and updates Telegram posts dynamically.
-    """
-    def __init__(self, bot_token: str, channel_id: str, scan_interval_seconds: int = 60):
-        self.bot_token = bot_token
-        self.channel_id = channel_id
-        self.scan_interval_seconds = scan_interval_seconds
-        self.is_running = False
-        self.task = None
+    def __init__(self, bot_client, chat_id: str, check_interval_seconds: int = 300):
+        self.bot_client = bot_client
+        self.chat_id = chat_id
+        self.check_interval_seconds = check_interval_seconds
+        self._running = False
+        self._task: Optional[asyncio.Task] = None
 
-    async def _scan_and_expire_deals(self):
-        """Scans recent active products and flags those whose price has returned to normal."""
-        db = SessionLocal()
+    def start(self):
+        """Starts the expiration daemon background loop."""
+        if not self._running:
+            self._running = True
+            self._task = asyncio.create_task(self._loop())
+            logger.info("Expiration Daemon started.")
+
+    async def stop(self):
+        """Gracefully stops the expiration daemon."""
+        self._running = False
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+            logger.info("Expiration Daemon stopped.")
+
+    async def _loop(self):
+        while self._running:
+            try:
+                await self.check_and_expire_deals()
+            except Exception as e:
+                logger.error(f"Error in Expiration Daemon check loop: {e}", exc_info=True)
+            await asyncio.sleep(self.check_interval_seconds)
+
+    async def check_and_expire_deals(self):
+        """Fetches active deals from the DB, checks their expiration status, and updates Telegram posts."""
+        db: Session = SessionLocal()
         try:
-            # Get products posted in the last 24 hours that have telegram message IDs
-            day_ago = time.time() - 86400
-            active_products = db.query(Product).filter(
-                Product.created_at >= day_ago,
-                Product.telegram_message_id.isnot(None)
+            # Fetch deals that are not expired and are less than 48 hours old
+            cutoff = datetime.utcnow() - timedelta(hours=48)
+            active_deals = db.query(Deal).filter(
+                Deal.is_expired == False,
+                Deal.created_at > cutoff,
+                Deal.mirrored_message_id != None
             ).all()
+            
+            logger.info(f"Checking expiration status for {len(active_deals)} active deals...")
+            
+            for deal in active_deals:
+                # Simulation/Rule: deals older than 6 hours are expired.
+                # In production, this can also check if the price went up by scraping the URL.
+                is_now_expired = False
+                
+                # Rule 1: Time-based fallback (e.g. > 6 hours old)
+                age = datetime.utcnow() - deal.created_at
+                if age > timedelta(hours=6):
+                    is_now_expired = True
+                    reason = "Time limit exceeded (6h)"
+                else:
+                    # Rule 2: Random simulation or check if the URL is expired (fallback)
+                    # For this template, we assume it's valid unless age exceeds limit.
+                    pass
 
-            for product in active_products:
-                # Retrieve the latest scanned price entry
-                latest = db.query(PriceHistory).filter_by(
-                    product_id=product.id
-                ).order_by(PriceHistory.timestamp.desc()).first()
-
-                if not latest:
-                    continue
-
-                # Check expiration rule: if price went back up near MRP
-                # e.g., price increase of more than 20% compared to discount price, or price >= 95% of MRP
-                if latest.mrp > latest.price and latest.price >= int(latest.mrp * 0.95):
-                    logger.info(f"[Daemon] Price glitch/discount ended for {product.title[:35]}. Expiring post.")
-                    await self.expire_telegram_post(product.telegram_message_id, product.title, product.url)
+                if is_now_expired:
+                    logger.info(f"Deal ID {deal.id} ('{deal.title}') marked as expired. Updating Telegram post...")
                     
-                    # Update database product message details to prevent double edits
-                    product.telegram_message_id = None
-                    db.commit()
-
+                    # Update Telegram post text to mark as EXPIRED
+                    success = await self.edit_telegram_post_as_expired(deal)
+                    if success:
+                        deal.is_expired = True
+                        db.commit()
+                        logger.info(f"Successfully marked Deal ID {deal.id} as expired in DB.")
         except Exception as e:
-            logger.error(f"[Daemon] Expiration sweep failed: {e}")
+            logger.error(f"Failed during check_and_expire_deals database transaction: {e}")
         finally:
             db.close()
 
-    async def expire_telegram_post(self, message_id: int, title: str, buy_url: str):
-        """Dispatches HTML caption edit to Telegram, marking the deal expired."""
-        if not self.bot_token or not self.channel_id or "YOUR_TELEGRAM" in self.bot_token:
-            return
-
-        new_caption = (
-            f"❌ <b>[ DEAL EXPIRED / SOLD OUT ]</b> ❌\n\n"
-            f"<s>📦 {title[:80]}...</s>\n\n"
-            f"<i>This pricing error or flash deal has expired. Turn on notifications so you never miss another loot!</i>"
-        )
-        reply_markup = {
-            "inline_keyboard": [
-                [
-                    {"text": "❌ EXPIRED / SOLD OUT ❌", "url": buy_url}
-                ]
-            ]
-        }
-
-        url = f"https://api.telegram.org/bot{self.bot_token}/editMessageCaption"
-        payload = {
-            "chat_id": self.channel_id,
-            "message_id": message_id,
-            "caption": new_caption,
-            "parse_mode": "HTML",
-            "reply_markup": reply_markup
-        }
-
+    async def edit_telegram_post_as_expired(self, deal: Deal) -> bool:
+        """Edits an existing Telegram message to prepend '❌ EXPIRED' and strike out the grab link."""
+        if not self.bot_client or not deal.mirrored_message_id:
+            return False
+            
         try:
-            # Run in a non-blocking threadpool to prevent queue blocking
-            loop = asyncio.get_running_loop()
-            res = await loop.run_in_executor(
-                None, lambda: requests.post(url, json=payload, timeout=8)
+            # Reconstruct the caption with expired formatting
+            original_title = deal.title or "Loot Deal"
+            expired_text = (
+                f"❌ <b>[DEAL EXPIRED]</b> <s>{original_title}</s>\n"
+                f"💰 <b>Price:</b> <s>₹{deal.price}</s> (<s>₹{deal.mrp}</s>)\n"
+                f"📉 <b>Discount:</b> <s>{deal.discount}% OFF</s>\n\n"
+                f"━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ \n"
+                f"🔴 <i>This deal has expired. Join @LootRaidersDeals for live alerts!</i>"
             )
-            if res.status_code == 200:
-                logger.info(f"[Daemon] Expired post successfully edited for message ID: {message_id}")
+            
+            # Using Bot API sendMessage URL if bot_client is an HTTP client,
+            # or Hydrogram/Pyrogram client if it's a Client.
+            # Let's support both. If bot_client has 'edit_message_text', use it.
+            # Else if it is a bot token, use HTTP request.
+            if hasattr(self.bot_client, "edit_message_text"):
+                await self.bot_client.edit_message_text(
+                    chat_id=self.chat_id,
+                    message_id=deal.mirrored_message_id,
+                    text=expired_text,
+                    parse_mode="HTML"
+                )
             else:
-                logger.warning(f"[Daemon] Failed to edit expired post: {res.text}")
+                # If it's a token, make a direct request
+                import httpx
+                url = f"https://api.telegram.org/bot{self.bot_client}/editMessageText"
+                payload = {
+                    "chat_id": self.chat_id,
+                    "message_id": deal.mirrored_message_id,
+                    "text": expired_text,
+                    "parse_mode": "HTML"
+                }
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    res = await client.post(url, json=payload)
+                    if res.status_code != 200:
+                        logger.error(f"Telegram API editMessageText failed: {res.text}")
+                        return False
+            return True
         except Exception as e:
-            logger.error(f"[Daemon] Failed sending telegram edit: {e}")
-
-    async def _daemon_loop(self):
-        while self.is_running:
-            await self._scan_and_expire_deals()
-            await asyncio.sleep(self.scan_interval_seconds)
-
-    def start(self):
-        if self.is_running:
-            return
-        self.is_running = True
-        self.task = asyncio.create_task(self._daemon_loop())
-        logger.info("[Daemon] Expiration check daemon task started.")
-
-    def stop(self):
-        self.is_running = False
-        if self.task:
-            self.task.cancel()
-        logger.info("[Daemon] Expiration check daemon task stopped.")
+            logger.error(f"Failed to edit Telegram message {deal.mirrored_message_id}: {e}")
+            return False

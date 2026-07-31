@@ -1,24 +1,17 @@
 {
   "accounts": [
     {
-      "session_name": "loot_raiders_primary",
-      "api_id": 123456,
-      "api_hash": "abcdef1234567890abcdef1234567890",
+      "session_name": "loot_mirror_userbot_1",
+      "api_id": 39413198,
+      "api_hash": "YOUR_TELEGRAM_API_HASH",
       "proxy": {
+        "scheme": "socks5",
         "hostname": "127.0.0.1",
         "port": 1080,
-        "type": "socks5"
-      }
-    },
-    {
-      "session_name": "loot_raiders_secondary",
-      "api_id": 654321,
-      "api_hash": "0987654321fedcba0987654321fedcba",
-      "proxy": {
-        "hostname": "127.0.0.1",
-        "port": 1081,
-        "type": "socks5"
-      }
+        "username": "proxy_user",
+        "password": "proxy_password"
+      },
+      "enabled": false
     }
   ]
 }
