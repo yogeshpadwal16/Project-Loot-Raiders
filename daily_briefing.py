@@ -217,29 +217,28 @@ async def build_morning_news_post() -> str | None:
   if not headlines:
     return None
 
+  # Fetch LIVE rates dynamically
   rates = await fetch_live_commodity_rates()
 
-  # Unicode ASCII Escapes prevent paste corruption in terminal/IDE
-  # Decodes to: 📰 <b>लट रडरस - आजचय चल घडमड</b>
+  # Clean Unicode Escape Header
   header = "📰 <b>\u0932\u0942\u091F \u0930\u0947\u0921\u0930\u094D\u0938 - \u0906\u091C\u091A\u094D\u092F\u093E \u091A\u093E\u0932\u0942 \u0918\u0921\u093E\u092E\u094B\u0921\u0940</b>\n     \n\n"
 
-  news_blocks = []
-  for h in headlines:
-    emoji = get_emoji(h)
-    news_blocks.append(f"{emoji} {h}")
-
+  news_blocks = [f"{get_emoji(h)} {h}" for h in headlines]
   news_section = "\n\n".join(news_blocks)
 
-  # Footer Unicode ASCII Escapes
+  # Footer inserting dynamic rates
   footer = (
-      "\n\n🪙 Gold Rate Today \u0906\u091C\u091A\u0947"
-      f" \u0938\u094B\u0928\u094D\u092F\u093E\u091A\u0947 \u0926\u0930 - 22K = {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-\n"
-      "🥈 Silver Rate Today \u0906\u091C\u091A\u0947"
-      f" \u091A\u093E\u0902\u0926\u0940\u091A\u0947 \u0926\u0930 - 1Kg = {rates['silver_1kg']}/-\n"
-      " Petrol & Diesel Rate \u0906\u091C\u091A\u0947"
-      f" \u0907\u0902\u0920\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932 = {rates['petrol']}/L | | \u0921\u093F\u091D\u0947\u0932 = {rates['diesel']}/L\n"
-      "📢 \u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940"
-      " \u0906\u0923\u093F \u092C\u0947\u0938\u094D\u091F"
+      f"\n\n🪙 Gold Rate Today \u0906\u091C\u091A\u0947"
+      f" \u0938\u094B\u0928\u094D\u092F\u093E\u091A\u0947 \u0926\u0930 - 22K ="
+      f" {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-\n🥈 Silver Rate"
+      f" Today \u0906\u091C\u091A\u0947"
+      f" \u091A\u093E\u0902\u0926\u0940\u091A\u0947 \u0926\u0930 - 1Kg ="
+      f" {rates['silver_1kg']}/-\n Petrol & Diesel Rate \u0906\u091C\u091A\u0947"
+      " \u0907\u0902\u0920\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932"
+      f" = {rates['petrol']}/L | | \u0921\u093F\u091D\u0947\u0932 ="
+      f" {rates['diesel']}/L\n📢 \u0924\u093E\u091C\u094D\u092F\u093E"
+      " \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F"
+      " \u092C\u0947\u0938\u094D\u091F"
       " \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940"
       " \u091C\u0949\u0908\u0928 \u0915\u0930\u093E 👉 @LootRaidersDeals\n    "
       " "
