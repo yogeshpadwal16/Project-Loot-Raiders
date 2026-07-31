@@ -141,73 +141,101 @@ async def fetch_esakal_headlines(limit: int = 15) -> list[str]:
   return headlines[:limit]
 
 
-async def fetch_live_commodity_rates() -> dict:
-  """Dynamically scrapes live Mumbai market rates for 22K Gold, 24K Gold, Silver (1kg), Petrol, and Diesel."""
+RATES_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,"
+        " like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+async def fetch_live_rates() -> dict:
+  """Dynamically fetches real-time Mumbai Gold (22K/24K per 10g), Silver (per 1kg),
+
+  and Petrol/Diesel rates per Liter.
+  """
   rates = {
-      "gold_22k": "72,500",  # Dynamic fallbacks in case network is down
-      "gold_24k": "79,100",
-      "silver_1kg": "92,000",
+      "gold_22k": "N/A",
+      "gold_24k": "N/A",
+      "silver_1kg": "N/A",
       "petrol": "₹104.21",
       "diesel": "₹92.15",
   }
 
-  headers = {
-      "User-Agent": (
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-          " (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      )
-  }
-
   async with httpx.AsyncClient(
-      timeout=8.0, headers=headers, follow_redirects=True
+      timeout=10.0, headers=RATES_HEADERS, follow_redirects=True
   ) as client:
-    # 1. Scrape 22K & 24K Gold Rates (per 10g)
+
+    # 1. FETCH GOLD RATES (MUMBAI)
     try:
       resp = await client.get(
           "https://www.goodreturns.in/gold-rates/mumbai.html"
       )
       if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
-        tables = soup.find_all("div", {"class": "gold_silver_table"})
 
-        if tables:
-          # Table 0: 22K Gold Rates
-          rows_22 = tables[0].find_all("tr")
-          for row in rows_22:
-            cols = row.find_all("td")
-            if len(cols) >= 2 and "10 gram" in cols[0].text.lower():
-              rates["gold_22k"] = cols[1].text.strip().replace("₹", "").strip()
-
-          # Table 1: 24K Gold Rates
-          if len(tables) > 1:
-            rows_24 = tables[1].find_all("tr")
-            for row in rows_24:
-              cols = row.find_all("td")
-              if len(cols) >= 2 and "10 gram" in cols[0].text.lower():
-                rates["gold_24k"] = (
-                    cols[1].text.strip().replace("₹", "").strip()
-                )
+        # Scan all table rows for 10g 22K and 24K prices
+        for tr in soup.find_all("tr"):
+          text = tr.text.strip().replace("\n", " ")
+          if "10 gram" in text.lower():
+            cols = [td.text.strip() for td in tr.find_all("td")]
+            if len(cols) >= 2:
+              val = cols[1].replace("₹", "").replace(",", "").strip()
+              if val.isdigit():
+                formatted_val = f"{int(val):,}"
+                # First table on GoodReturns Mumbai is usually 22K, second is 24K
+                if rates["gold_22k"] == "N/A":
+                  rates["gold_22k"] = formatted_val
+                elif rates["gold_24k"] == "N/A":
+                  rates["gold_24k"] = formatted_val
     except Exception as e:
-      logger.warning(f"[COMMODITY_GOLD_FAIL] Could not fetch gold rates: {e}")
+      logger.warning(f"[RATES] Failed fetching gold: {e}")
 
-    # 2. Scrape Silver Rate (per 1kg)
+    # 2. FETCH SILVER RATE (MUMBAI)
     try:
       resp = await client.get(
           "https://www.goodreturns.in/silver-rates/mumbai.html"
       )
       if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
-        silver_table = soup.find("div", {"class": "gold_silver_table"})
-        if silver_table:
-          rows = silver_table.find_all("tr")
-          for row in rows:
-            cols = row.find_all("td")
-            if len(cols) >= 2 and "1 kg" in cols[0].text.lower():
-              rates["silver_1kg"] = (
-                  cols[1].text.strip().replace("₹", "").strip()
-              )
+        for tr in soup.find_all("tr"):
+          text = tr.text.strip().lower()
+          if "1 kg" in text or "1000 gram" in text:
+            cols = [td.text.strip() for td in tr.find_all("td")]
+            if len(cols) >= 2:
+              val = cols[1].replace("₹", "").replace(",", "").strip()
+              if val.isdigit():
+                rates["silver_1kg"] = f"{int(val):,}"
+                break
     except Exception as e:
-      logger.warning(f"[COMMODITY_SILVER_FAIL] Could not fetch silver rate: {e}")
+      logger.warning(f"[RATES] Failed fetching silver: {e}")
+
+    # 3. FETCH PETROL & DIESEL (MUMBAI)
+    try:
+      resp_p = await client.get(
+          "https://www.goodreturns.in/petrol-price-in-mumbai.html"
+      )
+      if resp_p.status_code == 200:
+        soup = BeautifulSoup(resp_p.text, "html.parser")
+        p_tag = soup.find("span", {"id": "qtrends_price"}) or soup.find(
+            "div", {"class": "fuel-price"}
+        )
+        if p_tag:
+          rates["petrol"] = f"₹{p_tag.text.strip()}"
+
+      resp_d = await client.get(
+          "https://www.goodreturns.in/diesel-price-in-mumbai.html"
+      )
+      if resp_d.status_code == 200:
+        soup = BeautifulSoup(resp_d.text, "html.parser")
+        d_tag = soup.find("span", {"id": "qtrends_price"}) or soup.find(
+            "div", {"class": "fuel-price"}
+        )
+        if d_tag:
+          rates["diesel"] = f"₹{d_tag.text.strip()}"
+    except Exception as e:
+      logger.warning(f"[RATES] Failed fetching fuel rates: {e}")
 
   return rates
 
@@ -218,7 +246,7 @@ async def build_morning_news_post() -> str | None:
     return None
 
   # Fetch LIVE rates dynamically
-  rates = await fetch_live_commodity_rates()
+  rates = await fetch_live_rates()
 
   # Clean Unicode Escape Header
   header = "📰 <b>\u0932\u0942\u091F \u0930\u0947\u0921\u0930\u094D\u0938 - \u0906\u091C\u091A\u094D\u092F\u093E \u091A\u093E\u0932\u0942 \u0918\u0921\u093E\u092E\u094B\u0921\u0940</b>\n     \n\n"
