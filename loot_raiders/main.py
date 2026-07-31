@@ -28,10 +28,7 @@ from loot_raiders.expiration_daemon import ExpirationDaemon
 from loot_raiders.ai_summarizer import DealSummarizer
 from loot_raiders.media_scraper import MediaScraper
 from loot_raiders.daily_briefing import (
-    fetch_20_categorized_headlines,
-    fetch_commodity_rates,
-    build_english_post,
-    translate_to_marathi,
+    safe_dispatch_briefing,
     IST
 )
 
@@ -108,36 +105,26 @@ class LootRaidersOrchestrator:
                 if now.hour == 8 and now.minute == 0:
                     logger.info("08:00 AM IST detected. Generating Morning Briefing...")
                     
-                    cats = await fetch_20_categorized_headlines()
-                    rates = await fetch_commodity_rates()
-                    eng_post = build_english_post(cats, rates)
-                    
-                    # 1. Enqueue English post (Priority 2: News / Scheduled)
+                    # Enqueue briefing dispatcher (Priority 2: News / Scheduled)
                     await self.rate_limiter.enqueue(
                         priority=2,
-                        func=lambda e=eng_post: self.send_telegram_raw(e),
-                        description="English Morning News Briefing"
-                    )
-                    
-                    # 2. Enqueue Marathi post 10 seconds later
-                    await asyncio.sleep(10)
-                    mar_post = await translate_to_marathi(eng_post, self.gemini_key)
-                    await self.rate_limiter.enqueue(
-                        priority=2,
-                        func=lambda m=mar_post: self.send_telegram_raw(m),
-                        description="Marathi Morning News Briefing"
+                        func=lambda: safe_dispatch_briefing(self.send_telegram_raw),
+                        description="Sakal Morning News Briefing"
                     )
                     
                     # Save briefing metadata to DB
                     db = SessionLocal()
                     try:
-                        briefing_record = Briefing(
-                            date=now.strftime("%Y-%m-%d"),
-                            english_text=eng_post,
-                            marathi_text=mar_post
-                        )
-                        db.add(briefing_record)
-                        db.commit()
+                        from loot_raiders.daily_briefing import generate_sakal_briefing_post
+                        post_content = await generate_sakal_briefing_post()
+                        if post_content:
+                            briefing_record = Briefing(
+                                date=now.strftime("%Y-%m-%d"),
+                                english_text=post_content,
+                                marathi_text=post_content
+                            )
+                            db.add(briefing_record)
+                            db.commit()
                     except Exception as db_err:
                         logger.error(f"Failed to save briefing to DB: {db_err}")
                     finally:

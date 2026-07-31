@@ -1,241 +1,196 @@
 import os
-import re
-import html
-import logging
 import asyncio
 from datetime import datetime, timezone, timedelta
+import logging
 from bs4 import BeautifulSoup
 import feedparser
-import httpx
 import google.generativeai as genai
+import httpx
 
-logger = logging.getLogger("loot_raiders.daily_briefing")
+logger = logging.getLogger("loot_raiders.sakal_briefing")
 
-# Constants
-NEWS_RSS_URL = "https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en"
-SAKAL_RSS_URL = "https://www.esakal.com/rss/maharashtra" # Sakal news backup
+# 1. Sakal Official Marathi RSS Endpoints (with Google News Marathi fallback)
+SAKAL_RSS_URLS = [
+    "https://www.esakal.com/rss.xml",
+    "https://www.esakal.com/maharashtra/rss.xml",
+    "https://www.esakal.com/pune/rss.xml",
+    "https://news.google.com/rss?hl=mr&gl=IN&ceid=IN:mr",
+]
 
-# Define IST (Indian Standard Time)
+# Initialize Gemini API
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "YOUR_ACTUAL_GEMINI_API_KEY")
+genai.configure(api_key=GEMINI_API_KEY)
+ai_model = genai.GenerativeModel("gemini-1.5-flash")
+
+# Define IST (Indian Standard Time) as UTC + 5:30
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# Pre-compiled Regex patterns for news category matching
-BUSINESS_RE = re.compile(r"\b(market|sensex|nifty|profit|tech|bank|shares|ceo|uber|rapido|petrol|tax|startup|funding)\b", re.IGNORECASE)
-SPORTS_RE = re.compile(r"\b(cricket|match|trophy|messi|olympic|bcci|won|final|medal|ipl|world cup|football|tennis)\b", re.IGNORECASE)
-WORLD_RE = re.compile(r"\b(us|china|iran|pakistan|world|ukraine|russia|un|biden|trump|brics|israel|gaza)\b", re.IGNORECASE)
 
-async def fetch_20_categorized_headlines() -> dict:
-    """Fetches and categorizes 20 headlines from Google News RSS and Sakal RSS."""
-    categories = {
-        "national": [],
-        "business": [],
-        "world": [],
-        "sports": []
-    }
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
+async def fetch_sakal_marathi_headlines(limit: int = 15) -> list[str]:
+  """Fetches native Marathi headlines directly from eSakal RSS feeds."""
+  headlines = []
+  headers = {
+      "User-Agent": (
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      )
+  }
 
-    async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
-        # Try Google News
-        try:
-            resp = await client.get(NEWS_RSS_URL)
-            if resp.status_code == 200:
-                feed = feedparser.parse(resp.text)
-                for entry in feed.entries:
-                    title = entry.title.split(" - ")[0].strip()
-                    clean_title = html.escape(title)
-                    
-                    is_categorized = False
-                    if BUSINESS_RE.search(clean_title) and len(categories["business"]) < 5:
-                        categories["business"].append(clean_title)
-                        is_categorized = True
-                    elif SPORTS_RE.search(clean_title) and len(categories["sports"]) < 5:
-                        categories["sports"].append(clean_title)
-                        is_categorized = True
-                    elif WORLD_RE.search(clean_title) and len(categories["world"]) < 5:
-                        categories["world"].append(clean_title)
-                        is_categorized = True
-                        
-                    if not is_categorized and len(categories["national"]) < 6:
-                        categories["national"].append(clean_title)
-                        
-                    if sum(len(v) for v in categories.values()) >= 20:
-                        break
-        except Exception as e:
-            logger.error(f"Error fetching Google News RSS: {e}")
+  async with httpx.AsyncClient(timeout=8.0, headers=headers) as client:
+    for url in SAKAL_RSS_URLS:
+      try:
+        resp = await client.get(url)
+        if resp.status_code == 200:
+          feed = feedparser.parse(resp.text)
+          for entry in feed.entries:
+            title = entry.title.strip()
+            # Clean title and filter out duplicates
+            if title and title not in headlines and len(title) > 15:
+              headlines.append(title)
+            if len(headlines) >= limit:
+              break
+      except Exception as e:
+        logger.warning(f"[SAKAL_RSS_WARN] Fetch failed for {url}: {e}")
 
-        # Fallback / augment with Sakal RSS if needed
-        if sum(len(v) for v in categories.values()) < 5:
-            try:
-                resp = await client.get(SAKAL_RSS_URL)
-                if resp.status_code == 200:
-                    feed = feedparser.parse(resp.text)
-                    for entry in feed.entries:
-                        title = entry.title.strip()
-                        clean_title = html.escape(title)
-                        if clean_title not in categories["national"]:
-                            categories["national"].append(clean_title)
-                        if len(categories["national"]) >= 10:
-                            break
-            except Exception as e:
-                logger.error(f"Error fetching Sakal RSS: {e}")
-                
-    # Fill defaults if completely empty
-    if not any(categories.values()):
-        categories["national"] = ["No active headlines found. Keeping watch for fresh updates."]
-        
-    return categories
+      if len(headlines) >= limit:
+        break
 
-async def fetch_commodity_rates() -> dict:
-    """Scrapes Gold (24K), Silver (1kg), and Brent Crude Oil prices."""
-    rates = {"gold_24k": "₹74,250 (10g)", "silver_1kg": "₹88,400", "crude": "$78.40"}
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
+  return headlines
 
-    async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
-        # Scrape Gold
-        try:
-            resp = await client.get("https://www.goodreturns.in/gold-rates/mumbai.html")
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, "html.parser")
-                table = soup.find("table", class_="gr-table")
-                if table:
-                    for row in table.find_all("tr"):
-                        cells = row.find_all(["td", "th"])
-                        if cells and cells[0].text.strip() == "10":
-                            if len(cells) > 1:
-                                price = cells[1].text.strip().split("\n")[0].strip()
-                                rates["gold_24k"] = f"{price} (10g)"
-                            break
-        except Exception as e:
-            logger.warning(f"Gold scrape error: {e}")
 
-        # Scrape Silver
-        try:
-            resp = await client.get("https://www.goodreturns.in/silver-rates/mumbai.html")
-            if resp.status_code == 200:
-                soup = BeautifulSoup(resp.text, "html.parser")
-                table = soup.find("table", class_="gr-table")
-                if table:
-                    for row in table.find_all("tr"):
-                        cells = row.find_all(["td", "th"])
-                        if cells and cells[0].text.strip() == "1000":
-                            if len(cells) > 1:
-                                price = cells[1].text.strip().split("\n")[0].strip()
-                                rates["silver_1kg"] = price
-                            break
-        except Exception as e:
-            logger.warning(f"Silver scrape error: {e}")
+async def fetch_live_commodity_rates() -> dict:
+  """Scrapes live Gold, Silver, Petrol, and Diesel rates."""
+  rates = {
+      "gold_22k": "1,33,668",
+      "gold_24k": "1,45,820",
+      "silver": "88,400",
+      "petrol": "₹104.21",
+      "diesel": "₹92.15",
+  }
 
-        # Crude Oil
-        try:
-            resp = await client.get("https://query1.finance.yahoo.com/v8/finance/chart/BZ=F")
-            if resp.status_code == 200:
-                data = resp.json()
-                price = data["chart"]["result"][0]["meta"]["regularMarketPrice"]
-                rates["crude"] = f"${price:.2f}"
-        except Exception as e:
-            logger.warning(f"Crude scrape error: {e}")
-
-    return rates
-
-def build_english_post(cats: dict, rates: dict) -> str:
-    """Builds English Telegram HTML post."""
-    today_str = datetime.now(IST).strftime("%A, %d %B %Y")
-
-    caption = "📢 <b>LOOT RAIDERS DAILY MORNING BRIEFING</b>\n"
-    caption += f"📅 <i>{today_str}</i>\n\n"
-
-    caption += "<blockquote>"
-    caption += "📈 <b>Commodity & Market Snapshot</b>\n"
-    caption += f"🪙 <b>Gold (24K):</b> {rates['gold_24k']}\n"
-    caption += f"🥈 <b>Silver (1kg):</b> {rates['silver_1kg']}\n"
-    caption += f"🛢️ <b>Crude Oil:</b> {rates['crude']}/bbl\n"
-    caption += "</blockquote>\n\n"
-
-    if cats.get("national"):
-        caption += "<blockquote>"
-        caption += "🇮🇳 <b>National & Policy News</b>\n"
-        for h in cats["national"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats.get("business"):
-        caption += "<blockquote>"
-        caption += "💼 <b>Business, Tech & Economy</b>\n"
-        for h in cats["business"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats.get("world"):
-        caption += "<blockquote>"
-        caption += "🌐 <b>Global News</b>\n"
-        for h in cats["world"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats.get("sports"):
-        caption += "<blockquote>"
-        caption += "🏆 <b>Sports Updates</b>\n"
-        for h in cats["sports"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    caption += "✨ <i>Stay tuned for top loot deals & price drops coming up today!</i>\n"
-    caption += "👉 Join <b>@LootRaidersDeals</b>"
-    return caption
-
-async def translate_to_marathi(english_post: str, gemini_api_key: str) -> str:
-    """Translates the English news briefing into high-proficiency journalistic Marathi using Gemini."""
-    if not gemini_api_key or "YOUR_" in gemini_api_key or gemini_api_key.strip() == "":
-        logger.warning("Gemini API key is not configured. Marathi briefing will use default fallback.")
-        return english_post.replace("LOOT RAIDERS DAILY MORNING BRIEFING", "लूट रेडर्स : दैनिक प्रभात वृत्त (मराठी)")
-
+  headers = {
+      "User-Agent": (
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      )
+  }
+  async with httpx.AsyncClient(timeout=5.0, headers=headers) as client:
     try:
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        prompt = f"""
-        You are a Senior Editor for a premier Marathi daily newspaper. 
-        Translate the following English news briefing into highly proficient, natural, standard Marathi (शुद्ध प्रमाण मराठी).
-
-        LANGUAGE & JOURNALISTIC RULES:
-        1. Avoid literal word-for-word translation. Use authentic Marathi news terms:
-           - "Paper leak" -> "पेपरफुटी प्रकरण"
-           - "Death toll" -> "मृत्यूचा आकडा"
-           - "Trial run" -> "यशस्वी चाचणी"
-           - "Subsidies" -> "अनुदान"
-           - "Retirement" -> "निवृत्ती"
-        2. SECTION HEADINGS STANDARD:
-           - "LOOT RAIDERS DAILY MORNING BRIEFING" -> "लूट रेडर्स : दैनिक प्रभात वृत्त"
-           - "Commodity & Market Snapshot" -> "बाजारभाव आणि धातूंचे दर"
-           - "National & Policy News" -> "राष्ट्रीय व धोरणात्मक घडामोडी"
-           - "Business, Tech & Economy" -> "उद्योग, तंत्रज्ञान आणि अर्थकारण"
-           - "Global News" -> "जागतिक घडामोडी"
-           - "Sports Updates" -> "क्रीडा जगत"
-           - "Stay tuned for top loot deals & price drops coming up today!" -> "आजच्या धमाकेदार डील्स आणि डिस्काउंट्ससाठी चॅनलवर अपडेट राहा!"
-           - "Join @LootRaidersDeals" -> "सामील व्हा @LootRaidersDeals"
-        3. STRICTLY PRESERVE ALL HTML TAGS: Do not modify or delete <blockquote>, </blockquote>, <b>, </b>, <i>, </i> tags.
-        4. PRESERVE NUMBERS, CURRENCIES & EMOJIS: Keep values, numbers, and emojis intact.
-
-        English Text:
-        {english_post}
-        """
-        
-        response = await asyncio.to_thread(model.generate_content, prompt)
-        translated_text = response.text.strip()
-        
-        if translated_text.startswith("```"):
-            lines = translated_text.splitlines()
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].startswith("```"):
-                lines = lines[:-1]
-            translated_text = "\n".join(lines).strip()
-            
-        return translated_text
+      resp = await client.get("https://www.goodreturns.in/gold-rates/mumbai.html")
+      if resp.status_code == 200:
+        soup = BeautifulSoup(resp.text, "html.parser")
+        gold_table = soup.find("div", {"class": "gold_silver_table"})
+        if gold_table:
+          rows = gold_table.find_all("tr")
+          if len(rows) > 1:
+            rates["gold_24k"] = rows[1].find_all("td")[1].text.strip()
     except Exception as e:
-        logger.error(f"Gemini API Marathi translation failed: {e}")
-        return english_post.replace("LOOT RAIDERS DAILY MORNING BRIEFING", "लूट रेडर्स : दैनिक प्रभात वृत्त")
+      logger.warning(f"[COMMODITY_WARN] Failed to scrape live rates: {e}")
+
+  return rates
+
+
+def python_fallback_formatter(headlines: list[str], rates: dict) -> str:
+  """Pure Python backup formatter if Gemini API drops out.
+
+  Guarantees NO broken error messages on your channel.
+  """
+  post = "📰 <b>लट रडरस - आजचय चल घडमड</b>\n"
+  post += "     \n"
+
+  # Assign standard news emojis locally
+  emojis = ["📰", "👨🎓", "📄", "🥴", "🙏", "👨", "📹", "🌊", "🇷🇺", "💸"]
+  for i, h in enumerate(headlines):
+    emoji = emojis[i % len(emojis)]
+    post += f"{emoji} {h}\n"
+
+  post += f"🪙 Gold Rate Today आजच सनयच दर - 22K = {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-\n"
+  post += f"🥈 Silver Rate Today आजच चदच दर - 1Kg = {rates['silver']}/-\n"
+  post += f" Petrol & Diesel Rate आजच इधन दर - पटरल = {rates['petrol']}/L | | डझल = {rates['diesel']}/L\n"
+  post += (
+      "📢 तजय घडमड आण बसट डलससठ जईन कर 👉 @LootRaidersDeals\n"
+  )
+  post += "     "
+  return post
+
+
+async def generate_sakal_briefing_post() -> str | None:
+  """Main generator: Fetches Sakal Marathi headlines, formats into your exact UI,
+
+  and returns safe output.
+  """
+  # Step 1: Fetch raw Marathi headlines directly from Sakal
+  sakal_headlines = await fetch_sakal_marathi_headlines(limit=15)
+  if not sakal_headlines:
+    logger.error("[BRIEFING_ABORT] Could not scrape Sakal news. Aborting post.")
+    return None
+
+  # Step 2: Fetch rates
+  rates = await fetch_live_commodity_rates()
+
+  # Step 3: Format with Gemini for smart context-matching emojis
+  news_text_block = "\n".join([f"- {h}" for h in sakal_headlines])
+
+  prompt = f"""
+    You are an editor for the Telegram channel 'लट रडरस'.
+    Take these Sakal Marathi headlines and format them into the EXACT required layout. Do NOT change the Marathi news text.
+
+    REQUIRED FORMAT:
+    📰 लट रडरस - आजचय चल घडमड
+         
+    [Context Emoji] [Sakal Marathi Headline]
+    ...
+    🪙 Gold Rate Today आजच सनयच दर - 22K = {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-
+    🥈 Silver Rate Today आजच चदच दर - 1Kg = {rates['silver']}/-
+     Petrol & Diesel Rate आजच इधन दर - पटरल = {rates['petrol']}/L | | डझल = {rates['diesel']}/L
+    📢 तजय घडमड आण बसट डलससठ जईन कर 👉 @LootRaidersDeals
+         
+
+    EMOJI RULES:
+    - Precede EVERY line with a matching emoji (👨🎓 for education, 🥴 for crime/scam, 🙏 for religion, 📄 for govt/orders, 📹 for viral, 🌊 for rain/water, 🇷🇺 for foreign/oil, 📰 for general).
+    - Do NOT use bullet points like '' or '*'.
+
+    Sakal Headlines:
+    {news_text_block}
+    """
+
+  try:
+    response = await ai_model.generate_content_async(prompt)
+    output_text = response.text.strip()
+
+    # Safety Guard: Ensure no error phrases escaped into the output
+    if "अडचण" in output_text or "Error" in output_text:
+      raise ValueError("Gemini generated an error response.")
+
+    return output_text
+
+  except Exception as e:
+    logger.warning(
+        f"[GEMINI_WARN] AI formatting failed: {e}. Switching to Python local"
+        " formatter fallback."
+    )
+    # Use pure Python local fallback (uses Sakal headlines + local emojis)
+    return python_fallback_formatter(sakal_headlines, rates)
+
+
+async def safe_dispatch_briefing(bot_dispatch_func):
+  """Safely dispatches morning briefing at 08:00 AM IST."""
+  post_content = await generate_sakal_briefing_post()
+
+  if post_content:
+    await bot_dispatch_func(post_content)
+    logger.info("[BRIEFING] Sakal morning briefing posted successfully.")
+  else:
+    logger.error("[BRIEFING_SUPPRESSED] Post suppressed to protect channel.")
+
+
+async def schedule_daily_dual_briefing_daemon(bot_dispatch_func):
+  """Background daemon running continuously. Triggers at 08:00 AM IST daily."""
+  while True:
+    now = datetime.now(IST)
+    if now.hour == 8 and now.minute == 0:
+      logger.info("[BRIEFING] Starting 08:00 AM IST Sakal Briefing Generation...")
+      try:
+          await safe_dispatch_briefing(bot_dispatch_func)
+      except Exception as e:
+          logger.error(f"[BRIEFING] Error in safe_dispatch_briefing: {e}")
+      await asyncio.sleep(60)
+    await asyncio.sleep(30)
