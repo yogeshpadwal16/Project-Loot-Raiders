@@ -36,9 +36,12 @@ def resolve_target_channel_id(product_title: str, settings: dict, category: str 
     Resolves the target channel ID/handle.
     Falls back to settings["telegram_chat_id"] if resolved to DEFAULT or mapping is not set.
     """
-    resolved = resolve_target_channel(product_title, category)
     default_chat = settings.get("telegram_chat_id") or CHANNEL_MAP["DEFAULT"]
+    
+    if not settings.get("dynamic_routing_enabled", False):
+        return default_chat
 
+    resolved = resolve_target_channel(product_title, category)
     if resolved == CHANNEL_MAP["DEFAULT"]:
         return default_chat
 
