@@ -240,6 +240,39 @@ async def fetch_live_rates() -> dict:
   return rates
 
 
+def build_footer_block(
+    gold_22k: str = "132,550",
+    gold_24k: str = "144,600",
+    silver_1kg: str = "235,000",
+    petrol_rate: str = "\u20b9111.21",
+    diesel_rate: str = "\u20b997.83",
+    channel_handle: str = "LootRaidersDeals",
+) -> str:
+  """Builds the commodity & fuel footer with spacing between each item and Unicode
+
+  ASCII escapes to protect Devanagari text during paste.
+  """
+  footer = (
+      f"\U0001fa99 Gold Rate Today \u0906\u091C\u091A\u0947"
+      f" \u0938\u094B\u0928\u094D\u092F\u093E\u091A\u0947 \u0926\u0930 - 22K ="
+      f" {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
+      f"\U0001f948 Silver Rate Today \u0906\u091C\u091A\u0947"
+      f" \u091A\u093E\u0902\u0926\u0940\u091A\u0947 \u0926\u0930 - 1Kg ="
+      f" {silver_1kg}/-\n\n"
+      f" Petrol & Diesel Rate \u0906\u091C\u091A\u0947"
+      " \u0907\u0902\u0927\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932"
+      f" = {petrol_rate}/L | | \u0921\u093F\u091D\u0947\u0932 ="
+      f" {diesel_rate}/L\n\n"
+      "\U0001f4e2 \u0924\u093E\u091C\u094D\u092F\u093E"
+      " \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F"
+      " \u092C\u0947\u0938\u094D\u091F"
+      " \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940"
+      f" \u091C\u0949\u0908\u0928 \u0915\u0930\u093E \U0001f449 @{channel_handle}\n"
+      "     "
+  )
+  return footer
+
+
 async def build_morning_news_post() -> str | None:
   headlines = await fetch_esakal_headlines(limit=15)
   if not headlines:
@@ -249,27 +282,17 @@ async def build_morning_news_post() -> str | None:
   rates = await fetch_live_rates()
 
   # Clean Unicode Escape Header
-  header = "📰 <b>\u0932\u0942\u091F \u0930\u0947\u0921\u0930\u094D\u0938 - \u0906\u091C\u091A\u094D\u092F\u093E \u091A\u093E\u0932\u0942 \u0918\u0921\u093E\u092E\u094B\u0921\u0940</b>\n     \n\n"
+  header = "\U0001f4f0 <b>\u0932\u0942\u091F \u0930\u0947\u0921\u0930\u094D\u0938 - \u0906\u091C\u091A\u094D\u092F\u093E \u091A\u093E\u0932\u0942 \u0918\u0921\u093E\u092E\u094B\u0921\u0940</b>\n     \n\n"
 
   news_blocks = [f"{get_emoji(h)} {h}" for h in headlines]
   news_section = "\n\n".join(news_blocks)
 
-  # Footer inserting dynamic rates
-  footer = (
-      f"\n\n🪙 Gold Rate Today \u0906\u091C\u091A\u0947"
-      f" \u0938\u094B\u0928\u094D\u092F\u093E\u091A\u0947 \u0926\u0930 - 22K ="
-      f" {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-\n🥈 Silver Rate"
-      f" Today \u0906\u091C\u091A\u0947"
-      f" \u091A\u093E\u0902\u0926\u0940\u091A\u0947 \u0926\u0930 - 1Kg ="
-      f" {rates['silver_1kg']}/-\n Petrol & Diesel Rate \u0906\u091C\u091A\u0947"
-      " \u0907\u0902\u0920\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932"
-      f" = {rates['petrol']}/L | | \u0921\u093F\u091D\u0947\u0932 ="
-      f" {rates['diesel']}/L\n📢 \u0924\u093E\u091C\u094D\u092F\u093E"
-      " \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F"
-      " \u092C\u0947\u0938\u094D\u091F"
-      " \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940"
-      " \u091C\u0949\u0908\u0928 \u0915\u0930\u093E 👉 @LootRaidersDeals\n    "
-      " "
+  footer = "\n\n" + build_footer_block(
+      gold_22k=rates["gold_22k"],
+      gold_24k=rates["gold_24k"],
+      silver_1kg=rates["silver_1kg"],
+      petrol_rate=rates["petrol"],
+      diesel_rate=rates["diesel"],
   )
 
   return header + news_section + footer
