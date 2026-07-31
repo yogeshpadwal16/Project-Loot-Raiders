@@ -253,10 +253,10 @@ def build_footer_block(
   ASCII escapes to protect Devanagari text during paste.
   """
   footer = (
-      f"\U0001f947 Gold Rate Today \u0906\u091C\u091A\u0947"
+      f"\U0001fa99 Gold Rate Today \u0906\u091C\u091A\u0947"
       f" \u0938\u094B\u0928\u094D\u092F\u093E\u091A\u0947 \u0926\u0930 - 22K ="
       f" {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
-      f"\U0001f948 Silver Rate Today \u0906\u091C\u091A\u0947"
+      f"\U0001fa99 Silver Rate Today \u0906\u091C\u091A\u0947"
       f" \u091A\u093E\u0902\u0926\u0940\u091A\u0947 \u0926\u0930 - 1Kg ="
       f" {silver_1kg}/-\n\n"
       f" Petrol & Diesel Rate \u0906\u091C\u091A\u0947"
