@@ -138,7 +138,7 @@ class DealMirrorProcessor:
                 # 4. Scrape details
                 # Priority A: Parse from Telegram message text (message.raw_text)
                 # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
-                title, price, mrp, img_url = "", 0, 0, ""
+                title, price, mrp, img_url = "", 0, 0, message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
                 
                 if message.raw_text and message.raw_text.strip():
                     import re
