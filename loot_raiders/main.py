@@ -115,8 +115,8 @@ class LootRaidersOrchestrator:
                     # Save briefing metadata to DB
                     db = SessionLocal()
                     try:
-                        from loot_raiders.daily_briefing import generate_esakal_only_post
-                        post_content = await generate_esakal_only_post()
+                        from loot_raiders.daily_briefing import build_morning_news_post
+                        post_content = await build_morning_news_post()
                         if post_content:
                             briefing_record = Briefing(
                                 date=now.strftime("%Y-%m-%d"),
