@@ -12,7 +12,8 @@ if (Test-Path $TAR_PATH) { Remove-Item $TAR_PATH -Force }
 
 # Change to project root directory to ensure relative paths in tar are correct
 $OriginalLocation = Get-Location
-Set-Location "C:\Users\yoges\Projects\Project-Loot-Raiders"
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
+Set-Location $ProjectRoot
 
 # Create a tar.gz archive including essential directories and files (added 'web', 'docker', 'daily_briefing.py', and 'main_briefing.py')
 tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n docker loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py
