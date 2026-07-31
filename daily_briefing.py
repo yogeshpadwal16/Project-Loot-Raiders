@@ -159,8 +159,8 @@ async def fetch_live_rates() -> dict:
       "gold_22k": "N/A",
       "gold_24k": "N/A",
       "silver_1kg": "N/A",
-      "petrol": "₹104.21",
-      "diesel": "₹92.15",
+      "petrol": "\u20b9104.21",
+      "diesel": "\u20b992.15",
   }
 
   async with httpx.AsyncClient(
@@ -168,6 +168,9 @@ async def fetch_live_rates() -> dict:
   ) as client:
 
     # 1. FETCH GOLD RATES (MUMBAI)
+    #    GoodReturns uses a table where Row 3 has tds=['10', '₹1,44,600...', '₹1,32,550...', ...]
+    #    Header Row 0 has ths=['Gram', '24K', '22K', '18K']
+    #    So for the 10g row: cols[1] = 24K price, cols[2] = 22K price
     try:
       resp = await client.get(
           "https://www.goodreturns.in/gold-rates/mumbai.html"
@@ -175,24 +178,24 @@ async def fetch_live_rates() -> dict:
       if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        # Scan all table rows for 10g 22K and 24K prices
         for tr in soup.find_all("tr"):
-          text = tr.text.strip().replace("\n", " ")
-          if "10 gram" in text.lower():
-            cols = [td.text.strip() for td in tr.find_all("td")]
-            if len(cols) >= 2:
-              val = cols[1].replace("₹", "").replace(",", "").strip()
-              if val.isdigit():
-                formatted_val = f"{int(val):,}"
-                # First table on GoodReturns Mumbai is usually 22K, second is 24K
-                if rates["gold_22k"] == "N/A":
-                  rates["gold_22k"] = formatted_val
-                elif rates["gold_24k"] == "N/A":
-                  rates["gold_24k"] = formatted_val
+          tds = tr.find_all("td")
+          if len(tds) >= 3:
+            first_col = tds[0].text.strip()
+            if first_col == "10":
+              # Extract 24K (col 1) and 22K (col 2) rates for 10 grams
+              raw_24k = tds[1].text.strip().split("\n")[0].replace("\u20b9", "").replace(",", "").strip()
+              raw_22k = tds[2].text.strip().split("\n")[0].replace("\u20b9", "").replace(",", "").strip()
+              if raw_24k.isdigit():
+                rates["gold_24k"] = f"{int(raw_24k):,}"
+              if raw_22k.isdigit():
+                rates["gold_22k"] = f"{int(raw_22k):,}"
+              break
     except Exception as e:
       logger.warning(f"[RATES] Failed fetching gold: {e}")
 
     # 2. FETCH SILVER RATE (MUMBAI)
+    #    Silver table row has tds=['1000', '₹2,35,000', '₹2,35,000', '0']
     try:
       resp = await client.get(
           "https://www.goodreturns.in/silver-rates/mumbai.html"
@@ -200,40 +203,37 @@ async def fetch_live_rates() -> dict:
       if resp.status_code == 200:
         soup = BeautifulSoup(resp.text, "html.parser")
         for tr in soup.find_all("tr"):
-          text = tr.text.strip().lower()
-          if "1 kg" in text or "1000 gram" in text:
-            cols = [td.text.strip() for td in tr.find_all("td")]
-            if len(cols) >= 2:
-              val = cols[1].replace("₹", "").replace(",", "").strip()
+          tds = tr.find_all("td")
+          if len(tds) >= 2:
+            first_col = tds[0].text.strip()
+            if first_col == "1000":
+              val = tds[1].text.strip().replace("\u20b9", "").replace(",", "").strip()
               if val.isdigit():
                 rates["silver_1kg"] = f"{int(val):,}"
-                break
+              break
     except Exception as e:
       logger.warning(f"[RATES] Failed fetching silver: {e}")
 
     # 3. FETCH PETROL & DIESEL (MUMBAI)
+    #    GoodReturns uses <span id="fp-price" class="fp-price-big">₹111.21</span>
     try:
       resp_p = await client.get(
           "https://www.goodreturns.in/petrol-price-in-mumbai.html"
       )
       if resp_p.status_code == 200:
         soup = BeautifulSoup(resp_p.text, "html.parser")
-        p_tag = soup.find("span", {"id": "qtrends_price"}) or soup.find(
-            "div", {"class": "fuel-price"}
-        )
+        p_tag = soup.find("span", {"id": "fp-price"})
         if p_tag:
-          rates["petrol"] = f"₹{p_tag.text.strip()}"
+          rates["petrol"] = p_tag.text.strip()
 
       resp_d = await client.get(
           "https://www.goodreturns.in/diesel-price-in-mumbai.html"
       )
       if resp_d.status_code == 200:
         soup = BeautifulSoup(resp_d.text, "html.parser")
-        d_tag = soup.find("span", {"id": "qtrends_price"}) or soup.find(
-            "div", {"class": "fuel-price"}
-        )
+        d_tag = soup.find("span", {"id": "fp-price"})
         if d_tag:
-          rates["diesel"] = f"₹{d_tag.text.strip()}"
+          rates["diesel"] = d_tag.text.strip()
     except Exception as e:
       logger.warning(f"[RATES] Failed fetching fuel rates: {e}")
 
