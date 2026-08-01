@@ -14,7 +14,7 @@ FESTIVALS = {
         "desc": "A majestic premium festival greeting card design for Diwali, featuring traditional glowing oil lamps, gold accents, warm bokeh background, cinematic lighting, professional digital graphic art, 4k resolution, no text, clean composition",
         "caption": (
             "✨ <b>शुभ दीपावली!</b> ✨\n\n"
-            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला दीपावलीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो हीच प्रार्थना. "
+            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला दीपावलीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो, हीच प्रार्थना. "
             "हा दिव्यांचा सण तुमच्या आयुष्यात प्रकाश आणि आनंद घेऊन येवो!\n\n"
             "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
         )
@@ -47,9 +47,9 @@ FESTIVALS = {
             "design poster, golden accents, highly detailed, realistic textures, premium quality, no text, clean composition"
         ),
         "caption": (
-            "✨ <b>संकष्ट चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
-            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला संकष्ट चतुर्थीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो हीच ईश्वरचरणी प्रार्थना. "
-            "तुमचे सर्व संकट दूर होवोत!\n\n"
+            "✨ <b>संकष्टी चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
+            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला संकष्टी चतुर्थीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो, हीच गणरायाच्या चरणी प्रार्थना. "
+            "बाप्पा तुमच्या आयुष्यातील सर्व संकटे दूर करोत!\n\n"
             "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
         )
     }
