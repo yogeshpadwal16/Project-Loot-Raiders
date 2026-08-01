@@ -10,6 +10,7 @@ FESTIVALS = {
     "10-24": "Diwali Festival of Lights, traditional oil lamps, gold decorations",
     "09-07": "Ganesh Chaturthi Lord Ganesha, modak, grand celebration",
     "03-25": "Holi Festival of Colors, vibrant gulal powders, festive spirit",
+    "08-02": "Sankashti Chaturthi, Lord Ganesha, modak, divine blessings, traditional oil lamps, spiritual atmosphere",
 }
 
 async def generate_festival_poster(prompt_details: str) -> bytes:
