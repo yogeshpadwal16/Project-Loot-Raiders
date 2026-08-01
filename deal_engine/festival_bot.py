@@ -10,14 +10,14 @@ from PIL import Image, ImageDraw, ImageFont
 logger = logging.getLogger("loot_raiders.festival")
 
 # Custom Devanagari Font URL and Local File Path
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/yatraone/YatraOne-Regular.ttf"
-FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "YatraOne-Regular.ttf")
+FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/amita/Amita-Regular.ttf"
+FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Amita-Regular.ttf")
 
 FESTIVALS = {
     "10-24": {
         "desc": "Vibrant Diwali Festival of Lights card, traditional oil lamps, gold decorations, warm glowing lights background, cinematic lighting, 4k",
         "title": "\u0936\u0941\u092d \u0926\u0940\u092a\u093e\u0935\u0932\u0940",  # शुभ दीपावली
-        "sub": "\u0926\u0940\u092a\u093e\u0935\u0932\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u0926\u093f\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # दीपावलीच्या हार्दिक शुभेच्छा...
+        "sub": "\u0926\u0940\u092a\u093e\u0935\u0932\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # दीपावलीच्या हार्दिक शुभेच्छा...
     },
     "09-07": {
         "desc": "Vibrant Ganesh Chaturthi card, Lord Ganesha, modak, grand celebration, bright golden temple background, cinematic highlights, 4k",
@@ -27,7 +27,7 @@ FESTIVALS = {
     "03-25": {
         "desc": "Vibrant Holi Festival of Colors card, gulal powders splash, joyful festive spirit background, cinematic lighting, 4k",
         "title": "\u0927\u0941\u0932\u093f\u0935\u0902\u0926\u0928",  # धुलिवंदन
-        "sub": "\u093a\u094b\u0933\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u0926\u093f\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # होळीच्या हार्दिक शुभेच्छा...
+        "sub": "\u0939\u094b\u0933\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # होळीच्या हार्दिक शुभेच्छा...
     },
     "08-02": {
         "desc": (
@@ -36,14 +36,14 @@ FESTIVALS = {
             "professional digital graphic design greeting card, mystical and spiritual, 4k resolution"
         ),
         "title": "\u0938\u0902\u0915\u0937\u094d\u091f \u091a\u0924\u0941\u0930\u094d\u0925\u0940",  # संकष्ट चतुर्थी
-        "sub": "\u0928\u093f\u092e\u093f\u0924\u094d\u0924 \u0939\u093e\u0930\u094d\u0926\u093f\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # निमित्त हार्दिक शुभेच्छा...
+        "sub": "\u093f\u092e\u093f\u0924\u094d\u0924 \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # निमित्त हार्दिक शुभेच्छा...
     }
 }
 
 def download_font_if_needed():
     if not os.path.exists(FONT_PATH):
         try:
-            logger.info("Downloading Yatra One Devanagari font...")
+            logger.info("Downloading Amita Devanagari font...")
             res = requests.get(FONT_URL, timeout=15)
             if res.status_code == 200:
                 with open(FONT_PATH, "wb") as f:
@@ -53,12 +53,47 @@ def download_font_if_needed():
             logger.error(f"Failed to download Devanagari font: {e}")
 
 async def generate_festival_poster(prompt_details: str) -> bytes:
-    """Fetches a free AI-generated festival poster from Pollinations.ai."""
+    """Generates a premium festival poster using Gemini/Imagen model if API key available, otherwise falls back to Pollinations Flux."""
+    from config.settings import load_settings
+    settings = load_settings()
+    api_key = settings.get("gemini_api_key")
+    
+    if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
+        # Try generating using Gemini 2.5/3.1 flash-image model (which is the high-quality Nano Banana model)
+        # Note: we check gemini-3.1-flash-image and fall back to gemini-2.5-flash-image
+        for model in ["gemini-3.1-flash-image", "gemini-2.5-flash-image"]:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt_details}]}],
+                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+            }
+            try:
+                logger.info(f"[FESTIVAL] Attempting to generate poster using Gemini Imagen model: {model}...")
+                async with httpx.AsyncClient(timeout=45.0) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            for part in parts:
+                                inline_data = part.get("inlineData")
+                                if inline_data and inline_data.get("data"):
+                                    import base64
+                                    logger.info(f"[FESTIVAL] Successfully generated poster using {model}!")
+                                    return base64.b64decode(inline_data["data"])
+                    else:
+                        logger.warning(f"[FESTIVAL] Gemini API {model} returned status {res.status_code}: {res.text}")
+            except Exception as e:
+                logger.warning(f"[FESTIVAL] Failed to call Gemini {model} API: {e}")
+                
+    # Fallback to state-of-the-art Flux model on Pollinations.ai (free & very high quality)
+    logger.info("[FESTIVAL] Falling back to Pollinations Flux model...")
     base_prompt = f"{prompt_details}, high quality, 4k, festive lighting, no text, clean composition"
-    encoded_prompt = httpx.URL(base_prompt).raw_path.decode()
-    # Adding seed for reproducibility and premium quality
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1080&height=1080&nologo=true&seed=88"
-
+    # Using model=flux in Pollinations URL
+    url = f"https://image.pollinations.ai/prompt/{httpx.URL(base_prompt).raw_path.decode()}?model=flux&width=1080&height=1080&nologo=true"
+    
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(url)
         response.raise_for_status()
@@ -80,8 +115,8 @@ def overlay_channel_watermark(image_bytes: bytes, title_text: str, sub_text: str
     
     # Load fonts
     try:
-        font_title = ImageFont.truetype(FONT_PATH, 80)
-        font_sub = ImageFont.truetype(FONT_PATH, 32)
+        font_title = ImageFont.truetype(FONT_PATH, 95)
+        font_sub = ImageFont.truetype(FONT_PATH, 34)
         font_watermark = ImageFont.truetype("arial.ttf", 28)
     except Exception as e:
         logger.warning(f"Could not load custom font, using default: {e}")
