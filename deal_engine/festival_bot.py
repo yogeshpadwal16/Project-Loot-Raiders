@@ -10,19 +10,47 @@ logger = logging.getLogger("loot_raiders.festival")
 
 FESTIVALS = {
     "10-24": {
-        "desc": "A majestic premium festival greeting card design for Diwali, featuring traditional glowing oil lamps, gold accents, warm bokeh background, cinematic lighting, professional digital graphic art, 4k resolution, no text, clean composition"
+        "name": "Diwali",
+        "desc": "A majestic premium festival greeting card design for Diwali, featuring traditional glowing oil lamps, gold accents, warm bokeh background, cinematic lighting, professional digital graphic art, 4k resolution, no text, clean composition",
+        "caption": (
+            "✨ <b>शुभ दीपावली!</b> ✨\n\n"
+            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला दीपावलीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो हीच प्रार्थना. "
+            "हा दिव्यांचा सण तुमच्या आयुष्यात प्रकाश आणि आनंद घेऊन येवो!\n\n"
+            "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
+        )
     },
     "09-07": {
-        "desc": "A majestic premium festival greeting design for Ganesh Chaturthi, featuring Lord Ganesha, modak, bright golden temple background, cinematic lighting, 4k resolution, no text, clean composition"
+        "name": "Ganesh Chaturthi",
+        "desc": "A majestic premium festival greeting design for Ganesh Chaturthi, featuring Lord Ganesha, modak, bright golden temple background, cinematic lighting, 4k resolution, no text, clean composition",
+        "caption": (
+            "✨ <b>गणेश चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
+            "बाप्पाच्या आगमनाने तुमच्या घरी सुख, समृद्धी आणि ऐश्वर्य नांदो. "
+            "गणेश चतुर्थीच्या निमित्ताने तुम्हाला व तुमच्या कुटुंबाला हार्दिक शुभेच्छा!\n\n"
+            "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
+        )
     },
     "03-25": {
-        "desc": "A vibrant premium greeting design for Holi, featuring splashes of colourful gulal powders, joyful festive spirit background, cinematic lighting, 4k resolution, no text, clean composition"
+        "name": "Holi",
+        "desc": "A vibrant premium greeting design for Holi, featuring splashes of colourful gulal powders, joyful festive spirit background, cinematic lighting, 4k resolution, no text, clean composition",
+        "caption": (
+            "✨ <b>धुलिवंदन व होळीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
+            "रंगांचा हा सण तुमच्या आयुष्यात नवी उमेद, उत्साह आणि आनंद घेऊन येवो. "
+            "तुम्हाला आणि तुमच्या कुटुंबाला होळीच्या हार्दिक शुभेच्छा!\n\n"
+            "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
+        )
     },
     "08-02": {
+        "name": "Sankashti Chaturthi",
         "desc": (
             "A majestic premium festival greeting card design for Sankashti Chaturthi, featuring Lord Ganesha "
             "seated majestically in front of a warm glowing fire and orange sunlight background, professional graphic "
             "design poster, golden accents, highly detailed, realistic textures, premium quality, no text, clean composition"
+        ),
+        "caption": (
+            "✨ <b>संकष्ट चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
+            "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला संकष्ट चतुर्थीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो हीच ईश्वरचरणी प्रार्थना. "
+            "तुमचे सर्व संकट दूर होवोत!\n\n"
+            "🌸 <i>टीम @LootRaidersDeals कडून मनःपूर्वक शुभेच्छा</i> 🌸"
         )
     }
 }
@@ -74,7 +102,7 @@ def overlay_channel_watermark(image_bytes: bytes, title_text: str = "", sub_text
     """Stub function to maintain backward compatibility. Returns the image bytes unmodified."""
     return image_bytes
 
-def send_festival_greeting(image_bytes: bytes, festival_name: str) -> bool:
+def send_festival_greeting(image_bytes: bytes, caption: str) -> bool:
     from config.settings import load_settings
     import requests
     
@@ -87,12 +115,6 @@ def send_festival_greeting(image_bytes: bytes, festival_name: str) -> bool:
         return False
         
     endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-    caption = (
-        f"✨ <b>{festival_name} Greetings!</b> ✨\n\n"
-        f"Wishing you and your family a very happy, healthy, and prosperous {festival_name}. "
-        f"May this festive season fill your life with happiness and joy!\n\n"
-        f"🌸 <i>Warm regards from team @LootRaidersDeals</i> 🌸"
-    )
     
     try:
         files = {"photo": ("festival_poster.jpg", io.BytesIO(image_bytes), "image/jpeg")}
@@ -103,7 +125,7 @@ def send_festival_greeting(image_bytes: bytes, festival_name: str) -> bool:
         }
         res = requests.post(endpoint, data=payload, files=files, timeout=30)
         if res.status_code == 200:
-            logger.info(f"[FESTIVAL] Successfully posted greeting card for {festival_name} to Telegram!")
+            logger.info("[FESTIVAL] Successfully posted greeting card to Telegram!")
             return True
         else:
             logger.error(f"[FESTIVAL] Telegram API failed to post greeting card ({res.status_code}): {res.text}")
@@ -129,20 +151,12 @@ async def check_and_run_festival_bot():
         
     config = FESTIVALS[today_key]
     festival_desc = config["desc"]
+    caption = config["caption"]
     
-    # Determine printable name
-    festival_name = "Sankashti Chaturthi" if today_key == "08-02" else "Festival"
-    if today_key == "10-24":
-        festival_name = "Diwali"
-    elif today_key == "09-07":
-        festival_name = "Ganesh Chaturthi"
-    elif today_key == "03-25":
-        festival_name = "Holi"
-    
-    logger.info(f"[FESTIVAL] Today ({today_key}) is {festival_name}! Generating poster...")
+    logger.info(f"[FESTIVAL] Today ({today_key}) is {config['name']}! Generating poster...")
     try:
         raw_img = await generate_festival_poster(festival_desc)
-        posted = send_festival_greeting(raw_img, festival_name)
+        posted = send_festival_greeting(raw_img, caption)
         if posted:
             settings["last_festival_greeting_date"] = today_str
             save_settings(settings)
