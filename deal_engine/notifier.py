@@ -1412,11 +1412,32 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                         f"🔗 [Buy Link]({short_url})"
                     )
                 
+                    # Download image for Apprise attachment if available
+                    temp_attach_path = None
+                    if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
+                        try:
+                            import tempfile
+                            import requests as req
+                            img_res = req.get(img_url, timeout=10)
+                            if img_res.status_code == 200:
+                                with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                                    tmp.write(img_res.content)
+                                    temp_attach_path = tmp.name
+                        except Exception as img_err:
+                            logging.warning(f"Failed to fetch image attachment for Apprise: {img_err}")
+
                     apprise_ok = apobj.notify(
                         body=body_md,
                         title=subject,
-                        body_format=apprise.NotifyFormat.MARKDOWN
+                        body_format=apprise.NotifyFormat.MARKDOWN,
+                        attach=temp_attach_path if temp_attach_path else None
                     )
+                    
+                    if temp_attach_path and os.path.exists(temp_attach_path):
+                        try:
+                            os.remove(temp_attach_path)
+                        except Exception:
+                            pass
                     if not apprise_ok:
                         logging.warning("Apprise notification failed for one or more endpoints.")
             except Exception as apprise_err:

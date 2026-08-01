@@ -101,6 +101,22 @@ class DealMirrorProcessor:
     def _execute_pipeline(self, message: NormalizedMessage):
         """Decoupled processing pipeline steps matching the required architecture."""
         correlation_id = message.correlation_id
+        
+        # Apply tgcf-inspired plugins (filter, replace, ocr, format)
+        from deal_engine.mirroring.plugins import apply_plugins
+        message = apply_plugins(message)
+        if not message:
+            logging.info(f"[Mirror Engine] [CorrID: {correlation_id}] Message was filtered out by plugins.")
+            return
+
+        # Re-extract URLs from the modified message text to ensure we only scrape what remains
+        from deal_engine.mirroring.normalizer import extract_urls_from_text
+        combined_text = f"{message.raw_text or ''}\n{message.caption or ''}"
+        message.extracted_urls = extract_urls_from_text(combined_text)
+        for btn in message.buttons:
+            if btn.url and btn.url not in message.extracted_urls:
+                message.extracted_urls.append(btn.url)
+
         from config.settings import load_settings
         settings = load_settings()
         
@@ -331,10 +347,12 @@ class DealMirrorProcessor:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
         expanded = url
         try:
-            res = requests.head(url, headers=headers, allow_redirects=True, timeout=(3, 5))
-            if res.status_code >= 400 or res.url == url:
-                res = requests.get(url, headers=headers, allow_redirects=True, stream=True, timeout=(3, 5))
-            expanded = res.url
+            import httpx
+            with httpx.Client(headers=headers, follow_redirects=True, timeout=5.0) as client:
+                res = client.head(url)
+                if res.status_code >= 400 or str(res.url) == url:
+                    res = client.get(url)
+                expanded = str(res.url)
         except Exception as e:
             logging.warning(f"[PARSE] [CorrID: {correlation_id}] Short link expansion failed for {url}: {e}")
 
