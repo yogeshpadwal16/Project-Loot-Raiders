@@ -113,8 +113,18 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         }
         mapped_path = path_mappings.get(clean_path, clean_path)
         local_filename = mapped_path.lstrip('/')
-        filepath = os.path.join(DASHBOARD_DIR, local_filename)
         
+        # Path traversal mitigation: Resolve absolute path and restrict access
+        filepath = os.path.abspath(os.path.join(DASHBOARD_DIR, local_filename))
+        dashboard_abs = os.path.abspath(DASHBOARD_DIR)
+        
+        if not filepath.startswith(dashboard_abs):
+            self.send_response(403)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Forbidden: Path traversal detected."}).encode('utf-8'))
+            return
+
         if os.path.exists(filepath) and os.path.isfile(filepath):
             ext = os.path.splitext(filepath)[1].lower()
             mime_types = {

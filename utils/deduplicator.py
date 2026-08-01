@@ -125,7 +125,17 @@ def find_duplicate_deal(
         for f in fingerprints:
             IN_FLIGHT_DEALS[f] = now
             
-    # 2. Query SQLite Database
+    # 2. Query Semantic Vector Database (ChromaDB)
+    try:
+        from utils.semantic_dedup import find_semantic_duplicate
+        matched_id = find_semantic_duplicate(title=title, price=price, threshold=SIMILARITY_THRESHOLD / 100.0)
+        if matched_id:
+            logger.info(f"ChromaDB semantic duplicate match: '{title[:30]}' mapped to {matched_id}")
+            return True, matched_id
+    except Exception as sem_err:
+        logger.error(f"ChromaDB semantic duplicate check failed: {sem_err}")
+
+    # 3. Query SQLite Database
     db = SessionLocal()
     try:
         # Check by Unique ID (ASIN / PID)
@@ -209,6 +219,16 @@ MOCKED_VECTOR_DB = {}
 
 def find_similar_product(title: str, distance_threshold: float = 0.15) -> Optional[str]:
     """Fallback compatibility method mapping directly to our fast fuzzy matcher."""
+    # Try querying persistent ChromaDB first
+    try:
+        from utils.semantic_dedup import find_semantic_duplicate
+        matched_id = find_semantic_duplicate(title=title, price=0, threshold=1.0 - distance_threshold)
+        if matched_id:
+            logger.info(f"ChromaDB similar product match: {matched_id} ('{title[:30]}')")
+            return matched_id
+    except Exception as sem_err:
+        logger.error(f"Persistent vector DB lookup failed: {sem_err}")
+
     cleaned_title = clean_title_for_fuzzy(title)
     if not cleaned_title:
         return None
@@ -256,6 +276,11 @@ def add_product_to_vector_db(product_id: str, title: str) -> bool:
     """Mock index a product in memory to prevent nested transaction write locks during active DB flushes."""
     MOCKED_VECTOR_DB[product_id] = title
     logger.info(f"Mock-indexed product '{product_id}' -> '{title[:30]}' in memory.")
+    try:
+        from utils.semantic_dedup import add_deal_vector
+        add_deal_vector(product_id=product_id, title=title, price=0)
+    except Exception as index_err:
+        logger.error(f"Failed to add product to persistent vector DB: {index_err}")
     return True
 
 def is_genuine_loot_deal(product_id: str, title: str, price: int, mrp: int, discount: float, db) -> Tuple[bool, str]:

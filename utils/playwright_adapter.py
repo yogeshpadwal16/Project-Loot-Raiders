@@ -259,13 +259,14 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
         
         proxy_config = None
         if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
-            valid_proxies = [p.strip() for p in settings["proxy_list"] if p.strip()]
-            if valid_proxies:
-                proxy_url = random.choice(valid_proxies)
-                if not proxy_url.startswith("http"):
-                    proxy_url = f"http://{proxy_url}"
-                proxy_config = {"server": proxy_url}
-                logging.info(f"Playwright launching using proxy: {proxy_url}")
+            try:
+                from utils.proxy_validator import get_next_working_proxy
+                proxy_url = get_next_working_proxy(settings)
+                if proxy_url:
+                    proxy_config = {"server": proxy_url}
+                    logging.info(f"Playwright launching using validated proxy: {proxy_url}")
+            except Exception as pe:
+                logging.error(f"Failed to resolve validated proxy: {pe}")
 
         # Launch in true headless mode to avoid requiring X11 display server on headless VPS
         browser = playwright.chromium.launch(

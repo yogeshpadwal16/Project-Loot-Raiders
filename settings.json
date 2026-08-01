@@ -89,5 +89,57 @@
       "min_score": 75,
       "voice": "en-IN-NeerjaNeural"
     }
+  },
+  "mirror_plugins": {
+    "filter": {
+      "enabled": true,
+      "blocklist_keywords": [],
+      "whitelist_keywords": [],
+      "min_length": 10
+    },
+    "replace": {
+      "enabled": true,
+      "patterns": [
+        {
+          "find": "t\\.me/[a-zA-Z0-9_\\+]+",
+          "replace": "",
+          "regex": true
+        },
+        {
+          "find": "telegram\\.me/[a-zA-Z0-9_\\+]+",
+          "replace": "",
+          "regex": true
+        },
+        {
+          "find": "@[a-zA-Z0-9_]+",
+          "replace": "",
+          "regex": true
+        },
+        {
+          "find": "(?i)join\\s+our\\s+channel",
+          "replace": "",
+          "regex": true
+        },
+        {
+          "find": "(?i)subscribe\\s+now",
+          "replace": "",
+          "regex": true
+        },
+        {
+          "find": "(?i)loot\\s+alerts?",
+          "replace": "",
+          "regex": true
+        }
+      ]
+    },
+    "format": {
+      "enabled": false,
+      "header": "\ud83d\udd25 [LOOT DEAL] \ud83d\udd25\n",
+      "footer": "\n\n\ud83d\udc49 Join @LootRaidersDeals for more deals!"
+    },
+    "ocr": {
+      "enabled": false,
+      "tesseract_path": ""
+    }
   }
 }
