@@ -5,149 +5,74 @@ import logging
 import requests
 import httpx
 from datetime import datetime
-from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger("loot_raiders.festival")
 
-# Custom Devanagari Font URL and Local File Path
-FONT_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/amita/Amita-Regular.ttf"
-FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Amita-Regular.ttf")
-
 FESTIVALS = {
     "10-24": {
-        "desc": "Vibrant Diwali Festival of Lights card, traditional oil lamps, gold decorations, warm glowing lights background, cinematic lighting, 4k",
-        "title": "\u0936\u0941\u092d \u0926\u0940\u092a\u093e\u0935\u0932\u0940",  # शुभ दीपावली
-        "sub": "\u0926\u0940\u092a\u093e\u0935\u0932\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # दीपावलीच्या हार्दिक शुभेच्छा...
+        "desc": "A majestic premium festival greeting card design for Diwali, featuring traditional glowing oil lamps, gold accents, warm bokeh background, cinematic lighting, professional digital graphic art, 4k resolution, no text, clean composition"
     },
     "09-07": {
-        "desc": "Vibrant Ganesh Chaturthi card, Lord Ganesha, modak, grand celebration, bright golden temple background, cinematic highlights, 4k",
-        "title": "\u0917\u0923\u0947\u0936 \u091a\u0924\u0941\u0930\u094d\u0925\u0940",  # गणेश चतुर्थी
-        "sub": "\u092e\u0902\u0917\u0932\u092e\u094d\u092f \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # मंगलमय शुभेच्छा...
+        "desc": "A majestic premium festival greeting design for Ganesh Chaturthi, featuring Lord Ganesha, modak, bright golden temple background, cinematic lighting, 4k resolution, no text, clean composition"
     },
     "03-25": {
-        "desc": "Vibrant Holi Festival of Colors card, gulal powders splash, joyful festive spirit background, cinematic lighting, 4k",
-        "title": "\u0927\u0941\u0932\u093f\u0935\u0902\u0926\u0928",  # धुलिवंदन
-        "sub": "\u0939\u094b\u0933\u0940\u091a\u094d\u092f\u093e \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # होळीच्या हार्दिक शुभेच्छा...
+        "desc": "A vibrant premium greeting design for Holi, featuring splashes of colourful gulal powders, joyful festive spirit background, cinematic lighting, 4k resolution, no text, clean composition"
     },
     "08-02": {
         "desc": (
-            "Vibrant cinematic portrait of Lord Ganesha, seated majestically, realistic textures, "
-            "glowing bright orange and yellow fire background, intense golden highlights, high contrast, "
-            "professional digital graphic design greeting card, mystical and spiritual, 4k resolution"
-        ),
-        "title": "\u0938\u0902\u0915\u0937\u094d\u091f \u091a\u0924\u0941\u0930\u094d\u0925\u0940",  # संकष्ट चतुर्थी
-        "sub": "\u093f\u092e\u093f\u0924\u094d\u0924 \u0939\u093e\u0930\u094d\u093f\u0926\u0915 \u0936\u0941\u092d\u0947\u091a\u094d\u091b\u093e..."  # निमित्त हार्दिक शुभेच्छा...
+            "A majestic premium festival greeting card design for Sankashti Chaturthi, featuring Lord Ganesha "
+            "seated majestically in front of a warm glowing fire and orange sunlight background, professional graphic "
+            "design poster, golden accents, highly detailed, realistic textures, premium quality, no text, clean composition"
+        )
     }
 }
 
-def download_font_if_needed():
-    if not os.path.exists(FONT_PATH):
-        try:
-            logger.info("Downloading Amita Devanagari font...")
-            res = requests.get(FONT_URL, timeout=15)
-            if res.status_code == 200:
-                with open(FONT_PATH, "wb") as f:
-                    f.write(res.content)
-                logger.info("Font downloaded successfully.")
-        except Exception as e:
-            logger.error(f"Failed to download Devanagari font: {e}")
-
 async def generate_festival_poster(prompt_details: str) -> bytes:
-    """Generates a premium festival poster using Gemini/Imagen model if API key available, otherwise falls back to Pollinations Flux."""
+    """Generates a premium festival poster using Google Gemini Imagen models exclusively."""
     from config.settings import load_settings
     settings = load_settings()
     api_key = settings.get("gemini_api_key")
     
-    if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
-        # Try generating using Gemini 2.5/3.1 flash-image model (which is the high-quality Nano Banana model)
-        # Note: we check gemini-3.1-flash-image and fall back to gemini-2.5-flash-image
-        for model in ["gemini-3.1-flash-image", "gemini-2.5-flash-image"]:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{"parts": [{"text": prompt_details}]}],
-                "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]}
+    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
+        raise ValueError("GEMINI_API_KEY is not set or configured. Cannot generate poster.")
+
+    # Loop through Gemini Pro & Flash image generation models (Nano Banana)
+    models = ["gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-2.5-flash-image"]
+    
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{"parts": [{"text": prompt_details}]}],
+            "generationConfig": {
+                "responseModalities": ["TEXT", "IMAGE"]
             }
-            try:
-                logger.info(f"[FESTIVAL] Attempting to generate poster using Gemini Imagen model: {model}...")
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    res = await client.post(url, json=payload, headers=headers)
-                    if res.status_code == 200:
-                        data = res.json()
-                        candidates = data.get("candidates", [])
-                        if candidates:
-                            parts = candidates[0].get("content", {}).get("parts", [])
-                            for part in parts:
-                                inline_data = part.get("inlineData")
-                                if inline_data and inline_data.get("data"):
-                                    import base64
-                                    logger.info(f"[FESTIVAL] Successfully generated poster using {model}!")
-                                    return base64.b64decode(inline_data["data"])
-                    else:
-                        logger.warning(f"[FESTIVAL] Gemini API {model} returned status {res.status_code}: {res.text}")
-            except Exception as e:
-                logger.warning(f"[FESTIVAL] Failed to call Gemini {model} API: {e}")
-                
-    # Fallback to state-of-the-art Flux model on Pollinations.ai (free & very high quality)
-    logger.info("[FESTIVAL] Falling back to Pollinations Flux model...")
-    base_prompt = f"{prompt_details}, high quality, 4k, festive lighting, no text, clean composition"
-    # Using model=flux in Pollinations URL
-    url = f"https://image.pollinations.ai/prompt/{httpx.URL(base_prompt).raw_path.decode()}?model=flux&width=1080&height=1080&nologo=true"
-    
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        return response.content
+        }
+        try:
+            logger.info(f"[FESTIVAL] Attempting to generate poster using Gemini Pro/Flash Imagen model: {model}...")
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.post(url, json=payload, headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        for part in parts:
+                            inline_data = part.get("inlineData")
+                            if inline_data and inline_data.get("data"):
+                                import base64
+                                logger.info(f"[FESTIVAL] Successfully generated poster using {model}!")
+                                return base64.b64decode(inline_data["data"])
+                else:
+                    logger.warning(f"[FESTIVAL] Gemini API {model} returned status {res.status_code}: {res.text}")
+        except Exception as e:
+            logger.warning(f"[FESTIVAL] Failed to call Gemini {model} API: {e}")
+            
+    raise RuntimeError("All Gemini/Imagen image models failed to generate the poster. Check quota/billing.")
 
-def overlay_channel_watermark(image_bytes: bytes, title_text: str, sub_text: str, handle: str = "@LootRaidersDeals") -> bytes:
-    """
-    Overlays polished Devanagari calligraphy text and watermark on the Ganesha poster.
-    Applies a smooth bottom gradient vignette instead of a solid black banner.
-    """
-    download_font_if_needed()
-    
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
-    width, height = img.size
-    
-    # Create overlay drawing context
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-    
-    # Load fonts
-    try:
-        font_title = ImageFont.truetype(FONT_PATH, 95)
-        font_sub = ImageFont.truetype(FONT_PATH, 34)
-        font_watermark = ImageFont.truetype("arial.ttf", 28)
-    except Exception as e:
-        logger.warning(f"Could not load custom font, using default: {e}")
-        font_title = ImageFont.load_default()
-        font_sub = ImageFont.load_default()
-        font_watermark = ImageFont.load_default()
-
-    # Draw a soft dark gradient vignette at the bottom to make text highly readable
-    for y in range(height - 350, height):
-        alpha = int((y - (height - 350)) / 350 * 220) # Max opacity 220
-        draw.line([(0, y), (width, y)], fill=(12, 4, 4, alpha))
-
-    # Draw main title shadow
-    draw.text((width // 2 + 3, height - 240 + 3), title_text, fill=(0, 0, 0, 180), font=font_title, anchor="mm")
-    # Draw main title (gold color)
-    draw.text((width // 2, height - 240), title_text, fill=(255, 215, 0, 255), font=font_title, anchor="mm")
-
-    # Draw sub text shadow
-    draw.text((width // 2 + 1, height - 160 + 1), sub_text, fill=(0, 0, 0, 180), font=font_sub, anchor="mm")
-    # Draw sub text (white)
-    draw.text((width // 2, height - 160), sub_text, fill=(255, 255, 255, 255), font=font_sub, anchor="mm")
-
-    # Draw watermark (gold)
-    draw.text((width // 2, height - 60), handle, fill=(255, 215, 0, 220), font=font_watermark, anchor="mm")
-
-    # Composite images
-    final_img = Image.alpha_composite(img, overlay).convert("RGB")
-    
-    output = io.BytesIO()
-    final_img.save(output, format="JPEG", quality=95)
-    return output.getvalue()
+def overlay_channel_watermark(image_bytes: bytes, title_text: str = "", sub_text: str = "", handle: str = "") -> bytes:
+    """Stub function to maintain backward compatibility. Returns the image bytes unmodified."""
+    return image_bytes
 
 def send_festival_greeting(image_bytes: bytes, festival_name: str) -> bool:
     from config.settings import load_settings
@@ -170,7 +95,7 @@ def send_festival_greeting(image_bytes: bytes, festival_name: str) -> bool:
     )
     
     try:
-        files = {"photo": ("festival_poster.png", io.BytesIO(image_bytes), "image/png")}
+        files = {"photo": ("festival_poster.jpg", io.BytesIO(image_bytes), "image/jpeg")}
         payload = {
             "chat_id": chat_id,
             "caption": caption,
@@ -204,17 +129,20 @@ async def check_and_run_festival_bot():
         
     config = FESTIVALS[today_key]
     festival_desc = config["desc"]
-    title_text = config["title"]
-    sub_text = config["sub"]
     
-    # Determine printable name from prompt details
-    festival_name = "Sankashti Chaturthi" if today_key == "08-02" else festival_desc.split(',')[0].split('Festival')[0].strip()
+    # Determine printable name
+    festival_name = "Sankashti Chaturthi" if today_key == "08-02" else "Festival"
+    if today_key == "10-24":
+        festival_name = "Diwali"
+    elif today_key == "09-07":
+        festival_name = "Ganesh Chaturthi"
+    elif today_key == "03-25":
+        festival_name = "Holi"
     
     logger.info(f"[FESTIVAL] Today ({today_key}) is {festival_name}! Generating poster...")
     try:
         raw_img = await generate_festival_poster(festival_desc)
-        final_poster = overlay_channel_watermark(raw_img, title_text, sub_text)
-        posted = send_festival_greeting(final_poster, festival_name)
+        posted = send_festival_greeting(raw_img, festival_name)
         if posted:
             settings["last_festival_greeting_date"] = today_str
             save_settings(settings)
