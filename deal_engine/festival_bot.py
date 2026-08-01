@@ -37,7 +37,7 @@ async def generate_festival_poster(prompt_details: str) -> bytes:
         raise ValueError("GEMINI_API_KEY is not set or configured. Cannot generate poster.")
 
     # Loop through Gemini Pro & Flash image generation models (Nano Banana)
-    models = ["gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-2.5-flash-image"]
+    models = ["nano-banana-pro-preview", "gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"]
     
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
