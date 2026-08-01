@@ -134,9 +134,10 @@ async def fetch_sindhudurg_headlines() -> list:
                             continue
                         seen_urls.add(href)
                         
-                        title = a.text.strip()
-                        # Clean prefix/suffixes
+                        # Clean prefix/suffixes (e.g. "Sindhudurg : ")
                         title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
+                        # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
+                        title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
                         
                         # Find the parent card to locate time
                         time_tag = None
@@ -195,8 +196,8 @@ async def fetch_live_rates() -> dict:
                     for row in rows:
                         cells = row.find_all(["td", "th"])
                         if len(cells) >= 3 and cells[0].text.strip() == "10":
-                            rate_24k = cells[1].text.strip().split(" ")[0].replace("\u20b9", "").strip()
-                            rate_22k = cells[2].text.strip().split(" ")[0].replace("\u20b9", "").strip()
+                            rate_24k = cells[1].text.strip().split()[0].replace("\u20b9", "").strip()
+                            rate_22k = cells[2].text.strip().split()[0].replace("\u20b9", "").strip()
                             rates["gold_24k"] = rate_24k
                             rates["gold_22k"] = rate_22k
                             break
@@ -214,7 +215,7 @@ async def fetch_live_rates() -> dict:
                     for row in rows:
                         cells = row.find_all(["td", "th"])
                         if len(cells) >= 2 and cells[0].text.strip() == "1000":
-                            rate_1kg = cells[1].text.strip().split(" ")[0].replace("\u20b9", "").strip()
+                            rate_1kg = cells[1].text.strip().split()[0].replace("\u20b9", "").strip()
                             rates["silver_1kg"] = rate_1kg
                             break
         except Exception as e:
@@ -280,10 +281,10 @@ def build_footer_block(
     # तजय घडमड आण बसट डलससठ जईन कर -> \u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E
     
     footer = (
-        f"Gold Rate Today \u0906\u091c\u091a\u0947 \u0938\u094b\u0928\u094d\u092f\u093e\u091a\u0947 \u0926\u0930 - 22K = {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
-        f"Silver Rate Today \u0906\u091c\u091a\u0947 \u091a\u093e\u0902\u0926\u0940\u091a\u0947 \u0926\u0930 - 1Kg = {silver_1kg}/-\n\n"
-        f"Petrol & Diesel Rate \u0906\u091c\u091a\u0947 \u0907\u0902\u0927\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932 = {petrol_rate}/L | | \u0921\u093F\u091D\u0947\u0932 = {diesel_rate}/L\n\n"
-        f"\u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E  @{channel_handle}"
+        f"\U0001fa99 Gold Rate Today \u0906\u091c\u091a\u0947 \u0938\u094b\u0928\u094d\u092f\u093e\u091a\u0947 \u0926\u0930 - 22K = {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
+        f"\U0001fa99 Silver Rate Today \u0906\u091c\u091a\u0947 \u091a\u093e\u0902\u0926\u0940\u091a\u0947 \u0926\u0930 - 1Kg = {silver_1kg}/-\n\n"
+        f"\u26fd Petrol & Diesel Rate \u0906\u091c\u091a\u0947 \u0907\u0902\u0927\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932 = {petrol_rate}/L | | \u0921\u093F\u091D\u0947\u0932 = {diesel_rate}/L\n\n"
+        f"\U0001f4e2 \u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E  @{channel_handle}"
     )
     return footer
 
