@@ -280,10 +280,10 @@ def build_footer_block(
     # तजय घडमड आण बसट डलससठ जईन कर -> \u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E
     
     footer = (
-        f"🟡 Gold Rate Today \u0906\u091c\u091a\u0947 \u0938\u094b\u0928\u094d\u092f\u093e\u091a\u0947 \u0926\u0930 - 22K = {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
-        f"⚪ Silver Rate Today \u0906\u091c\u091a\u0947 \u091a\u093e\u0902\u0926\u0940\u091a\u0947 \u0926\u0930 - 1Kg = {silver_1kg}/-\n\n"
-        f"⛽ Petrol & Diesel Rate \u0906\u091c\u091a\u0947 \u0907\u0902\u0927\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932 = {petrol_rate}/L | | \u0921\u093F\u091D\u0947\u0932 = {diesel_rate}/L\n\n"
-        f"📢 \u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E 👉 @{channel_handle}"
+        f"Gold Rate Today \u0906\u091c\u091a\u0947 \u0938\u094b\u0928\u094d\u092f\u093e\u091a\u0947 \u0926\u0930 - 22K = {gold_22k}/- | | 24K = {gold_24k}/-\n\n"
+        f"Silver Rate Today \u0906\u091c\u091a\u0947 \u091a\u093e\u0902\u0926\u0940\u091a\u0947 \u0926\u0930 - 1Kg = {silver_1kg}/-\n\n"
+        f"Petrol & Diesel Rate \u0906\u091c\u091a\u0947 \u0907\u0902\u0927\u0928 \u0926\u0930 - \u092A\u0947\u091F\u094D\u0930\u094B\u0932 = {petrol_rate}/L | | \u0921\u093F\u091D\u0947\u0932 = {diesel_rate}/L\n\n"
+        f"\u0924\u093E\u091C\u094D\u092F\u093E \u0918\u0921\u093E\u092E\u094B\u0921\u0940 \u0906\u0923\u093F \u092C\u0947\u0938\u094F\u091F \u0921\u0940\u0932\u094D\u0938\u0938\u093E\u0920\u0940 \u091C\u094D\u0908\u0928 \u0915\u0930\u093E  @{channel_handle}"
     )
     return footer
 
@@ -309,7 +309,7 @@ async def build_morning_news_post() -> tuple:
     header = "<b>\u0932\u0942\u091f \u0930\u0947\u0921\u0930\u094d\u0938 - \u0938\u093f\u0902\u0927\u0941\u0926\u0941\u0930\u094d\u0917 \u091a\u093e\u0932\u0942 \u0918\u0921\u093e\u092e\u094b\u0921\u0940</b>\n"
     
     # Separator
-    separator = "—————————————————————\n\n"
+    separator = "———————————————\n\n"
     
     # News list with a blank line after EVERY headline item
     news_section = ""
