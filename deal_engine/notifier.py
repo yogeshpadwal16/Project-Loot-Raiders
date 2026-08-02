@@ -1534,30 +1534,48 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
 
 def notifier_worker():
     logging.info("Background Alert Dispatch Worker Activated.")
+    last_digest_check = 0.0
+    last_growth_check = 0.0
+    last_festival_check = 0.0
+    last_presale_check = 0.0
+
     while True:
-        # Check and send Daily digests
-        send_daily_digest_if_time()
-        
-        # Track Telegram channel growth
-        try:
-            track_channel_growth()
-        except Exception as e:
-            logging.error(f"Error tracking channel growth: {e}")
-            
-        # Check and send Indian Festival greetings dynamically
-        try:
-            import asyncio
-            from deal_engine.festival_bot import check_and_run_festival_bot
-            asyncio.run(check_and_run_festival_bot())
-        except Exception as e:
-            logging.error(f"Error running festival bot check: {e}")
-        
-        # Check and send Mega-Sale checklist alerts (Feature 30)
-        try:
-            check_and_send_presale_alerts()
-        except Exception as e:
-            logging.error(f"Error checking presale alerts: {e}")
-            
+        now_time = time.time()
+
+        # Check and send Daily digests (once every 15 minutes)
+        if now_time - last_digest_check > 900.0:
+            try:
+                send_daily_digest_if_time()
+            except Exception as e:
+                logging.error(f"Error checking daily digest: {e}")
+            last_digest_check = now_time
+
+        # Track Telegram channel growth (once every 4 hours)
+        if now_time - last_growth_check > 14400.0:
+            try:
+                track_channel_growth()
+            except Exception as e:
+                logging.error(f"Error tracking channel growth: {e}")
+            last_growth_check = now_time
+
+        # Check and send Indian Festival greetings dynamically (once every hour)
+        if now_time - last_festival_check > 3600.0:
+            try:
+                import asyncio
+                from deal_engine.festival_bot import check_and_run_festival_bot
+                asyncio.run(check_and_run_festival_bot())
+            except Exception as e:
+                logging.error(f"Error running festival bot check: {e}")
+            last_festival_check = now_time
+
+        # Check and send Mega-Sale checklist alerts (once every 15 minutes)
+        if now_time - last_presale_check > 900.0:
+            try:
+                check_and_send_presale_alerts()
+            except Exception as e:
+                logging.error(f"Error checking presale alerts: {e}")
+            last_presale_check = now_time
+
         try:
             queue_item = notification_queue.get(timeout=5)
         except queue.Empty:
