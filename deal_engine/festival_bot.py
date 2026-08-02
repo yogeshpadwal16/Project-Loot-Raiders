@@ -57,47 +57,53 @@ FESTIVALS = {
 }
 
 async def generate_festival_poster(prompt_details: str) -> bytes:
-    """Generates a premium festival poster using Google Gemini Imagen models exclusively."""
+    """Generates a premium festival poster using Google Gemini Imagen models, falling back to Pollinations Flux if quota is exceeded."""
     from config.settings import load_settings
     settings = load_settings()
     api_key = settings.get("gemini_api_key")
     
-    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
-        raise ValueError("GEMINI_API_KEY is not set or configured. Cannot generate poster.")
-
-    # Loop through Gemini Pro & Flash image generation models (Nano Banana)
-    models = ["nano-banana-pro-preview", "gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"]
-    
-    for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{"parts": [{"text": prompt_details}]}],
-            "generationConfig": {
-                "responseModalities": ["TEXT", "IMAGE"]
+    if api_key and "YOUR_GEMINI" not in api_key and api_key.strip() != "":
+        # Loop through Gemini Pro & Flash image generation models (Nano Banana)
+        models = ["nano-banana-pro-preview", "gemini-3-pro-image", "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"]
+        
+        for model in models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": prompt_details}]}],
+                "generationConfig": {
+                    "responseModalities": ["TEXT", "IMAGE"]
+                }
             }
-        }
-        try:
-            logger.info(f"[FESTIVAL] Attempting to generate poster using Gemini Pro/Flash Imagen model: {model}...")
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                res = await client.post(url, json=payload, headers=headers)
-                if res.status_code == 200:
-                    data = res.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        for part in parts:
-                            inline_data = part.get("inlineData")
-                            if inline_data and inline_data.get("data"):
-                                import base64
-                                logger.info(f"[FESTIVAL] Successfully generated poster using {model}!")
-                                return base64.b64decode(inline_data["data"])
-                else:
-                    logger.warning(f"[FESTIVAL] Gemini API {model} returned status {res.status_code}: {res.text}")
-        except Exception as e:
-            logger.warning(f"[FESTIVAL] Failed to call Gemini {model} API: {e}")
-            
-    raise RuntimeError("All Gemini/Imagen image models failed to generate the poster. Check quota/billing.")
+            try:
+                logger.info(f"[FESTIVAL] Attempting to generate poster using Gemini Pro/Flash Imagen model: {model}...")
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            for part in parts:
+                                inline_data = part.get("inlineData")
+                                if inline_data and inline_data.get("data"):
+                                    import base64
+                                    logger.info(f"[FESTIVAL] Successfully generated poster using {model}!")
+                                    return base64.b64decode(inline_data["data"])
+                    else:
+                        logger.warning(f"[FESTIVAL] Gemini API {model} returned status {res.status_code}: {res.text}")
+            except Exception as e:
+                logger.warning(f"[FESTIVAL] Failed to call Gemini {model} API: {e}")
+                
+    # Fallback to state-of-the-art Flux model on Pollinations.ai (free & very high quality)
+    logger.info("[FESTIVAL] Falling back to Pollinations Flux model...")
+    # Using model=flux in Pollinations URL
+    url = f"https://image.pollinations.ai/prompt/{httpx.URL(prompt_details).raw_path.decode()}?model=flux&width=1080&height=1080&nologo=true"
+    
+    async with httpx.AsyncClient(timeout=45.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        return response.content
 
 def overlay_channel_watermark(image_bytes: bytes, title_text: str = "", sub_text: str = "", handle: str = "") -> bytes:
     """Stub function to maintain backward compatibility. Returns the image bytes unmodified."""

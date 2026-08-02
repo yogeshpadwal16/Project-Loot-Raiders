@@ -134,6 +134,7 @@ async def fetch_sindhudurg_headlines() -> list:
                             continue
                         seen_urls.add(href)
                         
+                        title = a.text.strip()
                         # Clean prefix/suffixes (e.g. "Sindhudurg : ")
                         title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
                         # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
