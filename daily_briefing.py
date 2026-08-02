@@ -96,14 +96,12 @@ def mark_headlines_posted(headlines: list):
 # ==========================================
 async def fetch_sindhudurg_headlines() -> list:
     """
-    Fetches fresh Batmya headlines from Sakal's RSS feed & Topic Scrape.
-    Strictly filters to only include items published within the last 24 hours.
+    Fetches all Batmya headlines from Sakal's RSS feed & Topic Scrape.
+    Duplicates are filtered using the database posted_briefings table.
     """
     headlines = []
     seen_urls = set()
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
-    now_utc = datetime.now(timezone.utc)
-    cutoff = now_utc - timedelta(hours=24)
     
     async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
         # 1. FETCH RSS FEED
@@ -113,11 +111,8 @@ async def fetch_sindhudurg_headlines() -> list:
                 feed = feedparser.parse(res_rss.text)
                 for entry in feed.entries:
                     title = entry.title.strip()
-                    if hasattr(entry, "published_parsed") and entry.published_parsed:
-                        pub_dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
-                        if pub_dt >= cutoff:
-                            if title not in headlines:
-                                headlines.append(title)
+                    if title not in headlines:
+                        headlines.append(title)
         except Exception as e:
             logger.warning(f"[Briefing Scraper] RSS feed fetching failed: {e}")
 
@@ -140,30 +135,8 @@ async def fetch_sindhudurg_headlines() -> list:
                         # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
                         title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
                         
-                        # Find the parent card to locate time
-                        time_tag = None
-                        curr = a
-                        for _ in range(3):
-                            if curr is None:
-                                break
-                            time_tag = curr.find("time")
-                            if time_tag:
-                                break
-                            curr = curr.parent
-                            
-                        if time_tag and time_tag.get("datetime"):
-                            try:
-                                dt_str = time_tag.get("datetime")
-                                pub_dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
-                                if pub_dt >= cutoff:
-                                    if title not in headlines:
-                                        headlines.append(title)
-                            except Exception as dt_err:
-                                logger.warning(f"[Briefing Scraper] Failed to parse datetime {dt_str}: {dt_err}")
-                        else:
-                            # Fallback: if no time tag found but page indicates recent content, add it
-                            if title not in headlines:
-                                headlines.append(title)
+                        if title not in headlines:
+                            headlines.append(title)
         except Exception as e:
             logger.warning(f"[Briefing Scraper] Topic Page scraping failed: {e}")
             
@@ -344,11 +317,11 @@ async def safe_dispatch_briefing(send_telegram_func):
     await dispatch_briefing(send_telegram_func)
 
 async def schedule_daily_dual_briefing_daemon(bot_dispatch_func):
-    """Triggers at 08:00 AM IST daily."""
+    """Triggers at 08:00 AM and 08:00 PM IST daily."""
     while True:
         now = datetime.now(IST)
-        if now.hour == 8 and now.minute == 0:
-            logger.info("[BRIEFING] Generating 08:00 AM IST Sindhudurg Briefing...")
+        if (now.hour == 8 or now.hour == 20) and now.minute == 0:
+            logger.info(f"[BRIEFING] Generating {now.strftime('%I:%M %p')} IST Sindhudurg Briefing...")
             try:
                 await safe_dispatch_briefing(bot_dispatch_func)
             except Exception as e:
