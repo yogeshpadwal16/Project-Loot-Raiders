@@ -42,11 +42,19 @@ async def dispatch_to_channel(text_content: str):
 async def main():
     import sys
     if "--now" in sys.argv or "--test" in sys.argv:
-        logging.info("[BRIEFING] Test mode activated: generating and posting Sakal briefing immediately...")
-        from daily_briefing import safe_dispatch_briefing
+        logging.info("[BRIEFING] Test mode activated: generating and posting both briefings immediately...")
+        from daily_briefing import safe_dispatch_briefing, dispatch_general_briefing
         try:
+            logging.info("[BRIEFING] Dispatching Sindhudurg briefing...")
             await safe_dispatch_briefing(dispatch_to_channel)
-            logging.info("[BRIEFING] Sakal briefing dispatched in test/now mode.")
+            
+            logging.info("[BRIEFING] Waiting 10 seconds before dispatching General news briefing...")
+            await asyncio.sleep(10)
+            
+            logging.info("[BRIEFING] Dispatching General news briefing...")
+            await dispatch_general_briefing(dispatch_to_channel)
+            
+            logging.info("[BRIEFING] Both briefings dispatched successfully in test/now mode.")
         except Exception as e:
             logging.error(f"[BRIEFING] Error in test/now mode: {e}", exc_info=True)
     else:
