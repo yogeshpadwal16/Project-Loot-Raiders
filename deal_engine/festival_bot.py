@@ -11,7 +11,7 @@ logger = logging.getLogger("loot_raiders.festival")
 FESTIVALS = {
     "10-24": {
         "name": "Diwali",
-        "desc": "A majestic premium festival greeting card design for Diwali, featuring traditional glowing oil lamps, gold accents, warm bokeh background, cinematic lighting, professional digital graphic art, 4k resolution, no text, clean composition",
+        "desc": "An epic cinematic poster for Diwali, featuring traditional glowing oil lamps, rich gold accents, warm bokeh lights, volumetric smoke, floating dust embers, professional digital art, 8k resolution, no text, clean composition",
         "caption": (
             "✨ <b>शुभ दीपावली!</b> ✨\n\n"
             "तुम्हाला आणि तुमच्या संपूर्ण कुटुंबाला दीपावलीच्या निमित्ताने सुख, समृद्धी आणि उत्तम आरोग्य लाभो, हीच प्रार्थना. "
@@ -21,7 +21,7 @@ FESTIVALS = {
     },
     "09-07": {
         "name": "Ganesh Chaturthi",
-        "desc": "A majestic premium festival greeting design for Ganesh Chaturthi, featuring Lord Ganesha, modak, bright golden temple background, cinematic lighting, 4k resolution, no text, clean composition",
+        "desc": "An epic cinematic poster of Lord Ganesha, seated majestically on a golden throne, realistic detailed textures, dramatic volumetric lighting, bright golden temple background with soft glowing smoke and floating dust particles, high contrast, professional digital art, award-winning illustration style, 8k resolution, no text, clean composition",
         "caption": (
             "✨ <b>गणेश चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
             "बाप्पाच्या आगमनाने तुमच्या घरी सुख, समृद्धी आणि ऐश्वर्य नांदो. "
@@ -31,7 +31,7 @@ FESTIVALS = {
     },
     "03-25": {
         "name": "Holi",
-        "desc": "A vibrant premium greeting design for Holi, featuring splashes of colourful gulal powders, joyful festive spirit background, cinematic lighting, 4k resolution, no text, clean composition",
+        "desc": "An epic cinematic poster for Holi, featuring vibrant splashes of colourful gulal powders, joyful festive spirit background, dynamic lighting, floating powder particles, professional digital art, 8k resolution, no text, clean composition",
         "caption": (
             "✨ <b>धुलिवंदन व होळीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
             "रंगांचा हा सण तुमच्या आयुष्यात नवी उमेद, उत्साह आणि आनंद घेऊन येवो. "
@@ -42,9 +42,10 @@ FESTIVALS = {
     "08-02": {
         "name": "Sankashti Chaturthi",
         "desc": (
-            "A majestic premium festival greeting card design for Sankashti Chaturthi, featuring Lord Ganesha "
-            "seated majestically in front of a warm glowing fire and orange sunlight background, professional graphic "
-            "design poster, golden accents, highly detailed, realistic textures, premium quality, no text, clean composition"
+            "An epic cinematic poster of Lord Ganesha, seated majestically on a golden throne, "
+            "realistic detailed textures, dramatic volumetric lighting, warm golden and deep orange "
+            "fire background with soft glowing smoke and floating dust particles, high contrast, "
+            "professional digital art, award-winning illustration style, 8k resolution, no text, clean composition"
         ),
         "caption": (
             "✨ <b>संकष्टी चतुर्थीच्या हार्दिक शुभेच्छा!</b> ✨\n\n"
