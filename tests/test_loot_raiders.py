@@ -5,6 +5,9 @@ import os
 # Adjust path to import project modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from database.db_session import init_db
+init_db()
+
 from utils.parser import extract_amazon_asin, extract_flipkart_pid, calculate_true_discount
 from utils.affiliate import get_best_affiliate_url, generate_auto_cart_url
 from deal_engine.scorer import calculate_deal_score, calculate_cancellation_risk
@@ -346,17 +349,34 @@ class TestShlinkIntegration(unittest.TestCase):
     def test_get_short_deal_link_local_fallback(self):
         from deal_engine.notifier import get_short_deal_link
         from config.settings import load_settings, save_settings
+        import config.settings
         
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env_path = os.path.join(base_dir, ".env")
+        env_tmp_path = os.path.join(base_dir, ".env.tmp")
+        
+        has_env = os.path.exists(env_path)
+        if has_env:
+            try: os.rename(env_path, env_tmp_path)
+            except Exception: pass
+            
         # Save temporary settings to clean out shlink config for fallback check
         settings = load_settings()
         orig_url = settings.get("shlink_api_url")
         orig_key = settings.get("shlink_api_key")
         orig_cloak = settings.get("cloaker_domain")
         
+        orig_env_url = os.environ.get("SHLINK_API_URL")
+        orig_env_key = os.environ.get("SHLINK_API_KEY")
+        
+        if "SHLINK_API_URL" in os.environ: del os.environ["SHLINK_API_URL"]
+        if "SHLINK_API_KEY" in os.environ: del os.environ["SHLINK_API_KEY"]
+        
         settings["shlink_api_url"] = ""
         settings["shlink_api_key"] = ""
         settings["cloaker_domain"] = "localhost:5555"
         save_settings(settings)
+        config.settings._settings_cache = None  # Invalidate settings cache
         
         try:
             test_url = "https://www.flipkart.com/product"
@@ -364,10 +384,18 @@ class TestShlinkIntegration(unittest.TestCase):
             # Should fallback to local /go/ path
             self.assertTrue(result.endswith("/go/test_fallback_id"))
         finally:
+            if orig_env_url is not None: os.environ["SHLINK_API_URL"] = orig_env_url
+            if orig_env_key is not None: os.environ["SHLINK_API_KEY"] = orig_env_key
+            
             settings["shlink_api_url"] = orig_url
             settings["shlink_api_key"] = orig_key
             settings["cloaker_domain"] = orig_cloak
             save_settings(settings)
+            config.settings._settings_cache = None  # Invalidate settings cache
+            
+            if has_env and os.path.exists(env_tmp_path):
+                try: os.rename(env_tmp_path, env_path)
+                except Exception: pass
 
 
 class TestSemanticDeduplication(unittest.TestCase):
@@ -384,11 +412,10 @@ class TestSemanticDeduplication(unittest.TestCase):
         except Exception:
             pass
         try:
-            from utils.deduplicator import _init_db
-            import utils.deduplicator as deduplicator
-            _init_db()
-            if deduplicator._collection:
-                deduplicator._collection.delete(ids=["test_product_9999"])
+            from utils.semantic_dedup import get_chroma_collection
+            collection = get_chroma_collection()
+            if collection.count() > 0:
+                collection.delete(ids=collection.get()["ids"])
         except Exception:
             pass
 
@@ -403,9 +430,10 @@ class TestSemanticDeduplication(unittest.TestCase):
         except Exception:
             pass
         try:
-            import utils.deduplicator as deduplicator
-            if deduplicator._collection:
-                deduplicator._collection.delete(ids=["test_product_9999"])
+            from utils.semantic_dedup import get_chroma_collection
+            collection = get_chroma_collection()
+            if collection.count() > 0:
+                collection.delete(ids=collection.get()["ids"])
         except Exception:
             pass
             

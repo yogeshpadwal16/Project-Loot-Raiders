@@ -7,10 +7,16 @@ from utils.semantic_dedup import add_deal_vector, find_semantic_duplicate, get_c
 class TestSemanticDeduplication(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # We wipe any test collection by forcing a custom database directory in settings
-        # or clearing the ChromaDB database directory.
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        cls.chroma_path = os.path.join(base_dir, "database", "chroma_db")
+        pass
+
+    def setUp(self):
+        try:
+            from utils.semantic_dedup import get_chroma_collection
+            collection = get_chroma_collection()
+            if collection.count() > 0:
+                collection.delete(ids=collection.get()["ids"])
+        except Exception:
+            pass
 
     def test_semantic_duplicate_detection(self):
         product_id = "test_asin_123"
