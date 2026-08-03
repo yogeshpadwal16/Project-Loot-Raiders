@@ -2,6 +2,8 @@
 import requests
 import logging
 
+_shlink_offline_logged = False
+
 class ShlinkClient:
     """
     Enterprise API client wrapper for self-hosted Shlink URL Shortener.
@@ -19,6 +21,7 @@ class ShlinkClient:
         Submits a long link to Shlink to create a trackable slug.
         Falls back to the original URL if Shlink is unreachable.
         """
+        global _shlink_offline_logged
         endpoint = f"{self.base_url}/rest/v3/short-urls"
         payload = {
             "longUrl": long_url,
@@ -36,8 +39,14 @@ class ShlinkClient:
                 return res.json().get("shortUrl", long_url)
             else:
                 logging.error(f"Shlink API shortening failed ({res.status_code}): {res.text}")
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as conn_err:
+            if not _shlink_offline_logged:
+                logging.info("[INFO] Shlink shortener offline - using direct URL")
+                _shlink_offline_logged = True
         except Exception as e:
-            logging.error(f"Failed to connect to Shlink redirect server: {e}")
+            if not _shlink_offline_logged:
+                logging.info("[INFO] Shlink shortener offline - using direct URL")
+                _shlink_offline_logged = True
             
         return long_url
 
@@ -64,7 +73,10 @@ class ShlinkClient:
                     total = len(visits_obj.get("data", []))
                 return int(total)
         except Exception as e:
-            logging.error(f"Failed to fetch Shlink click velocity for {short_code}: {e}")
+            global _shlink_offline_logged
+            if not _shlink_offline_logged:
+                logging.info("[INFO] Shlink shortener offline - using direct URL")
+                _shlink_offline_logged = True
         return 0
 
 

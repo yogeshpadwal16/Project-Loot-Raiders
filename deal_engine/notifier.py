@@ -817,7 +817,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 photo_sent = True
                 save_telegram_message_info(unique_id, res, caption)
             else:
-                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image send failed ({res.status_code}). Falling back to local card.")
+                err_desc = ""
+                if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
+                elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
+                elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
+                elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
+                elif res.status_code == 429: err_desc = " (429 Rate Limited)"
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image send failed ({res.status_code}{err_desc}). Response: {res.text}. Falling back to local card.")
         except Exception as raw_send_err:
             logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
 
@@ -839,7 +845,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 photo_sent = True
                 save_telegram_message_info(unique_id, res, caption)
             else:
-                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}).")
+                err_desc = ""
+                if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
+                elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
+                elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
+                elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
+                elif res.status_code == 429: err_desc = " (429 Rate Limited)"
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}{err_desc}). Response: {res.text}.")
         except requests.exceptions.Timeout:
             logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out. Falling back to text-only.")
         except Exception as upload_err:
@@ -870,7 +882,13 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             save_telegram_message_info(unique_id, res, caption)
             return True
         else:
-            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Telegram text-only send returned {res.status_code}: {res.text}")
+            err_desc = ""
+            if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
+            elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
+            elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
+            elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
+            elif res.status_code == 429: err_desc = " (429 Rate Limited)"
+            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Telegram text-only send returned {res.status_code}{err_desc}: {res.text}")
     except Exception as text_send_err:
         logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send text-only Telegram message: {text_send_err}")
         
@@ -1310,11 +1328,11 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                         img_url = og_img
                         logging.info(f"[Notifier] OG fallback rescued image for '{title[:30]}'")
                     else:
-                        logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
-                        return True  # Finished, do not retry
-                except Exception:
-                    logging.warning(f"Skipping Telegram channel broadcast for '{title[:30]}' due to missing product image.")
-                    return True  # Finished, do not retry
+                        logging.warning(f"Product image not found for '{title[:30]}'. Proceeding with text-only broadcast fallback.")
+                        img_url = None
+                except Exception as rescue_err:
+                    logging.warning(f"Product image rescue exception: {rescue_err}. Proceeding with text-only broadcast fallback.")
+                    img_url = None
             
             try:
                 telegram_ok = send_telegram_alert(

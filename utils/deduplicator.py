@@ -326,13 +326,16 @@ def is_genuine_loot_deal(product_id: str, title: str, price: int, mrp: int, disc
             history_entries = db.query(PriceHistory).filter_by(product_id=matched_pid).order_by(PriceHistory.timestamp.desc()).all()
             real_pid = matched_pid
 
+    now = time.time()
+    # Filter out any entries created in the last 10 seconds to avoid matching the current run's DB save
+    history_entries = [h for h in history_entries if (now - h.timestamp) > 10.0]
+
     if not history_entries:
         # Brand new product with no history
         return True, "new_product"
 
     # Analyze posting history
     latest_entry = history_entries[0]
-    now = time.time()
     
     # 1. Frequency suppression: If it was posted within the last 12 hours,
     # suppress it unless there's a significant price drop (>= 15% drop from last post)

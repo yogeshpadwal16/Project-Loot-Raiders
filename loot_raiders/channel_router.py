@@ -33,8 +33,19 @@ def resolve_target_channel_id(product_title: str, default_chat_id: str = None) -
     """
     Resolves target channel handle, falling back to configured environment settings.
     """
+    try:
+        from config.settings import load_settings
+        settings = load_settings()
+        dynamic_routing = settings.get("dynamic_routing_enabled", False)
+    except Exception:
+        dynamic_routing = False
+
+    default_chat = default_chat_id or os.environ.get("TELEGRAM_CHAT_ID", "@LootRaidersDeals")
+
+    if not dynamic_routing:
+        return default_chat
+
     resolved = resolve_target_channel(product_title)
     if resolved == CHANNEL_MAP["DEFAULT"]:
-        # Fallback to general environment configurations if general fallback is provided
-        return default_chat_id or os.environ.get("TELEGRAM_CHAT_ID", "@LootRaidersDeals")
+        return default_chat
     return resolved
