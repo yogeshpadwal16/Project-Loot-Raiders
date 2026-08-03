@@ -31,7 +31,9 @@ cp .env.example .env
 python loot_scraper.py
 ```
 
-The dashboard will be available at **http://127.0.0.1:5555/**
+The dashboard will be available at:
+- **Local development:** http://127.0.0.1:5555/
+- **Production (Oracle Cloud VPS):** http://92.4.70.19:5555/
 
 ---
 
