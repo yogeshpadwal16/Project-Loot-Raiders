@@ -15,8 +15,8 @@ $OriginalLocation = Get-Location
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
-# Create a tar.gz archive including essential directories and files (added 'web', 'docker', 'daily_briefing.py', 'main_briefing.py', and 'run_all_tests.py')
-tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n docker loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py run_all_tests.py
+# Create a tar.gz archive including essential directories and files (added 'web', 'docker', 'daily_briefing.py', 'main_briefing.py', 'run_all_tests.py', and 'run_full_audit.py')
+tar.exe -czf $TAR_PATH core dashboard database deal_engine knowledge_base plugins scripts utils config web n8n docker loot_scraper.py selectors.json settings.json requirements.txt .env ecosystem.config.js check_health.py daily_briefing.py main_briefing.py run_all_tests.py run_full_audit.py
 
 # Restore directory location
 Set-Location $OriginalLocation
