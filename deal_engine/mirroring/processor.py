@@ -225,72 +225,44 @@ class DealMirrorProcessor:
                         mrp = scraped_data.get("mrp", 0)
                         img_url = scraped_data.get("image_url", "")
                 
+                # Unrestricted Deal Mirroring: Format and post anyway if price extraction fails
                 if price == 0:
-                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not extract price. Skipping.")
-                    continue
-                    
-                discount = 0.0
-                if mrp > price:
-                    discount = ((mrp - price) / mrp) * 100.0
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Could not extract price. Formatting anyway using original competitor text.")
+                    price = 0
+                    mrp = 0
+                    discount = 0.0
+                    if not title or title == "Competitor Deal":
+                        title = message.raw_text[:120] if message.raw_text else "Competitor Deal"
+                else:
+                    discount = 0.0
+                    if mrp > price:
+                        discount = ((mrp - price) / mrp) * 100.0
                     
                 rating = scraped.get("rating")
                 reviews = scraped.get("reviews")
                 has_bank_offer = scraped.get("has_bank_offer", False)
-                # 4.5. Extensions: Smart Filter Engine
-                extensions = settings.get("extensions", {}) if settings else {}
-                smart_filter = extensions.get("smart_filter", {}) if extensions else {}
-                if smart_filter and smart_filter.get("enabled", False):
-                    # Blocklist Regex Check
-                    block_regex = smart_filter.get("blocklist_regex", "")
-                    if block_regex:
-                        import re
-                        try:
-                            if re.search(block_regex, title, flags=re.IGNORECASE):
-                                logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (Regex matched '{block_regex}')")
-                                continue
-                        except Exception as regex_err:
-                            logging.error(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter invalid regex '{block_regex}': {regex_err}")
-                    
-                    # Allowlist Keywords Check
-                    allow_keywords = smart_filter.get("allowlist_keywords", [])
-                    if allow_keywords:
-                        if not any(kw.strip().lower() in title.lower() for kw in allow_keywords if kw.strip()):
-                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Extensions Filter blocked title: '{title}' (No allowlist keywords matched)")
-                            continue
-                    
-                # 5. Duplicate Detection (Intelligent RapidFuzz check)
-                is_dup, matched_id = IntelligentDeduplicator.find_duplicate(
-                    title=title,
-                    current_price=price,
-                    time_window_hours=24,
-                    platform=platform,
-                    url=expanded_url,
-                    text=message.raw_text
-                )
                 
-                if is_dup:
-                    if matched_id == "in-flight":
-                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping concurrent in-flight deal: {title[:35]}")
-                        continue
+                # Bypassed: Smart Filter and keyword blacklists are disabled for unrestricted mirroring
+                
+                # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
+                product_already_posted = False
+                if platform and unique_id:
+                    prod = db.query(Product).filter_by(id=unique_id).first()
+                    if prod:
+                        product_already_posted = True
                         
-                    price_changed = True
-                    try:
-                        latest = db.query(PriceHistory).filter_by(product_id=matched_id).order_by(PriceHistory.timestamp.desc()).first()
-                        if latest and price >= latest.price:
-                            price_changed = False
-                    except Exception as db_err:
-                        logging.error(f"[DEDUP] [CorrID: {correlation_id}] Price duplicate check error: {db_err}")
-
-                    if not price_changed:
-                        logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate deal: {title[:30]} (Price ₹{price} >= latest ₹{latest.price if latest else 0})")
-                        continue
-
-                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Deduplicated: '{title[:30]}' mapped to existing deal {matched_id}")
-                    unique_id = matched_id
-
-
-
-                    
+                if not product_already_posted and expanded_url:
+                    from utils.deduplicator import get_canonical_url
+                    canon_url = get_canonical_url(expanded_url)
+                    if canon_url:
+                        prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
+                        if prod:
+                            product_already_posted = True
+                
+                if product_already_posted:
+                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({unique_id}) was already posted to channel.")
+                    continue
+                
                 # 6. Check price trends
                 is_verified_low = True
                 try:

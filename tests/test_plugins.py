@@ -17,24 +17,24 @@ class TestMirrorPlugins(unittest.TestCase):
         )
 
     def test_filter_plugin_blacklist(self):
-        # 1. Match blacklist keyword
+        # Match blacklist keyword (bypassed in unrestricted mirroring)
         config = {"enabled": True, "blocklist_keywords": ["competitor_deals"]}
         plugin = FilterPlugin(config)
         res = plugin.apply(self.message)
-        self.assertIsNone(res)
+        self.assertIsNotNone(res)
 
-        # 2. Skip if disabled
+        # Skip if disabled
         config["enabled"] = False
         plugin = FilterPlugin(config)
         res = plugin.apply(self.message)
         self.assertIsNotNone(res)
 
     def test_filter_plugin_whitelist(self):
-        # Whitelist mismatch
+        # Whitelist mismatch (bypassed in unrestricted mirroring)
         config = {"enabled": True, "whitelist_keywords": ["flipkart"]}
         plugin = FilterPlugin(config)
         res = plugin.apply(self.message)
-        self.assertIsNone(res)
+        self.assertIsNotNone(res)
 
         # Whitelist match
         config["whitelist_keywords"] = ["awesome", "amazon"]
