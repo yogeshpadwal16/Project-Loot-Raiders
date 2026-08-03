@@ -419,7 +419,7 @@ class MultiClientMirrorListener:
         public_channels = [ch for ch in channels if not (ch.startswith("+") or "joinchat" in ch)]
         
         # Perform initial sweep to establish baseline last_seen IDs
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10) as client:
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30) as client:
             for ch in public_channels:
                 try:
                     url = f"https://t.me/s/{ch}"
@@ -449,11 +449,28 @@ class MultiClientMirrorListener:
         while self.should_run and self.active_client_name == "web_scraper":
             try:
                 logging.info("[Web Scraper] Polling competitor channels...")
-                async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10) as client:
-                    for ch in public_channels:
+                async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30) as client:
+                    for ch_idx, ch in enumerate(public_channels):
                         try:
+                            # Stagger requests to avoid connection pressure
+                            if ch_idx > 0:
+                                await asyncio.sleep(2)
                             url = f"https://t.me/s/{ch}"
-                            resp = await client.get(url)
+                            # Retry up to 3 times with backoff on connection errors
+                            resp = None
+                            for attempt in range(3):
+                                try:
+                                    resp = await client.get(url)
+                                    break
+                                except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout) as retry_err:
+                                    if attempt < 2:
+                                        wait_secs = 3 * (attempt + 1)
+                                        logging.warning(f"[Web Scraper] Retry {attempt+1}/3 for {ch} after {retry_err.__class__.__name__}. Waiting {wait_secs}s...")
+                                        await asyncio.sleep(wait_secs)
+                                    else:
+                                        logging.error(f"[Web Scraper] All 3 retries failed for {ch}: {retry_err}")
+                            if resp is None:
+                                continue
                             if resp.status_code != 200:
                                 logging.warning(f"[Web Scraper] Failed to fetch {ch}, status: {resp.status_code}")
                                 continue
