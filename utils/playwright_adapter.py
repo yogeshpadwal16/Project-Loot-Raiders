@@ -233,7 +233,7 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
             running_loop = asyncio.get_running_loop()
             logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, Running Loop: {running_loop}")
         except RuntimeError:
-            logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
+            logging.debug(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
             
         playwright = sync_playwright().start()
         
