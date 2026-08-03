@@ -509,10 +509,9 @@ async def dispatch_general_briefing(send_telegram_func):
         }
 
         eng_post = build_english_post(cats, rates_snapshot)
-        await send_telegram_func(eng_post)
-        logger.info("[BRIEFING] English general news briefing dispatched.")
+        logger.info("[BRIEFING] English general news briefing compiled (dispatch skipped per user preference).")
 
-        await asyncio.sleep(10)
+        # Translate to Marathi and dispatch
         mar_post = await translate_to_proficient_marathi(eng_post)
         await send_telegram_func(mar_post)
         logger.info("[BRIEFING] Marathi general news briefing dispatched.")
