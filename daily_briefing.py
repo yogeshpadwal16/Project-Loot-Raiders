@@ -389,99 +389,60 @@ async def fetch_20_categorized_headlines() -> dict:
                 "sports": [],
             }
 
-def build_english_post(cats: dict, rates: dict) -> str:
-    """Builds primary English Telegram HTML post."""
-    today_str = datetime.now(IST).strftime("%A, %d %B %Y")
-
-    caption = "📰 <b>LOOT RAIDERS DAILY MORNING BRIEFING</b>\n"
-    caption += f"<i>{today_str}</i>\n\n"
-
-    caption += "<blockquote>"
-    caption += "<b>Commodity & Market Snapshot</b>\n"
-    caption += f"🪙 <b>Gold (24K):</b> {rates['gold_24k']}\n"
-    caption += f"🥈 <b>Silver (1kg):</b> {rates['silver_1kg']}\n"
-    caption += f"⛽ <b>Petrol & Diesel:</b> Petrol = {rates['petrol']}/L | Diesel = {rates['diesel']}/L\n"
-    caption += "</blockquote>\n\n"
-
-    if cats["national"]:
-        caption += "<blockquote>"
-        caption += "<b>National & Policy News</b>\n"
-        for h in cats["national"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats["business"]:
-        caption += "<blockquote>"
-        caption += "<b>Business, Tech & Economy</b>\n"
-        for h in cats["business"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats["world"]:
-        caption += "<blockquote>"
-        caption += "<b>Global News</b>\n"
-        for h in cats["world"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    if cats["sports"]:
-        caption += "<blockquote>"
-        caption += "<b>Sports Updates</b>\n"
-        for h in cats["sports"]:
-            caption += f"• {h}\n"
-        caption += "</blockquote>\n\n"
-
-    caption += "<i>Stay tuned for top loot deals & price drops coming up today!</i>\n"
-    caption += "Join <b>@LootRaidersDeals</b>"
-
-    return caption
-
-async def translate_to_proficient_marathi(english_post: str) -> str:
-    """Translates English post into high-proficiency journalistic Marathi (शुद्ध प्रमाण मराठी) using Gemini."""
+async def generate_general_marathi_briefing(headlines: list, rates: dict) -> str | None:
+    """Uses Gemini to translate general news headlines to Marathi and format them in the exact decided layout."""
+    from config.settings import load_settings
+    import google.generativeai as genai
+    
+    settings = load_settings()
+    api_key = settings.get("gemini_api_key")
+    if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
+        logger.warning("[BRIEFING_FAIL] Gemini API key not configured. Returning None.")
+        return None
+        
+    genai.configure(api_key=api_key)
+    ai_model = genai.GenerativeModel("gemini-3.5-flash")
+    
+    news_text_block = "\n".join([f"- {h}" for h in headlines])
+    
+    prompt = f"""
+    You are a Senior Editor for 'लूट रेडर्स' Telegram channel.
+    Translate these English news headlines into highly proficient, standard, natural Marathi (शुद्ध प्रमाण मराठी).
+    Format them into the EXACT required layout.
+    
+    REQUIRED LAYOUT:
+    📰 <b>लूट रेडर्स - आजच्या चालू घडामोडी</b>
+    ———————————————
+    
+    [Context Emoji] [Translated Marathi Headline]
+    
+    [Context Emoji] [Translated Marathi Headline]
+    ...
+    
+    🪙 Gold Rate Today आजचे सोन्याचे दर - 22K = {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-
+    
+    🥈 Silver Rate Today आजचे चांदीचे दर - 1Kg = {rates['silver']}/-
+    
+    ⛽ Petrol & Diesel Rate Today आजचे इंधन दर - पेट्रोल = {rates['petrol']}/L | | डिझेल = {rates['diesel']}/L
+    
+    📢 ताज्या घडामोडी आणि बेस्ट डील्ससाठी जॉईन करा 👉 @LootRaidersDeals
+    
+    EMOJI RULES:
+    - Precede EVERY headline with a matching context emoji (🎓 for education, 🚨 for crime/accident, 🛕 for religion/festival, 🌊 for rain/weather, 💸 for business/finance/rates, 🇷🇺/🇺🇸 for international, 📰 for general).
+    - Do NOT use bullet points like '•' or '*'.
+    - Leave exactly one blank line between each headline item.
+    - Keep the Marathi translations natural and professional.
+    
+    English Headlines:
+    {news_text_block}
+    """
+    
     try:
-        from config.settings import load_settings
-        import google.generativeai as genai
-        
-        settings = load_settings()
-        api_key = settings.get("gemini_api_key")
-        if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
-            logger.warning("[MARATHI_FAIL] Gemini API key not configured. Returning untranslated post.")
-            return english_post
-            
-        genai.configure(api_key=api_key)
-        ai_model = genai.GenerativeModel("gemini-3.5-flash")
-        
-        prompt = f"""
-        You are a Senior Editor for a premier Marathi daily newspaper. 
-        Translate the following English news briefing into highly proficient, natural, standard Marathi (शुद्ध प्रमाण मराठी).
-
-        LANGUAGE & JOURNALISTIC RULES:
-        1. Avoid literal word-for-word translation. Use authentic Marathi news terms:
-           - "Paper leak" -> "पेपरफुटी प्रकरण"
-           - "Death toll" -> "मृत्यूचा आकडा"
-           - "Trial run" -> "यशस्वी चाचणी"
-           - "Subsidies" -> "अनुदान"
-           - "Retirement" -> "सर्व प्रकारच्या क्रिकेटमधून निवृत्ती"
-        2. SECTION HEADINGS STANDARD:
-           - "LOOT RAIDERS DAILY MORNING BRIEFING" -> "लूट रेडर्स : दैनिक प्रभात वृत्त"
-           - "Commodity & Market Snapshot" -> "बाजारभाव आणि धातूंचे दर"
-           - "National & Policy News" -> "राष्ट्रीय व धोरणात्मक घडामोडी"
-           - "Business, Tech & Economy" -> "उद्योग, तंत्रज्ञान आणि अर्थकारण"
-           - "Global News" -> "जागतिक घडामोडी"
-           - "Sports Updates" -> "क्रीडा जगत"
-           - "Stay tuned for top loot deals & price drops coming up today!" -> "आजच्या धमाकेदार डील्स आणि डिस्काउंट्ससाठी चॅनलवर अपडेट राहा!"
-           - "Join @LootRaidersDeals" -> "सामील व्हा @LootRaidersDeals"
-        3. STRICTLY PRESERVE ALL HTML TAGS: Do not modify or delete <blockquote>, </blockquote>, <b>, </b>, <i>, </i> tags.
-        4. PRESERVE NUMBERS & CURRENCIES: Keep values, numbers, and emojis intact.
-
-        English Text:
-        {english_post}
-        """
-
         loop = asyncio.get_running_loop()
         response = await loop.run_in_executor(None, lambda: ai_model.generate_content(prompt))
         translated_text = response.text.strip()
         
+        # Clean any markdown code blocks
         if translated_text.startswith("```"):
             lines = translated_text.splitlines()
             if lines[0].startswith("```"):
@@ -492,30 +453,34 @@ async def translate_to_proficient_marathi(english_post: str) -> str:
             
         return translated_text
     except Exception as e:
-        logger.error(f"[MARATHI_FAIL] Gemini API translation failed: {e}")
-        return english_post
+        logger.error(f"[MARATHI_FAIL] Gemini general news translation failed: {e}")
+        return None
 
 async def dispatch_general_briefing(send_telegram_func):
-    """Fetches, builds, and dispatches the general news briefing in English, followed by Marathi."""
+    """Fetches, builds, and dispatches the general news briefing in clean Marathi."""
     try:
-        cats = await fetch_20_categorized_headlines()
+        cats_dict = await fetch_20_categorized_headlines()
+        
+        # Flatten categories into a single list of headlines
+        headlines = []
+        for cat, list_hl in cats_dict.items():
+            if list_hl:
+                headlines.extend(list_hl)
+                
+        if not headlines:
+            logger.warning("[BRIEFING] No general headlines found. Skipping general briefing.")
+            return
+            
         rates = await fetch_live_rates()
         
-        rates_snapshot = {
-            "gold_24k": f"₹{rates['gold_24k']} (10g)" if rates['gold_24k'] != "N/A" else "₹74,250 (10g)",
-            "silver_1kg": f"₹{rates['silver_1kg']}" if rates['silver_1kg'] != "N/A" else "₹88,400",
-            "petrol": rates["petrol"],
-            "diesel": rates["diesel"]
-        }
-
-        eng_post = build_english_post(cats, rates_snapshot)
-        logger.info("[BRIEFING] English general news briefing compiled (dispatch skipped per user preference).")
-
-        # Translate to Marathi and dispatch
-        mar_post = await translate_to_proficient_marathi(eng_post)
-        await send_telegram_func(mar_post)
-        logger.info("[BRIEFING] Marathi general news briefing dispatched.")
-        
+        # Generate and dispatch direct Marathi post (skipping English post)
+        mar_post = await generate_general_marathi_briefing(headlines[:15], rates)
+        if mar_post:
+            await send_telegram_func(mar_post)
+            logger.info("[BRIEFING] Marathi general news briefing dispatched.")
+        else:
+            logger.error("[BRIEFING] Failed to generate Marathi general news briefing.")
+            
     except Exception as e:
         logger.error(f"[BRIEFING_ERROR] General news briefing dispatch failed: {e}", exc_info=True)
 
