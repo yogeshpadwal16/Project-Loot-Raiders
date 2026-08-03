@@ -112,7 +112,7 @@ def mark_headlines_posted(headlines: list):
 # ==========================================
 async def fetch_sindhudurg_headlines() -> list:
     """
-    Fetches all Batmya headlines from Sakal's RSS feed & Topic Scrape.
+    Fetches all Batmya headlines from Sakal's query search RSS feed & Topic Scrape.
     Duplicates are filtered using the database posted_briefings table.
     """
     headlines = []
@@ -120,42 +120,51 @@ async def fetch_sindhudurg_headlines() -> list:
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
     
     async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
-        # 1. FETCH RSS FEED
+        # 1. FETCH GOOGLE NEWS SEARCH RSS FEED FOR SINDHUDURG SITE:ESAKAL.COM IN MARATHI
         try:
-            res_rss = await client.get("https://www.esakal.com/sindhudurg/rss.xml")
+            url = "https://news.google.com/rss/search?q=sindhudurg+site:esakal.com&hl=mr&gl=IN&ceid=IN:mr"
+            res_rss = await client.get(url)
             if res_rss.status_code == 200:
                 feed = feedparser.parse(res_rss.text)
                 for entry in feed.entries:
                     title = entry.title.strip()
-                    if title not in headlines:
+                    # Clean publisher suffix (e.g. " - Agrowon", " - Esakal")
+                    title = re.sub(r'\s*-\s*(?:Agrowon|Esakal|Sakal|सकाळ|Agrowon - Sakal|Saam TV)\s*$', '', title, flags=re.IGNORECASE).strip()
+                    # Clean prefix/suffixes (e.g. "Sindhudurg : ")
+                    title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
+                    # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
+                    title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
+                    
+                    if title and title not in headlines:
                         headlines.append(title)
         except Exception as e:
             logger.warning(f"[Briefing Scraper] RSS feed fetching failed: {e}")
 
-        # 2. FETCH TOPIC SCRAPE
-        try:
-            res_topic = await client.get("https://www.esakal.com/topic/sindhudurg")
-            if res_topic.status_code == 200:
-                soup = BeautifulSoup(res_topic.text, "html.parser")
-                for a in soup.find_all("a"):
-                    href = a.get("href")
-                    if href and "sindhudurg" in href.lower() and a.text.strip():
-                        # Exclude duplicates in same run
-                        if href in seen_urls:
-                            continue
-                        seen_urls.add(href)
-                        
-                        title = a.text.strip()
-                        # Clean prefix/suffixes (e.g. "Sindhudurg : ")
-                        title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
-                        # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
-                        title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
-                        
-                        if title not in headlines:
-                            headlines.append(title)
-        except Exception as e:
-            logger.warning(f"[Briefing Scraper] Topic Page scraping failed: {e}")
-            
+        # 2. FALLBACK TO TOPIC SCRAPE (If RSS returned nothing)
+        if not headlines:
+            try:
+                res_topic = await client.get("https://www.esakal.com/topic/sindhudurg")
+                if res_topic.status_code == 200:
+                    soup = BeautifulSoup(res_topic.text, "html.parser")
+                    for a in soup.find_all("a"):
+                        href = a.get("href")
+                        if href and "sindhudurg" in href.lower() and a.text.strip():
+                            # Exclude duplicates in same run
+                            if href in seen_urls:
+                                continue
+                            seen_urls.add(href)
+                            
+                            title = a.text.strip()
+                            # Clean prefix/suffixes (e.g. "Sindhudurg : ")
+                            title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
+                            # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
+                            title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
+                            
+                            if title not in headlines:
+                                headlines.append(title)
+            except Exception as e:
+                logger.warning(f"[Briefing Scraper] Topic Page scraping failed: {e}")
+                
     return headlines
 
 # ==========================================
@@ -292,6 +301,9 @@ async def build_morning_news_post() -> tuple:
             
     if not fresh_headlines:
         return None, []
+        
+    # Limit to top 15 news headlines to prevent exceeding Telegram message size limit
+    fresh_headlines = fresh_headlines[:15]
         
     # 3. Fetch rates
     rates = await fetch_live_rates()
