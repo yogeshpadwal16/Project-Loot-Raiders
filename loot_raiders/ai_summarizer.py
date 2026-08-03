@@ -12,7 +12,7 @@ class DealSummarizer:
         if gemini_api_key and "YOUR_" not in gemini_api_key and gemini_api_key.strip() != "":
             try:
                 genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel("gemini-1.5-flash")
+                self.model = genai.GenerativeModel("gemini-2.5-flash")
                 self.enabled = True
                 logger.info("Gemini Deal Summarizer configured successfully.")
             except Exception as e:

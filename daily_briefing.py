@@ -449,7 +449,7 @@ async def translate_to_proficient_marathi(english_post: str) -> str:
             return english_post
             
         genai.configure(api_key=api_key)
-        ai_model = genai.GenerativeModel("gemini-1.5-flash")
+        ai_model = genai.GenerativeModel("gemini-2.5-flash")
         
         prompt = f"""
         You are a Senior Editor for a premier Marathi daily newspaper. 
