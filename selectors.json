@@ -78,15 +78,15 @@
     },
     "tatacliq_deals": {
         "url": "https://www.tatacliq.com/search/?text=deals",
-        "card_selector": "a.ProductModule__base, [class*='ProductModule__base']",
-        "title_selector": "h2.ProductDescription__description, [class*='ProductDescription__description']",
+        "card_selector": "a.ProductModule__base, [class*='ProductModule__base'], [class*='productCard']",
+        "title_selector": "h2.ProductDescription__description, [class*='ProductDescription__description'], [class*='productName']",
         "link_selector": "a",
         "image_selector": "img"
     },
     "jiomart_deals": {
         "url": "https://www.jiomart.com/collection/basic-electricals1",
-        "card_selector": "div.productContainer, div.productCard__productCard",
-        "title_selector": "h3.productCard__productTitle",
+        "card_selector": "div.productContainer, div.productCard__productCard, .plp-card-container, [class*='productCard']",
+        "title_selector": "h3.productCard__productTitle, [class*='productTitle']",
         "link_selector": "a",
         "image_selector": "img"
     }

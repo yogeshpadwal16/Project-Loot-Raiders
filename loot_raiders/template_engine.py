@@ -19,7 +19,7 @@ def build_html_caption(deal: dict, ab_variant: str = "CARD_BLOCKQUOTE", tracking
         truncated_title = truncated_title[:87] + "..."
 
     # Inject compliance guard disclosure (Part of compliance rules)
-    from compliance_guard import get_compliance_disclosure
+    from loot_raiders.compliance_guard import get_compliance_disclosure
     disclosure = get_compliance_disclosure()
 
     # Track conversions with URL fragments

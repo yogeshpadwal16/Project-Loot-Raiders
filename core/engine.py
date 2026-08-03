@@ -194,6 +194,7 @@ def scrape_platform(platform: str, config: dict, history: set):
                 db.close()
                 
             if not price_changed:
+                logging.info(f"Skipping deal: '{title[:35]}' | Reason: Price has not changed (₹{price}) since last scan.")
                 release_in_flight_deal(title, platform, final_url)
                 continue
                 
@@ -255,6 +256,8 @@ def scrape_platform(platform: str, config: dict, history: set):
                     logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
                     release_in_flight_deal(title, platform, final_url)
                     continue
+                else:
+                    logging.info(f"Accepted genuine loot deal: '{title[:35]}' | Reason: {suppression_reason}")
                 
                 # Publication Frequency Guard — suppress re-posts within 6h at same price
                 # This directly fixes the 3x-same-product-in-8-seconds spam bug
