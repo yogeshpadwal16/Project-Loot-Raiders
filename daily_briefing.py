@@ -421,7 +421,7 @@ async def generate_general_marathi_briefing(headlines: list, rates: dict) -> str
     
     🪙 Gold Rate Today आजचे सोन्याचे दर - 22K = {rates['gold_22k']}/- | | 24K = {rates['gold_24k']}/-
     
-    🥈 Silver Rate Today आजचे चांदीचे दर - 1Kg = {rates['silver']}/-
+    🥈 Silver Rate Today आजचे चांदीचे दर - 1Kg = {rates['silver_1kg']}/-
     
     ⛽ Petrol & Diesel Rate Today आजचे इंधन दर - पेट्रोल = {rates['petrol']}/L | | डिझेल = {rates['diesel']}/L
     
