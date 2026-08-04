@@ -653,32 +653,70 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # 4. Upload raw product image or dynamic image card to Telegram
     photo_sent = False
     
-    # Try sending raw image first if it's a valid remote URL
+    # Try downloading and uploading product image locally first to prevent Telegram CDN download blocks
     if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
+        local_temp_img_path = None
         try:
-            endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-            payload = {
-                "chat_id": chat_id,
-                "photo": img_url,
-                "caption": caption,
-                "parse_mode": "HTML",
-                "reply_markup": reply_markup_json
+            import tempfile
+            dl_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             }
-            res = requests.post(endpoint, json=payload, timeout=25)
-            if res.status_code == 200:
-                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal to Telegram: {truncated_title[:20]}...")
-                photo_sent = True
-                save_telegram_message_info(unique_id, res, caption)
-            else:
-                err_desc = ""
-                if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
-                elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
-                elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
-                elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
-                elif res.status_code == 429: err_desc = " (429 Rate Limited)"
-                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image send failed ({res.status_code}{err_desc}). Response: {res.text}. Falling back to local card.")
-        except Exception as raw_send_err:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}. Falling back to local card.")
+            logging.info(f"[Notifier] [CorrID: {unique_id}] Downloading raw image locally to upload as file: {img_url}")
+            dl_res = requests.get(img_url, headers=dl_headers, timeout=15)
+            if dl_res.status_code == 200:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+                    tmp_file.write(dl_res.content)
+                    local_temp_img_path = tmp_file.name
+        except Exception as dl_err:
+            logging.warning(f"[Notifier] [CorrID: {unique_id}] Failed to download raw image locally: {dl_err}")
+            
+        if local_temp_img_path and os.path.exists(local_temp_img_path):
+            try:
+                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+                with open(local_temp_img_path, "rb") as f:
+                    files = {"photo": f}
+                    payload = {
+                        "chat_id": chat_id,
+                        "caption": caption,
+                        "parse_mode": "HTML",
+                        "reply_markup": reply_markup_json
+                    }
+                    res = requests.post(endpoint, data=payload, files=files, timeout=30)
+                if res.status_code == 200:
+                    logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Uploaded local product image to Telegram: {truncated_title[:20]}...")
+                    photo_sent = True
+                    save_telegram_message_info(unique_id, res, caption)
+                else:
+                    logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Failed local product image upload ({res.status_code}). Response: {res.text}.")
+            except Exception as upload_err:
+                logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed uploading product image file: {upload_err}")
+            finally:
+                try:
+                    os.remove(local_temp_img_path)
+                except Exception:
+                    pass
+                    
+        # Fallback to remote URL send if local upload did not succeed
+        if not photo_sent:
+            try:
+                logging.info(f"[Notifier] [CorrID: {unique_id}] Falling back to remote URL photo dispatch: {img_url}")
+                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+                payload = {
+                    "chat_id": chat_id,
+                    "photo": img_url,
+                    "caption": caption,
+                    "parse_mode": "HTML",
+                    "reply_markup": reply_markup_json
+                }
+                res = requests.post(endpoint, json=payload, timeout=25)
+                if res.status_code == 200:
+                    logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal via URL to Telegram: {truncated_title[:20]}...")
+                    photo_sent = True
+                    save_telegram_message_info(unique_id, res, caption)
+                else:
+                    logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image URL send failed ({res.status_code}). Response: {res.text}.")
+            except Exception as raw_send_err:
+                logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}")
 
     # Fallback to local PIL card if raw image send was not successful
     if not photo_sent and local_card_path and os.path.exists(local_card_path):
