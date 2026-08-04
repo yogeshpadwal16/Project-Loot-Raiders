@@ -19,12 +19,7 @@ def load_mirror_settings() -> Dict[str, Any]:
 
 # Monitored source channels (can be overridden by environment variable SOURCE_CHANNELS)
 DEFAULT_SOURCE_CHANNELS = [
-    'Loot_shoppingdeals123',
-    'EPM_Deals',
-    'idoffers',
-    'indiafreestuffin',
-    '+jY1FAgS1Wx80Mjk1',
-    'countingunique'
+    'Loot_shoppingdeals123'
 ]
 
 def get_source_channels() -> List[str]:
