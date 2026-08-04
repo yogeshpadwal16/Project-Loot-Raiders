@@ -1,8 +1,47 @@
 import logging
 import httpx
 from bs4 import BeautifulSoup
+import re
 
 logger = logging.getLogger("loot_raiders.media_scraper")
+
+def upgrade_image_url_to_high_res(url: str) -> str:
+    """
+    Upgrades low-res thumbnail URLs to high-res versions for Amazon and Flipkart.
+    """
+    if not url:
+        return url
+    if "amazon" in url.lower():
+        # Replace thumbnail tags like ._AC_UL320_ or ._SX342_ with ._AC_SL1500_
+        url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', url)
+    elif "flipkart" in url.lower():
+        # Replace thumbnail dimensions like /128/128/ or /416/416/ with /832/832/
+        url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', url)
+    return url
+
+def fetch_opengraph_image(product_url: str, timeout: float = 4.0) -> str:
+    """
+    Immediate lightweight fallback scrape for og:image/twitter:image.
+    """
+    default_banner = "https://lootraiders.com/assets/default_banner.jpg"
+    if not product_url or not product_url.startswith("http"):
+        return default_banner
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        with httpx.Client(timeout=timeout, headers=headers, follow_redirects=True) as client:
+            resp = client.get(product_url)
+            if resp.status_code == 200:
+                soup = BeautifulSoup(resp.text, "html.parser")
+                og_image = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "twitter:image"}) or soup.find("meta", attrs={"name": "og:image"})
+                if og_image and og_image.get("content"):
+                    img_url = og_image.get("content").strip()
+                    if img_url and not img_url.startswith("data:"):
+                        return upgrade_image_url_to_high_res(img_url)
+    except Exception as e:
+        logger.warning(f"Fallback scrape failed: {e}")
+    return default_banner
 
 class MediaScraper:
     def __init__(self, timeout_seconds: float = 4.0):
@@ -16,7 +55,7 @@ class MediaScraper:
     async def scrape_opengraph_data(self, url: str) -> dict:
         """
         Scrapes the target URL to extract OpenGraph metadata (image, title, description).
-        Enforces a strict 4.0 second timeout limit to prevent blocking.
+        Enforces a strict timeout limit to prevent blocking.
         """
         result = {
             "image_url": None,
@@ -38,14 +77,14 @@ class MediaScraper:
                     soup = BeautifulSoup(resp.text, "html.parser")
                     
                     # 1. Extract image
-                    og_image = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "twitter:image"})
+                    og_image = soup.find("meta", property="og:image") or soup.find("meta", attrs={"name": "twitter:image"}) or soup.find("meta", attrs={"name": "og:image"})
                     if og_image and og_image.get("content"):
-                        result["image_url"] = og_image.get("content").strip()
+                        raw_img = og_image.get("content").strip()
+                        result["image_url"] = upgrade_image_url_to_high_res(raw_img)
                         
                     # 2. Extract title
                     og_title = soup.find("meta", property="og:title") or soup.find("title")
                     if og_title:
-                        # meta tags have 'content', title tag has text content
                         content = og_title.get("content") or og_title.text
                         if content:
                             result["title"] = content.strip()

@@ -21,6 +21,18 @@ def clean_and_truncate_html(html_content: str, max_chars: int = 10000) -> str:
     html_content = re.sub(r'\s+', ' ', html_content)
     return html_content[:max_chars]
 
+def clean_and_upgrade_image_url(url: str) -> str:
+    if not url:
+        return ""
+    url = url.strip()
+    if url.startswith("//"):
+        url = "https:" + url
+    if "amazon" in url.lower():
+        url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', url)
+    elif "flipkart" in url.lower():
+        url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', url)
+    return url
+
 def auto_heal_with_dom_analysis(driver, platform_id: str, config: dict, settings: dict) -> bool:
     """
     DOM-based self-healing selector recovery. Scans the page for common
@@ -421,7 +433,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             "price": price,
                             "mrp": mrp,
                             "discount": true_discount,
-                            "image_url": img_url,
+                            "image_url": clean_and_upgrade_image_url(img_url),
                             "url": raw_url,
                             "is_lightning": False,
                             "rating": rating,
@@ -558,7 +570,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                     "price": int(price),
                                     "mrp": int(mrp),
                                     "discount": round(discount, 2),
-                                    "image_url": image_url,
+                                    "image_url": clean_and_upgrade_image_url(image_url),
                                     "url": url,
                                     "is_lightning": False
                                 })
@@ -667,7 +679,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             "price": price,
                             "mrp": mrp,
                             "discount": discount,
-                            "image_url": img_url,
+                            "image_url": clean_and_upgrade_image_url(img_url),
                             "url": prod_url,
                             "is_lightning": False
                         })
@@ -800,7 +812,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 "price": price,
                                 "mrp": mrp,
                                 "discount": round(discount, 2),
-                                "image_url": img_url,
+                                "image_url": clean_and_upgrade_image_url(img_url),
                                 "url": prod_url,
                                 "is_lightning": False
                             })
@@ -866,7 +878,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 "price": price_val,
                                 "mrp": mrp_val,
                                 "discount": round(discount, 2),
-                                "image_url": img_url,
+                                "image_url": clean_and_upgrade_image_url(img_url),
                                 "url": prod_url,
                                 "is_lightning": False
                             })
@@ -991,7 +1003,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 "price": price,
                                 "mrp": mrp,
                                 "discount": round(discount, 2),
-                                "image_url": img_url,
+                                "image_url": clean_and_upgrade_image_url(img_url),
                                 "url": prod_url,
                                 "is_lightning": False
                             })
@@ -1053,7 +1065,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 "price": price_val,
                                 "mrp": mrp_val,
                                 "discount": round(discount, 2),
-                                "image_url": img_url,
+                                "image_url": clean_and_upgrade_image_url(img_url),
                                 "url": prod_url,
                                 "is_lightning": False
                             })
