@@ -108,15 +108,15 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     caption_parts = []
     caption_parts.append(f"{store_emoji} <b>{store_name} DEAL</b>\n")
     caption_parts.append(f"<b>{product_title}</b>\n")
-    caption_parts.append(f" <b>Deal Price:</b> ₹{price_val:,}")
+    caption_parts.append(f"💳 <b>Deal Price:</b> ₹{price_val:,}")
     
     if mrp_val > price_val:
-        caption_parts.append(f" <b>MRP:</b> <s>₹{mrp_val:,}</s>")
-        caption_parts.append(f" <b>Discount:</b> {discount_pct}% OFF")
-        caption_parts.append(f" <b>You Save:</b> ₹{savings:,}")
+        caption_parts.append(f"  <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_parts.append(f"🔥 <b>Discount:</b> {discount_pct}% OFF")
+        caption_parts.append(f"💰 <b>You Save:</b> ₹{savings:,}")
         
-    caption_parts.append("\n <i>Verified Lowest Price | Limited Stock</i>\n")
-    caption_parts.append(" <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    caption_parts.append("\n  <i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_parts.append("📌 <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
     caption = "\n".join(caption_parts)
     if len(caption) > 850:
@@ -637,11 +637,12 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if auto_cart_url and not auto_cart_url.startswith("http"):
         auto_cart_url = None  # Drop invalid auto-cart URL rather than crash
     
+    price_val = int(price) if price else 0
     reply_markup = {
         "inline_keyboard": [
             [
                 {
-                    "text": "🛍️ BUY NOW 🛍️",
+                    "text": f"🛍 BUY NOW — ₹{price_val:,} 🛍",
                     "url": buy_url
                 }
             ]
@@ -718,33 +719,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    # 5. Text-Only Fallback (sendMessage API) if photo sending failed or was skipped
+    # 5. Native Photo Fallback using default banner (never send text-only)
     try:
-        endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        fallback_photo = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
+        endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
         payload = {
             "chat_id": chat_id,
-            "text": caption,
+            "photo": fallback_photo,
+            "caption": caption,
             "parse_mode": "HTML",
-            "reply_markup": reply_markup_json,
-            "disable_web_page_preview": False
+            "reply_markup": reply_markup_json
         }
         res = requests.post(endpoint, json=payload, timeout=25)
         if res.status_code == 200:
-            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored text-only deal to Telegram: {truncated_title[:20]}...")
+            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored fallback photo deal to Telegram: {truncated_title[:20]}...")
             save_telegram_message_info(unique_id, res, caption)
             return True
         else:
-            err_desc = ""
-            if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
-            elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
-            elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
-            elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
-            elif res.status_code == 429: err_desc = " (429 Rate Limited)"
-            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Telegram text-only send returned {res.status_code}{err_desc}: {res.text}")
-    except Exception as text_send_err:
-        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send text-only Telegram message: {text_send_err}")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Native photo send and fallback photo send both failed.")
+    except Exception as fallback_err:
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send fallback photo: {fallback_err}")
         
-    logging.error(f"Telegram photo card failed to send for {truncated_title[:20]}... Skipping.")
     return False
 
 def save_telegram_message_info(unique_id: str, res, caption: str):

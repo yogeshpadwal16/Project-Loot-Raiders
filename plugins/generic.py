@@ -1,3 +1,4 @@
+# Telegram Native Photo & Button Fix Directive Applied
 import re
 import time
 import logging
