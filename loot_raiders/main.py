@@ -31,6 +31,7 @@ from loot_raiders.daily_briefing import (
     safe_dispatch_briefing,
     IST
 )
+from loot_raiders.template_engine import build_html_caption, build_inline_buttons
 
 class LootRaidersOrchestrator:
     def __init__(self):
@@ -95,6 +96,41 @@ class LootRaidersOrchestrator:
             else:
                 logger.error(f"Failed to post to Telegram: {res.text}")
                 return None
+
+    async def send_telegram_photo(self, photo_url: str, caption: str, reply_markup: dict = None):
+        """Helper to send a photo message using the configured Bot Token."""
+        import httpx
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendPhoto"
+        
+        # Immediate fallback if photo_url is missing or invalid
+        if not photo_url or not photo_url.startswith("http"):
+            photo_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
+            
+        payload = {
+            "chat_id": self.chat_id,
+            "photo": photo_url,
+            "caption": caption,
+            "parse_mode": "HTML",
+        }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+            
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            res = await client.post(url, json=payload)
+            if res.status_code == 200:
+                logger.info("Successfully posted photo to Telegram.")
+                return res.json().get("result", {}).get("message_id")
+            else:
+                logger.warning(f"Failed to post photo, retrying with default banner. Error: {res.text}")
+                # Try fallback photo
+                payload["photo"] = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    logger.info("Successfully posted fallback photo to Telegram.")
+                    return res.json().get("result", {}).get("message_id")
+                else:
+                    logger.error(f"Failed to post fallback photo to Telegram: {res.text}")
+                    return None
 
     async def schedule_daily_briefing_loop(self):
         """Monitors clock time and runs daily briefing at 08:00 AM IST."""
@@ -172,22 +208,20 @@ class LootRaidersOrchestrator:
             # 3. Calculate discount percentage
             discount = ((mock_deal_data["mrp"] - mock_deal_data["price"]) / mock_deal_data["mrp"]) * 100
             
-            # 4. Format telegram deal card HTML
-            deal_card = (
-                f"🔥 <b>LOOT DEAL DETECTED!</b> 🔥\n\n"
-                f"📦 <b>Product:</b> {deal_title}\n"
-                f"💰 <b>Deal Price:</b> <code>₹{mock_deal_data['price']:.0f}</code> (<s>₹{mock_deal_data['mrp']:.0f}</s>)\n"
-                f"📉 <b>Discount:</b> {discount:.0f}% OFF!\n\n"
-                f"📋 <b>Key Highlights:</b>\n"
-                f"{summary}\n\n"
-                f"👉 <b><a href='{mock_deal_data['url']}'>GRAB THIS DEAL NOW</a></b>\n"
-                f"━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ ━ \n"
-                f"📢 Join <b>@LootRaidersDeals</b> for more fast alerts!"
-            )
+            # 4. Format telegram deal card caption and keyboard
+            deal_dict = {
+                "title": deal_title,
+                "price": mock_deal_data["price"],
+                "mrp": mock_deal_data["mrp"],
+                "url": mock_deal_data["url"],
+                "platform": "amazon"
+            }
+            caption = build_html_caption(deal_dict)
+            reply_markup = build_inline_buttons(deal_dict)
             
             # Define posting helper to tie DB save and Telegram return ID
-            async def dispatch_deal_task(card_html=deal_card, data=mock_deal_data, disc=discount, summ=summary):
-                msg_id = await self.send_telegram_raw(card_html)
+            async def dispatch_deal_task(photo_url=og_data.get("image_url"), caption_txt=caption, markup=reply_markup, data=mock_deal_data, disc=discount, summ=summary):
+                msg_id = await self.send_telegram_photo(photo_url, caption_txt, markup)
                 if msg_id:
                     db = SessionLocal()
                     try:
