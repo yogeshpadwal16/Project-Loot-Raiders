@@ -68,166 +68,61 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
                             effective_cashback: str = "", upi_offer: str = "", offline_compare: str = "",
                             buying_advice: dict = None, unique_id: str = None) -> str:
     """
-    Smart template-based caption generator for Telegram deal posts with A/B testing.
-    Supports CARD_BLOCKQUOTE (detailed blockquote layout) and COMPACT_LIST (concise height-optimized layout).
+    Format captions strictly as follows (NO brackets around store header):
+    {store_emoji} **{store_name} DEAL**
+    **{product_title}**
+    Deal Price: ₹{price}
+    MRP: ~~₹{mrp}~~
+    Discount: {discount_pct}% OFF
+    You Save: ₹{savings}
+    *Verified Lowest Price | Limited Stock*
+    *Join @LootRaidersDeals for live price drop alerts!*
     """
-    import random
-    import hashlib
+    import re
     
-    savings = mrp - price
-    platform_upper = platform.upper()
-    
-    # Seed randomness per product for consistent but varied output
-    seed = int(hashlib.md5(f"{title}{price}".encode()).hexdigest()[:8], 16)
-    rng = random.Random(seed)
-    
-    # Platform-specific emoji
+    # Store emoji mapping
     platform_emojis = {
         "amazon": "🟠", "flipkart": "🔵", "myntra": "💗",
         "ajio": "🟤", "meesho": "🟣", "tatacliq": "🔴", "jiomart": "🟢"
     }
-    p_emoji = platform_emojis.get(platform.lower().split("_")[0], "✨")
+    store_name = platform.strip().upper()
+    store_emoji = platform_emojis.get(store_name.lower().split("_")[0], "✨")
     
-    # Randomized urgency hooks
-    urgency_hooks = [
-        "⚡ <i>Price drops don't last — grab it before stock ends!</i>",
-        "🏃 <i>Limited stock alert! Order before it sells out!</i>",
-        "⏰ <i>Deal may expire any moment — don't miss this!</i>",
-        "🔥 <i>Lowest price we've tracked — act fast!</i>",
-        "💨 <i>Flying off shelves! Secure yours now!</i>",
-        "🚀 <i>This loot won't last long — hurry!</i>",
-    ]
-    
-    # Randomized call-to-action text
-    cta_texts = [
-        "👉 GRAB THIS DEAL NOW",
-        "🛒 BUY NOW BEFORE IT'S GONE",
-        "💎 CLAIM THIS LOOT",
-        "🔥 SNAG THIS DEAL",
-        "⚡ ORDER NOW — LIMITED STOCK",
-    ]
-    
-    # Randomized opening excitement lines
-    excitement_openers = [
-        f"🚨 <b>MASSIVE {discount:.0f}% OFF</b> on {platform_upper}! 🚨",
-        f"💥 <b>PRICE CRASH!</b> {discount:.0f}% discount spotted on {platform_upper}!",
-        f"🎯 <b>STEAL DEAL!</b> Save ₹{savings:,} on {platform_upper}!",
-        f"💣 <b>LOOT PRICE!</b> {platform_upper} deal at just ₹{price:,}!",
-        f"🔥 <b>{platform_upper} LOOT DROP!</b> {discount:.0f}% OFF detected!",
-    ]
-    
+    # Truncate product title to max 120 characters
     clean_title = title.split('\n')[0].strip()
-    truncated = clean_title[:107] + "..." if len(clean_title) > 110 else clean_title
+    clean_title = re.sub(r'\s+', ' ', clean_title)
+    if len(clean_title) > 120:
+        product_title = clean_title[:117] + "..."
+    else:
+        product_title = clean_title
+        
+    price_val = int(price) if price else 0
+    mrp_val = int(mrp) if mrp else 0
     
-    # Determine A/B variant
-    ab_variant = "CARD_BLOCKQUOTE"
-    tracking_tag = "ab_variant_card_blockquote"
-    if unique_id:
-        try:
-            from utils.ab_testing import select_ab_template
-            ab_variant, tracking_tag = select_ab_template(unique_id)
-        except Exception:
-            pass
-            
-    parts = []
+    savings = max(0, mrp_val - price_val)
+    if mrp_val > 0:
+        discount_pct = round(((mrp_val - price_val) / mrp_val) * 100)
+    else:
+        discount_pct = 0
+        
+    caption_parts = []
+    caption_parts.append(f"{store_emoji} <b>{store_name} DEAL</b>\n")
+    caption_parts.append(f"<b>{product_title}</b>\n")
+    caption_parts.append(f" <b>Deal Price:</b> ₹{price_val:,}")
     
-    # 1. Excitement opener
-    parts.append(rng.choice(excitement_openers))
-    parts.append("")
+    if mrp_val > price_val:
+        caption_parts.append(f" <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_parts.append(f" <b>Discount:</b> {discount_pct}% OFF")
+        caption_parts.append(f" <b>You Save:</b> ₹{savings:,}")
+        
+    caption_parts.append("\n <i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_parts.append(" <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
-    if ab_variant == "CARD_BLOCKQUOTE":
-        card_content = []
-        card_content.append(f"🛍️ <b>{truncated}</b>")
-        card_content.append("")
+    caption = "\n".join(caption_parts)
+    if len(caption) > 850:
+        caption = caption[:847] + "..."
         
-        # Predictive Buying Intelligence Badge
-        if buying_advice and buying_advice.get("badge"):
-            badge = buying_advice["badge"]
-            conf = buying_advice.get("confidence", 85)
-            reason = buying_advice.get("reason", "")
-            card_content.append(f"🧠 <b>[ {badge} ]</b> (<i>{conf}% AI Confidence</i>)")
-            if reason:
-                card_content.append(f"💡 <i>{reason}</i>")
-        elif is_verified_low:
-            card_content.append("🏆 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
-            
-        card_content.append("")
-        card_content.append(f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>")
-        card_content.append(f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>")
-        card_content.append(f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>")
-        card_content.append(f"💰 <b>You Save:</b>     <code>₹{savings:,}</code>")
-        card_content.append("")
-        
-        if effective_cashback:
-            card_content.append(f"🪙 <b>Effective:</b> {effective_cashback}")
-        if upi_offer:
-            card_content.append(f"📱 <b>UPI Bonus:</b> {upi_offer}")
-        if offline_compare:
-            card_content.append(f"🏬 <b>Offline:</b> {offline_compare}")
-            
-        if coupon_detail:
-            card_content.append(f"🏷️ <b>Coupon:</b>      <code>{coupon_detail}</code>")
-        if bank_offers:
-            from utils.bank_offers import get_best_bank_effective_price
-            bank_eff_price, bank_summary = get_best_bank_effective_price(price, bank_offers)
-            card_content.append(f"💳 <b>Bank Offer:</b>  <code>{', '.join(bank_offers[:2])}</code>")
-            if bank_summary and bank_eff_price < price:
-                card_content.append(f"💎 <b>Effective Price:</b> <code>₹{bank_eff_price:,}</code> ({bank_summary})")
-                
-        if review_grade and review_grade != "N/A":
-            card_content.append(f"⭐ <b>Review Trust:</b> <code>Grade {review_grade}</code>")
-            
-        # Wrap details in blockquote
-        parts.append("<blockquote>" + "\n".join(card_content) + "</blockquote>")
-        parts.append("")
-        
-    else:  # COMPACT_LIST
-        parts.append(f"🛍️ <b>{truncated}</b>")
-        parts.append(f"💵 <b>₹{price:,}</b> (<s>₹{mrp:,}</s>) | 📉 <b>{discount:.0f}% OFF</b>")
-        
-        meta_items = []
-        if buying_advice and buying_advice.get("badge"):
-            meta_items.append(f"🧠 <b>{buying_advice['badge']}</b> ({buying_advice.get('confidence', 85)}% AI)")
-        elif is_verified_low:
-            meta_items.append("🏆 <b>Verified Low</b>")
-        if review_grade and review_grade != "N/A":
-            meta_items.append(f"⭐ Grade {review_grade}")
-            
-        if meta_items:
-            parts.append(" | ".join(meta_items))
-            
-        parts.append("")
-        
-        compact_offers = []
-        if coupon_detail:
-            compact_offers.append(f"🏷️ <b>Coupon:</b> {coupon_detail}")
-        if bank_offers:
-            from utils.bank_offers import get_best_bank_effective_price
-            bank_eff_price, bank_summary = get_best_bank_effective_price(price, bank_offers)
-            if bank_summary and bank_eff_price < price:
-                compact_offers.append(f"💳 <b>Bank:</b> ₹{bank_eff_price:,} ({bank_summary})")
-            else:
-                compact_offers.append(f"💳 <b>Bank Offer:</b> {bank_offers[0]}")
-        if effective_cashback:
-            compact_offers.append(f"🪙 <b>Cashback:</b> {effective_cashback}")
-        if upi_offer:
-            compact_offers.append(f"📱 <b>UPI:</b> {upi_offer}")
-        if offline_compare:
-            compact_offers.append(f"🏬 <b>Offline:</b> {offline_compare}")
-            
-        if compact_offers:
-            parts.append("\n".join(compact_offers))
-            parts.append("")
-            
-    # Price stats & comparisons (common to both)
-    if price_stats and price_stats.get("points_count", 0) >= 3:
-        parts.append(f"📊 <b>Price History</b> ({price_stats['points_count']} checks):")
-        parts.append(f"  📈 High: ₹{price_stats['highest']:,} → 📉 Low: ₹{price_stats['lowest']:,}")
-        
-    if comparison:
-        parts.append(comparison)
-        
-    parts.append("")
+    return caption
     
     # Deal score
     rating_score = deal_score / 10.0
@@ -712,51 +607,8 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                                       effective_cashback=effective_cashback_prompt, upi_offer=upi_matcher_prompt, offline_compare=offline_comparison_prompt,
                                       buying_advice=buying_advice, unique_id=unique_id)
     
-    # Prepend the official branded header so the platform is ALWAYS clear
-    caption = f"{header}\n\n{caption}"
-    
-    # Append channel invite link
-    if include_invite_link:
-        caption += f"\n\n📢 <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more verified loot!</b>"
-        
-    # Guardrail: If caption exceeds 1000 chars, Telegram photo API fails.
-    # Trim caption to a clean, high-impact format if it's too long.
-    if len(caption) > 1000:
-        verification_text = "Verified All-Time Low" if is_verified_low else "Verified Price Drop"
-        promo_info = ""
-        if coupon_detail:
-            promo_info += f" | Coupon: {coupon_detail}"
-        caption = (
-            f"{header}\n\n"
-            f"🛍️ <b>{truncated_title}</b>\n\n"
-            f"💎 <b>Loot Price:</b> <code>₹{price:,}</code> (<s>₹{mrp:,}</s>)\n"
-            f"🔥 <b>Discount:</b> <b>{discount:.0f}% OFF</b>{promo_info}\n"
-            f"🛡️ <b>Verification:</b> <code>{verification_text}</code>"
-            + (f"\n\n📢 <b>Join <a href='{invite_link}'>@LootRaidersDeals</a> for more!</b>" if include_invite_link else "")
-        )
-    
-    # 2. Dynamic Price-Drop verification Card generation (Visual Proof)
-    # Only generate a local PIL card when we have a real product image URL.
-    # If img_url is empty or base64, skip card generation entirely and proceed
-    # to the text-only sendMessage path — PIL card upload via sendPhoto hangs
-    # indefinitely when the upload body has no hard timeout in requests.
     local_card_path = None
-    has_real_image = bool(img_url and img_url.startswith("http") and not img_url.startswith("data:image"))
-    if has_real_image:
-        try:
-            local_card_path = generate_deal_image(
-                unique_id=unique_id,
-                platform=platform,
-                title=title,
-                price=price,
-                mrp=mrp,
-                discount=discount,
-                original_image_url=img_url,
-                is_verified_low=is_verified_low,
-                deal_score=deal_score
-            )
-        except Exception as img_gen_err:
-            logging.error(f"Image generation failed inside notifier: {img_gen_err}")
+    has_real_image = False
 
     # 3. Build Inline Buy Button markup (Feature 3: Verification/Expiration Buttons)
     from knowledge_base.models import DealVote

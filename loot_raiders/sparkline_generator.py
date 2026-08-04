@@ -57,12 +57,7 @@ def draw_sparkline_overlay(prod_img: Image.Image, price_history: list) -> Image.
 
 
 def generate_sparkline_thumbnail(product_id: str, image_url: str, current_price: int, mrp: int) -> str | None:
-    """
-    Downloads product image, retrieves price history from SQLite,
-    applies the sparkline overlay, and saves it. Returns absolute path.
-    """
-    if not image_url or not image_url.startswith("http"):
-        return None
+    return None
 
     # Get price history from database
     from database import SessionLocal, PriceHistory

@@ -1,76 +1,64 @@
+import re
+
 def build_html_caption(deal: dict, ab_variant: str = "CARD_BLOCKQUOTE", tracking_tag: str = "") -> str:
     """
-    Renders a premium HTML caption for Telegram deal broadcasts based on the A/B testing layout.
+    Formats the caption according to the Option 1 Clean Telegram caption template.
     """
     title = deal.get("title", "")
     price = deal.get("price", 0)
-    mrp = deal.get("mrp", price)
-    discount = deal.get("discount", 0.0)
-    url = deal.get("url", "")
+    mrp = deal.get("mrp", 0)
     platform = deal.get("platform", "GENERIC").upper()
-    is_verified_low = deal.get("is_verified_low", False)
-    deal_score = deal.get("deal_score", 50.0)
-    bank_summary = deal.get("bank_summary", "")
-    eff_price = deal.get("effective_price", price)
 
-    savings = mrp - price
-    truncated_title = title.split('\n')[0].strip()
-    if len(truncated_title) > 90:
-        truncated_title = truncated_title[:87] + "..."
+    # Determine store name
+    store_name = platform.strip().upper()
+    
+    # Store emoji mapping
+    platform_emojis = {
+        "amazon": "🟠", "flipkart": "🔵", "myntra": "💗",
+        "ajio": "🟤", "meesho": "🟣", "tatacliq": "🔴", "jiomart": "🟢"
+    }
+    store_emoji = platform_emojis.get(store_name.lower().split("_")[0], "✨")
+    
+    # Truncate title to max 120 chars
+    clean_title = title.split('\n')[0].strip()
+    # Normalize spaces
+    clean_title = re.sub(r'\s+', ' ', clean_title)
+    if len(clean_title) > 120:
+        product_title = clean_title[:117] + "..."
+    else:
+        product_title = clean_title
 
-    # Inject compliance guard disclosure (Part of compliance rules)
-    from loot_raiders.compliance_guard import get_compliance_disclosure
-    disclosure = get_compliance_disclosure()
+    # Price logic calculations
+    price_val = int(price) if price else 0
+    mrp_val = int(mrp) if mrp else 0
+    
+    savings = max(0, mrp_val - price_val)
+    if mrp_val > 0:
+        discount_pct = round(((mrp_val - price_val) / mrp_val) * 100)
+    else:
+        discount_pct = 0
 
-    # Track conversions with URL fragments
-    cta_url = f"{url}#{tracking_tag}" if tracking_tag else url
-
-    if ab_variant == "CARD_BLOCKQUOTE":
-        card = []
-        card.append(f"🛍️ <b>{truncated_title}</b>")
-        card.append("")
-        if is_verified_low:
-            card.append("🔥 <b>[ VERIFIED ALL-TIME LOW PRICE ]</b>")
-        card.append(f"💵 <b>Loot Price:</b>  <code>₹{price:,}</code>")
-        card.append(f"❌ <b>Original MRP:</b> <s>₹{mrp:,}</s>")
-        card.append(f"📉 <b>Discount:</b>     <b>{discount:.0f}% OFF</b>")
-        card.append(f"💰 <b>You Save:</b>     <code>₹{savings:,}</code>")
+    caption_lines = []
+    caption_lines.append(f"{store_emoji} <b>{store_name} DEAL</b>\n")
+    caption_lines.append(f"<b>{product_title}</b>\n")
+    caption_lines.append(f" <b>Deal Price:</b> ₹{price_val:,}")
+    
+    # If MRP is missing or <= price, suppress MRP, Discount, and Savings cleanly
+    if mrp_val > price_val:
+        caption_lines.append(f" <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_lines.append(f" <b>Discount:</b> {discount_pct}% OFF")
+        caption_lines.append(f" <b>You Save:</b> ₹{savings:,}")
         
-        if bank_summary and eff_price < price:
-            card.append(f"💳 <b>Bank Benefit:</b> <code>₹{eff_price:,}</code> ({bank_summary})")
-
-        card_content = "\n".join(card)
-        caption = (
-            f"🚨 <b>{platform} LOOT ALERT</b> 🚨\n\n"
-            f"<blockquote>{card_content}</blockquote>\n\n"
-            f"💎 <b>Loot Score:</b> {deal_score}/100\n"
-            f"⚡ <i>Price error / glitch risk is active. Grab quick!</i>\n\n"
-            f"<a href='{cta_url}'>🛒 GRAB THIS DEAL NOW</a>\n\n"
-            f"{disclosure}\n"
-            f"#{tracking_tag}"
-        )
-    else:  # COMPACT_LIST
-        meta = []
-        if is_verified_low:
-            meta.append("🔥 Verified Low")
-        meta.append(f"Score: {deal_score:.0f}")
-
-        offers = []
-        if bank_summary and eff_price < price:
-            offers.append(f"💳 Bank: ₹{eff_price:,} ({bank_summary})")
-
-        caption = (
-            f"💥 <b>{platform} DROP:</b> {truncated_title}\n"
-            f"💵 <b>Loot: ₹{price:,}</b> (<s>₹{mrp:,}</s>) | 📉 <b>{discount:.0f}% OFF</b>\n"
-            f"📊 {' | '.join(meta)}\n\n"
-            f"{f'{chr(10)}'.join(offers) + f'{chr(10)}' if offers else ''}"
-            f"🛒 <a href='{cta_url}'>BUY NOW BEFORE IT'S GONE</a>\n\n"
-            f"{disclosure}\n"
-            f"#{tracking_tag}"
-        )
-
+    caption_lines.append("\n <i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_lines.append(" <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    
+    caption = "\n".join(caption_lines)
+    
+    # Ensure total caption is under 850 characters
+    if len(caption) > 850:
+        caption = caption[:847] + "..."
+        
     return caption
-
 
 def build_inline_buttons(deal: dict) -> list:
     """Formats mock Telegram inline keyboard markup payload."""

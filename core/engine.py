@@ -799,6 +799,15 @@ def scrape_product_details(url: str, driver=None) -> dict:
             elif reviews and reviews < 15:
                 review_grade += " (Low Sample)"
             
+        if image_url:
+            image_url = image_url.strip()
+            if image_url.startswith("//"):
+                image_url = "https:" + image_url
+            if "amazon" in image_url.lower():
+                image_url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', image_url)
+            elif "flipkart" in image_url.lower():
+                image_url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', image_url)
+            
         return {
             "platform": platform,
             "title": title,
