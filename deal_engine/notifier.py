@@ -111,12 +111,12 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     caption_parts.append(f"💳 <b>Deal Price:</b> ₹{price_val:,}")
     
     if mrp_val > price_val:
-        caption_parts.append(f"  <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_parts.append(f"<b>MRP:</b> <s>₹{mrp_val:,}</s>")
         caption_parts.append(f"🔥 <b>Discount:</b> {discount_pct}% OFF")
         caption_parts.append(f"💰 <b>You Save:</b> ₹{savings:,}")
         
-    caption_parts.append("\n  <i>Verified Lowest Price | Limited Stock</i>\n")
-    caption_parts.append("  <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    caption_parts.append(f"\n<i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_parts.append(f"📌 <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
     caption = "\n".join(caption_parts)
     if len(caption) > 850:
