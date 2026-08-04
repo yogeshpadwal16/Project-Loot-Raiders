@@ -384,14 +384,16 @@ def scrape_product_lightweight(url: str) -> dict:
                     result["price"] = clean_number(price_el.text())
                     
                 # MRP
-                mrp_el = None
-                for sel in ["span.a-price.a-text-price span.a-offscreen", "span.basisPrice span.a-offscreen", "span#listPrice"]:
+                mrp_val = 0
+                for sel in ["span.basisPrice span.a-offscreen", "span.a-price.a-text-price span.a-offscreen", "span#listPrice"]:
                     el = tree.css_first(sel)
                     if el:
-                        mrp_el = el
-                        break
-                if mrp_el:
-                    result["mrp"] = clean_number(mrp_el.text())
+                        val = clean_number(el.text())
+                        if val > result["price"]:
+                            mrp_val = val
+                            break
+                if mrp_val > 0:
+                    result["mrp"] = mrp_val
                 else:
                     if result["price"] > 0:
                         result["mrp"] = int(result["price"] * 1.3) # Fallback
@@ -426,9 +428,16 @@ def scrape_product_lightweight(url: str) -> dict:
                     result["price"] = clean_number(price_el.text())
                     
                 # MRP
-                mrp_el = tree.css_first("div._3I9_ww") or tree.css_first("div.yC0YEv") or tree.css_first("div._2pLDXM")
-                if mrp_el:
-                    result["mrp"] = clean_number(mrp_el.text())
+                mrp_val = 0
+                for sel in ["div._3I9_ww", "div.yC0YEv", "div._2pLDXM"]:
+                    el = tree.css_first(sel)
+                    if el:
+                        val = clean_number(el.text())
+                        if val > result["price"]:
+                            mrp_val = val
+                            break
+                if mrp_val > 0:
+                    result["mrp"] = mrp_val
                 else:
                     if result["price"] > 0:
                         result["mrp"] = int(result["price"] * 1.3)
