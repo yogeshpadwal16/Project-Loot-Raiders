@@ -74,9 +74,12 @@
       "flipkart_clearance_master_feed": 85
     }
   },
+  "source_channels": [
+    "Loot_shoppingdeals123"
+  ],
   "force_web_scraper": true,
   "last_digest_date": "2026-08-03",
-  "last_growth_check_time": 1785769247.7173514,
+  "last_growth_check_time": 1785848818.0016596,
   "cloaker_domain": null,
   "extensions": {
     "smart_filter": {

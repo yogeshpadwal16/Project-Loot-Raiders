@@ -50,7 +50,7 @@ def build_html_caption(deal: dict, ab_variant: str = "CARD_BLOCKQUOTE", tracking
         caption_lines.append(f"💰 <b>You Save:</b> ₹{savings:,}")
         
     caption_lines.append("\n  <i>Verified Lowest Price | Limited Stock</i>\n")
-    caption_lines.append("📌 <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    caption_lines.append("  <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
     caption = "\n".join(caption_lines)
     
