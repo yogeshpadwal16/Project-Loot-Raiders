@@ -399,21 +399,54 @@ def scrape_product_lightweight(url: str) -> dict:
                         result["mrp"] = int(result["price"] * 1.3) # Fallback
 
                 # Image
-                for sel in ["img#landingImage", "img#imgBlkFront", "img#main-image", "div#imgTagWrapperId img"]:
-                    el = tree.css_first(sel)
-                    if el:
-                        dyn = el.attributes.get("data-a-dynamic-image")
-                        if dyn:
-                            try:
-                                urls = list(json.loads(dyn).keys())
-                                if urls:
-                                    result["image_url"] = urls[0]
+                from plugins.generic import clean_and_upgrade_image_url
+                # 1. OpenGraph/Twitter tags
+                og_image = tree.css_first('meta[property="og:image"]') or tree.css_first('meta[name="twitter:image"]')
+                if og_image:
+                    content = og_image.attributes.get("content")
+                    if content and "images/I/" in content:
+                        cleaned = clean_and_upgrade_image_url(content)
+                        if cleaned: result["image_url"] = cleaned
+
+                # 2. Amazon Image IDs & selectors
+                if not result["image_url"]:
+                    for sel in ["img#landingImage", "img#imgBlkFront", "img[data-old-hires]", "img#main-image", "div#imgTagWrapperId img"]:
+                        el = tree.css_first(sel)
+                        if el:
+                            dyn = el.attributes.get("data-a-dynamic-image")
+                            if dyn:
+                                try:
+                                    urls = list(json.loads(dyn).keys())
+                                    if urls:
+                                        cleaned = clean_and_upgrade_image_url(urls[0])
+                                        if cleaned:
+                                            result["image_url"] = cleaned
+                                            break
+                                except Exception:
+                                    pass
+                            
+                            old_hires = el.attributes.get("data-old-hires")
+                            if old_hires:
+                                cleaned = clean_and_upgrade_image_url(old_hires)
+                                if cleaned:
+                                    result["image_url"] = cleaned
                                     break
-                            except Exception:
-                                pass
-                        src = el.attributes.get("src")
-                        if src and src.startswith("http") and "spinner" not in src:
-                            result["image_url"] = src
+                                    
+                            src = el.attributes.get("src")
+                            if src and src.startswith("http") and "spinner" not in src:
+                                cleaned = clean_and_upgrade_image_url(src)
+                                if cleaned:
+                                    result["image_url"] = cleaned
+                                    break
+                
+                # 3. Regex match for high-res Amazon image CDN pattern
+                if not result["image_url"]:
+                    cdn_pattern = r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9+%=-]+(?:\.[_A-Za-z0-9-]+)*(?:\.jpg|\.png|\.webp)'
+                    matches = re.findall(cdn_pattern, res.text)
+                    for m in matches:
+                        cleaned = clean_and_upgrade_image_url(m)
+                        if cleaned:
+                            result["image_url"] = cleaned
                             break
                             
             elif "flipkart" in url_lower:
