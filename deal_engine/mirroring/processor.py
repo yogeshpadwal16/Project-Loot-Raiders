@@ -211,32 +211,64 @@ class DealMirrorProcessor:
                         if not title:
                             title = "Competitor Deal"
                 
-                # Fallback to lightweight scraper if needed
+                # Fallback to lightweight scraper if price is 0 or image is missing
                 scraped = {}
-                if price == 0:
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] No price from message text — attempting lightweight HTTP scrape")
+                if price == 0 or not img_url:
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] price={price} or image is missing — attempting lightweight HTTP scrape")
                     from deal_engine.deal_processor import scrape_product_lightweight
                     scraped_data = scrape_product_lightweight(expanded_url)
                     if scraped_data:
                         scraped = scraped_data
                         if not title or title == "Competitor Deal":
                             title = scraped_data.get("title", "Product Deal")
-                        price = scraped_data.get("price", 0)
-                        mrp = scraped_data.get("mrp", 0)
-                        img_url = scraped_data.get("image_url", "")
+                        if price == 0:
+                            price = scraped_data.get("price", 0)
+                        if mrp == 0:
+                            mrp = scraped_data.get("mrp", 0)
+                        if not img_url:
+                            img_url = scraped_data.get("image_url", "")
                 
-                # Unrestricted Deal Mirroring: Format and post anyway if price extraction fails
-                if price == 0:
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Could not extract price. Formatting anyway using original competitor text.")
-                    price = 0
-                    mrp = 0
-                    discount = 0.0
-                    if not title or title == "Competitor Deal":
-                        title = message.raw_text[:120] if message.raw_text else "Competitor Deal"
+                # Extract the price directly from the original Telegram message text using regex if scraping failed
+                if price == 0 and message.raw_text:
+                    match_prices = re.findall(r'(?:Rs\.?|₹)\s*([\d,]+)', message.raw_text, flags=re.IGNORECASE)
+                    if match_prices:
+                        try:
+                            price = int(match_prices[0].replace(',', ''))
+                            if len(match_prices) > 1:
+                                mrp = int(match_prices[1].replace(',', ''))
+                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted price {price} from message text.")
+                        except Exception:
+                            pass
+                
+                # If no price can be extracted from either the web page or the message text, DISCARD the deal silently
+                if price <= 0 or price is None:
+                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Discarding deal silently: No valid price extracted.")
+                    continue
+                
+                # Validate image_url: If resolved URL is logo/banner, fallback to Telegram competitor photo or skip
+                is_valid_product_image = True
+                if img_url:
+                    img_lower = img_url.lower()
+                    if "logo" in img_lower or "banner" in img_lower or "default" in img_lower:
+                        is_valid_product_image = False
+                    elif "amazon" in img_lower and "images/i/" not in img_lower:
+                        is_valid_product_image = False
                 else:
-                    discount = 0.0
-                    if mrp > price:
-                        discount = ((mrp - price) / mrp) * 100.0
+                    is_valid_product_image = False
+                    
+                if not is_valid_product_image:
+                    raw_photo = message.media_file_id if message.media_file_id else message.metadata.get("photo_url")
+                    if raw_photo:
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Resolved image is static logo/banner. Falling back to competitor raw photo: {raw_photo}")
+                        img_url = raw_photo
+                    else:
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Skip: Invalid product image (logo/banner) and no raw competitor photo fallback.")
+                        continue
+                
+                discount = 0.0
+                if mrp > price:
+                    discount = ((mrp - price) / mrp) * 100.0
+
                     
                 rating = scraped.get("rating")
                 reviews = scraped.get("reviews")

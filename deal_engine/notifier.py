@@ -50,8 +50,6 @@ def log_failure(component: str, context: str, err: Exception, severity: str = "E
         f"\n==========================================================================\n"
         f"🚨 FAILURE REPORTED:\n"
         f"📅 Timestamp: {timestamp}\n"
-        f"🚨 FAILURE REPORTED:\n"
-        f"📅 Timestamp: {timestamp}\n"
         f"🔌 Component: {component}\n"
         f"🔍 Context: {context}\n"
         f"⚡ Root Cause: {type(err).__name__} - {str(err)}\n"
@@ -111,38 +109,18 @@ def generate_smart_caption(title: str, price: int, mrp: int, discount: float, fi
     caption_parts.append(f"💳 <b>Deal Price:</b> ₹{price_val:,}")
     
     if mrp_val > price_val:
-        caption_parts.append(f"<b>MRP:</b> <s>₹{mrp_val:,}</s>")
-        caption_parts.append(f"🔥 <b>Discount:</b> {discount_pct}% OFF")
-        caption_parts.append(f"💰 <b>You Save:</b> ₹{savings:,}")
+        caption_parts.append(f" <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_parts.append(f" <b>Discount:</b> {discount_pct}% OFF")
+        caption_parts.append(f" <b>You Save:</b> ₹{savings:,}")
         
-    caption_parts.append(f"\n<i>Verified Lowest Price | Limited Stock</i>\n")
-    caption_parts.append(f"📌 <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    caption_parts.append(f"\n <i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_parts.append(f" <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
     caption = "\n".join(caption_parts)
     if len(caption) > 850:
         caption = caption[:847] + "..."
         
     return caption
-    
-    # Deal score
-    rating_score = deal_score / 10.0
-    stars = "★" * int(round(rating_score / 2)) + "☆" * (5 - int(round(rating_score / 2)))
-    parts.append(f"💎 <b>Loot Score:</b>   <code>{rating_score:.1f}/10.0</code> ({stars})")
-    parts.append("")
-    
-    # Urgency hook
-    parts.append(rng.choice(urgency_hooks))
-    parts.append("")
-    
-    # CTA link with variant hash tag for tracking
-    cta = rng.choice(cta_texts)
-    cta_url = f"{final_url}#{tracking_tag}"
-    parts.append(f"<a href='{cta_url}'>{cta}</a>")
-    
-    # Subtle hashtag tag for analytics
-    parts.append(f"\n#{tracking_tag}")
-    
-    return "\n".join(parts)
 
 
 def send_n8n_webhook(webhook_url: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, short_url: str, deal_score: float) -> bool:
@@ -469,6 +447,20 @@ def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
 def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
+    
+    # 1. Quality Firewall validation check
+    try:
+        from compliance_guard import check_quality_firewall
+    except ImportError:
+        try:
+            from loot_raiders.compliance_guard import check_quality_firewall
+        except ImportError:
+            check_quality_firewall = None
+            
+    if check_quality_firewall:
+        if not check_quality_firewall(price, title, img_url):
+            return False
+
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
     buy_url = get_short_deal_link(final_url, unique_id)
     
@@ -1152,13 +1144,16 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
         bot_token = settings.get("telegram_bot_token")
         
         # Route to target Telegram channel dynamically based on keywords/category
-        try:
-            from utils.router import resolve_target_channel_id
-            chat_id = resolve_target_channel_id(title, settings)
-            logging.info(f"[Router] Resolved channel for '{title[:30]}': {chat_id}")
-        except Exception as router_err:
-            logging.warning(f"Channel routing failed: {router_err}")
-            chat_id = settings.get("telegram_chat_id")
+        if job.get("is_mirror"):
+            chat_id = "@LootRaidersDeals"
+        else:
+            try:
+                from utils.router import resolve_target_channel_id
+                chat_id = resolve_target_channel_id(title, settings)
+                logging.info(f"[Router] Resolved channel for '{title[:30]}': {chat_id}")
+            except Exception as router_err:
+                logging.warning(f"Channel routing failed: {router_err}")
+                chat_id = settings.get("telegram_chat_id")
             
         discord_webhook = settings.get("discord_webhook_url")
     
@@ -1436,6 +1431,7 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
         return True
 
 def notifier_worker():
+    global queue_counter
     logging.info("Background Alert Dispatch Worker Activated.")
     last_digest_check = 0.0
     last_growth_check = 0.0

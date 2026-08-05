@@ -100,7 +100,33 @@ class LootRaidersOrchestrator:
     async def send_telegram_photo(self, photo_url: str, caption: str, reply_markup: dict = None):
         """Helper to send a photo message using the configured Bot Token."""
         import httpx
+        
+        # 1. Quality Firewall check by parsing caption
+        try:
+            import re
+            from loot_raiders.compliance_guard import check_quality_firewall
+            
+            lines = [l.strip() for l in caption.split('\n') if l.strip()]
+            parsed_title = ""
+            parsed_price = None
+            
+            if len(lines) > 1:
+                parsed_title = re.sub(r'<[^>]*>', '', lines[1]).strip()
+                
+            for line in lines:
+                if "deal price" in line.lower() or "price" in line.lower():
+                    price_match = re.search(r'(?:₹|rs\.?)\s*([\d,]+)', line, flags=re.IGNORECASE)
+                    if price_match:
+                        parsed_price = int(price_match.group(1).replace(',', ''))
+                        break
+                        
+            if not check_quality_firewall(parsed_price, parsed_title, photo_url):
+                return None
+        except Exception as firewall_err:
+            logger.error(f"Quality firewall in send_telegram_photo failed: {firewall_err}")
+
         url = f"https://api.telegram.org/bot{self.bot_token}/sendPhoto"
+
         
         # Immediate fallback if photo_url is missing or invalid
         if not photo_url or not photo_url.startswith("http"):

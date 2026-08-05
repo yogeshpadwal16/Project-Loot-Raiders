@@ -50,3 +50,11 @@ def resolve_target_channel_id(product_title: str, default_chat_id: str = None) -
     if resolved == CHANNEL_MAP["DEFAULT"]:
         return default_chat
     return resolved
+
+
+try:
+    from compliance_guard import check_quality_firewall
+except ImportError:
+    from loot_raiders.compliance_guard import check_quality_firewall
+
+

@@ -28,11 +28,19 @@ def clean_and_upgrade_image_url(url: str) -> str:
     url = url.strip()
     if url.startswith("//"):
         url = "https:" + url
+    
+    url_lower = url.lower()
+    if "logo" in url_lower or "banner" in url_lower or "default" in url_lower:
+        return ""
+    if "amazon" in url_lower and "images/i/" not in url_lower:
+        return ""
+
     if "amazon" in url.lower():
         url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', url)
     elif "flipkart" in url.lower():
         url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', url)
     return url
+
 
 def auto_heal_with_dom_analysis(driver, platform_id: str, config: dict, settings: dict) -> bool:
     """
