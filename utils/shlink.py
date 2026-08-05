@@ -65,7 +65,7 @@ class ShlinkClient:
             res = requests.get(endpoint, headers=self.headers, params=params, timeout=4)
             if res.status_code == 200:
                 data = res.json()
-                visits_obj = data.get("visits", {})
+                visits_obj = data.get("visits") or {}
                 total = visits_obj.get("pagination", {}).get("totalItems")
                 if total is None:
                     total = visits_obj.get("total")

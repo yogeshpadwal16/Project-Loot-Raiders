@@ -61,7 +61,9 @@ def draw_sparkline_overlay(
     return Image.alpha_composite(img, overlay)
 
 def generate_deal_image(unique_id: str, platform: str, title: str, price: int, mrp: int, discount: float, original_image_url: str, is_verified_low: bool, deal_score: float) -> str:
-    return None
+    # Output file path
+    os.makedirs(SCRATCH_DIR, exist_ok=True)
+    out_file = os.path.join(SCRATCH_DIR, f"{unique_id}_deal.jpg")
     
     # 1. Initialize 800x1000 Canvas with Slate-to-Indigo Linear Gradient Background
     canvas = Image.new('RGB', (800, 1000), color='#0b0f19')
