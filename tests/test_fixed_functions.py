@@ -159,5 +159,37 @@ class TestFixedFunctions(unittest.TestCase):
         # Confirm cleanup: file must be deleted from filesystem
         self.assertFalse(os.path.exists(attach_path))
 
+    # ---------------------------------------------------------
+    # TEST 4: Quality Firewall Validation and Logs
+    # ---------------------------------------------------------
+    def test_quality_firewall_validation_and_logs(self):
+        try:
+            from compliance_guard import check_quality_firewall
+        except ImportError:
+            from loot_raiders.compliance_guard import check_quality_firewall
+
+        # Test Case A: Invalid price (0)
+        with self.assertLogs(level="WARNING") as log_watcher:
+            res = check_quality_firewall(0, "Apple iPhone 15 Pro", "https://m.media-amazon.com/images/I/sample.jpg")
+            self.assertFalse(res)
+            self.assertTrue(any("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]" in log for log in log_watcher.output))
+
+        # Test Case B: Dummy title ("Product Deal")
+        with self.assertLogs(level="WARNING") as log_watcher:
+            res = check_quality_firewall(499, "Product Deal", "https://m.media-amazon.com/images/I/sample.jpg")
+            self.assertFalse(res)
+            self.assertTrue(any("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]" in log for log in log_watcher.output))
+
+        # Test Case C: Generic store logo image
+        with self.assertLogs(level="WARNING") as log_watcher:
+            res = check_quality_firewall(499, "Apple iPhone 15 Pro", "https://m.media-amazon.com/images/I/amazon-logo.png")
+            self.assertFalse(res)
+            self.assertTrue(any("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]" in log for log in log_watcher.output))
+
+        # Test Case D: Valid payload
+        res = check_quality_firewall(499, "Apple iPhone 15 Pro", "https://m.media-amazon.com/images/I/sample.jpg")
+        self.assertTrue(res)
+
 if __name__ == "__main__":
     unittest.main()
+
