@@ -457,18 +457,31 @@ def sync_database_to_json():
         db.close()
 
 def scrape_product_details(url: str, driver=None) -> dict:
-    from selenium.webdriver.common.by import By
-    import time
-    import re
-    import json
+    """
+    Scrapes product details using Lightweight HTTP Fast-Path first (<1s),
+    automatically falling back to Playwright Chromium if lightweight scrape fails.
+    """
+    if not url:
+        return {"title": "Product Deal", "price": 0, "mrp": 0, "image_url": ""}
+
+    # 0. Lightweight Fast-Path (<1 second)
+    try:
+        from deal_engine.deal_processor import scrape_product_lightweight
+        fast_res = scrape_product_lightweight(url)
+        if fast_res and fast_res.get("price", 0) > 0 and fast_res.get("image_url"):
+            logging.info(f"[Fast-Path Scraper] Fast-path PASS for {url[:50]} (Price: ₹{fast_res['price']})")
+            return fast_res
+    except Exception as fast_err:
+        logging.warning(f"[Fast-Path Scraper] Fast-path skipped/failed, falling back to Playwright: {fast_err}")
+
+    # Fallback: Playwright Chromium browser rendering
+    from utils.playwright_adapter import get_playwright_driver
+    settings = load_settings()
+    driver = get_playwright_driver(settings)
     
-    local_driver = False
-    if driver is None:
-        driver = init_driver()
-        local_driver = True
     try:
         driver.get(url)
-        time.sleep(5)  # Wait for dynamic JS content to fully load
+        time.sleep(3)  # Reduced wait time for browser fallback to fully load
         
         title = ""
         price = 0
