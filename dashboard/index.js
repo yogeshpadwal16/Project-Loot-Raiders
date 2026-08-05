@@ -1348,10 +1348,15 @@ function initJackpotSpinner() {
 
 function initWatchlist() {
     const addInput = document.getElementById('watchlist-add-input');
+    const priceInput = document.getElementById('watchlist-add-price');
     const addBtn = document.getElementById('watchlist-add-btn');
     const container = document.getElementById('watchlist-container');
     const countBadge = document.getElementById('watchlist-count-badge');
     if (!addInput || !addBtn || !container || !countBadge) return;
+
+    if (window.Notification && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
 
     let watchlist = JSON.parse(localStorage.getItem('smart_watchlist') || '[]');
 
@@ -1378,12 +1383,16 @@ function initWatchlist() {
             const discLabel = matchingDeal ? `${matchingDeal.discount}% OFF` : 'Checking...';
             const stateColor = matchingDeal ? 'var(--cred-primary)' : 'var(--cred-accent)';
             const titleLabel = matchingDeal ? (matchingDeal.title.substring(0, 32) + '...') : item.id;
+            const targetLabel = item.target_price ? `<span style="font-size: 0.65rem; color: #aaa; margin-left: 6px;">Target: ₹${item.target_price}</span>` : '';
 
             html += `
                 <div class="watchlist-item" style="display: flex; justify-content: space-between; align-items: center; background: var(--md-sys-color-surface-container-high); border: 1px solid var(--md-sys-color-outline); padding: 8px 12px; border-radius: 12px; margin-bottom: 6px;">
                     <div style="display: flex; flex-direction: column; gap: 2px;">
                         <span style="font-size: 0.8rem; font-weight: bold; color: white;">${titleLabel}</span>
-                        <span style="font-size: 0.7rem; color: ${stateColor}; font-weight: bold;"><i class="fa-solid fa-tag"></i> ${priceLabel} (${discLabel})</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 0.7rem; color: ${stateColor}; font-weight: bold;"><i class="fa-solid fa-tag"></i> ${priceLabel} (${discLabel})</span>
+                            ${targetLabel}
+                        </div>
                     </div>
                     <button class="btn-remove-watchlist" data-id="${item.id}" style="background: transparent; border: none; color: var(--cred-error); cursor: pointer; padding: 4px;"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
@@ -1407,16 +1416,23 @@ function initWatchlist() {
         const id = addInput.value.trim().toUpperCase();
         if (!id) return;
         
+        const targetPriceVal = priceInput ? parseInt(priceInput.value.trim()) : 0;
+        
         if (watchlist.some(item => item.id === id)) {
             showToast('Item is already in your watchlist!', 'warning');
             return;
         }
 
-        watchlist.push({ id: id, added_at: Date.now() });
+        watchlist.push({ 
+            id: id, 
+            target_price: targetPriceVal || null, 
+            added_at: Date.now() 
+        });
         saveWatchlist();
         updateWatchlistUI();
         addInput.value = '';
-        showToast(`Added ${id} to Smart Watchlist!`);
+        if (priceInput) priceInput.value = '';
+        showToast(targetPriceVal ? `Tracking ${id} with target price ₹${targetPriceVal}!` : `Added ${id} to Smart Watchlist!`);
     });
 
     updateWatchlistUI();
@@ -1541,6 +1557,7 @@ function init() {
     fetchLootMapEvents();
     initJackpotSpinner();
     initWatchlist();
+    initRealTimeDealsStream();
     
     if (IS_STATIC_MODE) {
         // Statically poll deals file every minute
@@ -1556,7 +1573,7 @@ function init() {
     
     // Set periodic polling
     setInterval(fetchStatus, 3000);
-    setInterval(fetchDeals, 5000);
+    setInterval(fetchDeals, 30000);
     setInterval(fetchClicks, 4000);
     setInterval(fetchScraperHealth, 5000);
     setInterval(fetchAnalytics, 6000);
@@ -2344,5 +2361,78 @@ document.addEventListener('DOMContentLoaded', () => {
         requestPushNotificationPermission();
     }
 });
+
+
+function initRealTimeDealsStream() {
+    if (IS_STATIC_MODE) return;
+    
+    const streamUrl = `${API_BASE}/api/deals/stream`;
+    console.log('Connecting to real-time deals stream:', streamUrl);
+    
+    const eventSource = new EventSource(streamUrl);
+    
+    eventSource.onmessage = function(event) {
+        try {
+            const newDeal = JSON.parse(event.data);
+            console.log('Real-time deal received:', newDeal);
+            
+            // Check if this deal is already in currentDeals
+            const existsIdx = currentDeals.findIndex(d => d.id === newDeal.id);
+            if (existsIdx !== -1) {
+                currentDeals[existsIdx] = { ...currentDeals[existsIdx], ...newDeal };
+            } else {
+                currentDeals.unshift(newDeal);
+                showToast(`🔥 Real-time Drop: ${newDeal.title.substring(0, 30)}...`, 'success');
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-600.wav');
+                    audio.volume = 0.3;
+                    audio.play();
+                } catch(soundErr) {}
+            }
+            
+            // Re-render Spotlight and deals list
+            window.activeDeals = currentDeals;
+            applyFiltersAndRender();
+            
+            // Perform watchlist price alerts check
+            checkWatchlistAlerts(newDeal);
+        } catch (err) {
+            console.error('Error parsing stream event data:', err);
+        }
+    };
+    
+    eventSource.onerror = function(err) {
+        console.error('EventSource failed, reconnecting in 5s...', err);
+        eventSource.close();
+        setTimeout(initRealTimeDealsStream, 5000);
+    };
+}
+
+function checkWatchlistAlerts(newDeal) {
+    let watchlist = JSON.parse(localStorage.getItem('smart_watchlist') || '[]');
+    const item = watchlist.find(i => i.id === newDeal.id);
+    if (item) {
+        const dealPrice = parseInt(newDeal.price);
+        const targetPrice = item.target_price ? parseInt(item.target_price) : null;
+        
+        if (targetPrice === null || dealPrice <= targetPrice) {
+            showToast(`🚨 PRICE DROP: ${newDeal.title.substring(0, 25)}... is now ₹${dealPrice}!`, 'warning');
+            
+            try {
+                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/911/911-600.wav');
+                audio.volume = 0.5;
+                audio.play();
+            } catch(e) {}
+            
+            if (window.Notification && Notification.permission === 'granted') {
+                new Notification(`Loot Raiders Alert! 🚨`, {
+                    body: `${newDeal.title.substring(0, 50)} is down to ₹${dealPrice}! Click to buy now.`,
+                    icon: newDeal.image_url || '/icon-192.png'
+                });
+            }
+        }
+    }
+}
+
 
 
