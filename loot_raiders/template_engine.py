@@ -45,12 +45,12 @@ def build_html_caption(deal: dict, ab_variant: str = "CARD_BLOCKQUOTE", tracking
     
     # If MRP is missing or <= price, suppress MRP, Discount, and Savings cleanly
     if mrp_val > price_val:
-        caption_lines.append(f"  <b>MRP:</b> <s>₹{mrp_val:,}</s>")
-        caption_lines.append(f"🔥 <b>Discount:</b> {discount_pct}% OFF")
-        caption_lines.append(f"💰 <b>You Save:</b> ₹{savings:,}")
+        caption_lines.append(f" <b>MRP:</b> <s>₹{mrp_val:,}</s>")
+        caption_lines.append(f" <b>Discount:</b> {discount_pct}% OFF")
+        caption_lines.append(f" <b>You Save:</b> ₹{savings:,}")
         
-    caption_lines.append("\n  <i>Verified Lowest Price | Limited Stock</i>\n")
-    caption_lines.append("  <i>Join @LootRaidersDeals for live price drop alerts!</i>")
+    caption_lines.append("\n <i>Verified Lowest Price | Limited Stock</i>\n")
+    caption_lines.append(" <i>Join @LootRaidersDeals for live price drop alerts!</i>")
     
     caption = "\n".join(caption_lines)
     
@@ -65,10 +65,23 @@ def build_inline_buttons(deal: dict) -> dict:
     buy_url = deal.get("url", "")
     price = deal.get("price", 0)
     price_val = int(price) if price else 0
-    return {
-        "inline_keyboard": [
-            [
-                {"text": f"🛍 BUY NOW — ₹{price_val:,} 🛍", "url": buy_url}
-            ]
+    auto_cart_url = deal.get("auto_cart_url")
+    
+    inline_keyboard = [
+        [
+            {"text": f"🛍 BUY NOW — ₹{price_val:,} 🛍", "url": buy_url}
         ]
     ]
+    
+    try:
+        from config.settings import load_settings
+        settings = load_settings()
+    except Exception:
+        settings = {}
+        
+    if settings.get("enable_auto_cart_button", False) and auto_cart_url:
+        inline_keyboard.append([
+            {"text": "🛒 ADD TO CART 🛒", "url": auto_cart_url}
+        ])
+        
+    return {"inline_keyboard": inline_keyboard}

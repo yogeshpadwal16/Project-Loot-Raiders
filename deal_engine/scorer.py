@@ -87,6 +87,42 @@ def get_predictive_buying_advice(product_id: str, current_price: int) -> dict:
     finally:
         db.close()
 
+def get_gemini_ai_desirability_score(title: str, price: int, mrp: int, discount: float, platform: str) -> float:
+    """
+    Calls Gemini API to rank the desirability of a deal (0-100) based on title, price, discount.
+    """
+    settings = load_settings()
+    api_key = settings.get("gemini_api_key", "")
+    if not api_key or "YOUR_" in api_key or api_key.strip() == "":
+        return None
+
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        prompt = f"""
+        You are an expert shopping deal evaluator. Rate the desirability of this deal on a scale of 0.0 to 100.0.
+        A score of 100.0 means a massive pricing error, price glitch, or legendary low price on a popular brand.
+        A score of 50.0 is an average discount. A score of 0.0 is a bad deal or overpriced.
+
+        Product: {title}
+        Platform: {platform}
+        Price: {price}
+        MRP: {mrp}
+        Discount: {discount}%
+
+        Respond with only a float number (e.g. 87.5).
+        """
+        response = model.generate_content(prompt)
+        score_str = response.text.strip()
+        match = re.search(r'[\d\.]+', score_str)
+        if match:
+            return float(match.group(0))
+    except Exception as e:
+        logging.error(f"Failed to get Gemini AI desirability score: {e}")
+    return None
+
 def get_heuristic_ai_ranking(
     title: str,
     platform: str,
@@ -284,16 +320,21 @@ def calculate_deal_score(
         finally:
             db.close()
 
-    # Query heuristic AI ranking score (no external API)
-    ai_score = get_heuristic_ai_ranking(
-        title=title,
-        platform=platform,
-        price=price,
-        mrp=mrp,
-        discount=discount,
-        is_verified_low=is_verified_low,
-        product_id=product_id
-    )
+    # Query optional Gemini AI desirability score, or fall back to heuristic AI ranking score
+    ai_score = None
+    if settings.get("gemini_ai_scoring_enabled", False):
+        ai_score = get_gemini_ai_desirability_score(title, price, mrp, discount, platform)
+        
+    if ai_score is None:
+        ai_score = get_heuristic_ai_ranking(
+            title=title,
+            platform=platform,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            is_verified_low=is_verified_low,
+            product_id=product_id
+        )
 
     # Dynamic Weight Normalization based on whether AI score is available
     if ai_score is not None:

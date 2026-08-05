@@ -2,7 +2,6 @@ import time
 import re
 import urllib.parse
 import logging
-from selenium.webdriver.common.by import By
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from deal_engine.scorer import calculate_deal_score
@@ -205,6 +204,24 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
         logging.info(f"[DB Save] Committing database transaction...")
         db.commit()
         logging.info(f"[DB Save] Database transaction committed successfully for: {unique_id}")
+        
+        # Broadcast deal to SSE stream
+        try:
+            from web.server import broadcast_sse_event
+            broadcast_sse_event({
+                "id": unique_id,
+                "platform": platform,
+                "title": title,
+                "price": price,
+                "mrp": mrp,
+                "discount": discount,
+                "image_url": img_url,
+                "url": final_url,
+                "is_verified_low": is_verified_low,
+                "deal_score": deal_score
+            })
+        except Exception:
+            pass
     except Exception as e:
         db.rollback()
         logging.error(f"Failed to save deal to database: {e}")
@@ -232,6 +249,7 @@ def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: st
         db.close()
 
 def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
+    from selenium.webdriver.common.by import By
     settings = load_settings()
     external_enabled = settings.get("external_price_tracker_enabled", False)
     
