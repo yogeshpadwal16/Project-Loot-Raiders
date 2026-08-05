@@ -71,3 +71,6 @@ TELEGRAM_STRING_SESSION.txt
 
 # Vector database storage
 database/chroma_db/
+
+# Local OmniRoute Gateway Clone
+/OmniRoute/
