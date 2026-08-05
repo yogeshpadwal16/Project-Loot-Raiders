@@ -660,32 +660,78 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 
         # Images
         if not image_url:
-            selectors = []
+            from plugins.generic import clean_and_upgrade_image_url
             if platform == "amazon":
-                selectors = ["#landingImage", "#imgBlkFront", ".imgTagWrapper img", "#main-image"]
-            elif platform == "flipkart":
-                selectors = ["img.DByoR4", "img._396cs4", "img.jfZQxf", "div.CXW8mj img"]
-            elif platform == "myntra":
-                selectors = ["img.pdp-image", ".image-grid-image"]
-            elif platform == "ajio":
-                selectors = ["img.img-alignment", ".img-container img"]
-            elif platform == "meesho":
-                selectors = ["img[class*='ProductImage']"]
-            elif platform == "tatacliq":
-                selectors = ["img.ProductDetails__image"]
-            elif platform == "jiomart":
-                selectors = ["img#product-image", "img.product-image"]
+                # 1. OpenGraph/Twitter tags
+                for sel in ['meta[property="og:image"]', 'meta[name="twitter:image"]']:
+                    try:
+                        content = driver.find_element(By.CSS_SELECTOR, sel).get_attribute("content")
+                        if content and "images/I/" in content:
+                            cleaned = clean_and_upgrade_image_url(content)
+                            if cleaned:
+                                image_url = cleaned
+                                break
+                    except: pass
                 
-            for selector in selectors:
-                try:
-                    element = driver.find_element(By.CSS_SELECTOR, selector)
-                    for attr in ["data-src", "data-original", "data-img-src", "src"]:
-                        val = element.get_attribute(attr)
-                        if val and val.startswith("http"):
-                            image_url = val
-                            break
-                    if image_url: break
-                except: pass
+                # 2. Amazon Image IDs & selectors
+                if not image_url:
+                    selectors = ["#landingImage", "#imgBlkFront", "img[data-old-hires]", ".imgTagWrapper img", "#main-image"]
+                    for selector in selectors:
+                        try:
+                            element = driver.find_element(By.CSS_SELECTOR, selector)
+                            dyn = element.get_attribute("data-a-dynamic-image")
+                            if dyn:
+                                try:
+                                    import json
+                                    urls = list(json.loads(dyn).keys())
+                                    if urls:
+                                        cleaned = clean_and_upgrade_image_url(urls[0])
+                                        if cleaned:
+                                            image_url = cleaned
+                                            break
+                                except: pass
+                                
+                            old_hires = element.get_attribute("data-old-hires")
+                            if old_hires:
+                                cleaned = clean_and_upgrade_image_url(old_hires)
+                                if cleaned:
+                                    image_url = cleaned
+                                    break
+                                    
+                            src = element.get_attribute("src")
+                            if src and src.startswith("http") and "spinner" not in src:
+                                cleaned = clean_and_upgrade_image_url(src)
+                                if cleaned:
+                                    image_url = cleaned
+                                    break
+                        except: pass
+            else:
+                selectors = []
+                if platform == "flipkart":
+                    selectors = ["img.DByoR4", "img._396cs4", "img.jfZQxf", "div.CXW8mj img"]
+                elif platform == "myntra":
+                    selectors = ["img.pdp-image", ".image-grid-image"]
+                elif platform == "ajio":
+                    selectors = ["img.img-alignment", ".img-container img"]
+                elif platform == "meesho":
+                    selectors = ["img[class*='ProductImage']"]
+                elif platform == "tatacliq":
+                    selectors = ["img.ProductDetails__image"]
+                elif platform == "jiomart":
+                    selectors = ["img#product-image", "img.product-image"]
+                    
+                for selector in selectors:
+                    try:
+                        element = driver.find_element(By.CSS_SELECTOR, selector)
+                        for attr in ["data-src", "data-original", "data-img-src", "src"]:
+                            val = element.get_attribute(attr)
+                            if val and val.startswith("http"):
+                                cleaned = clean_and_upgrade_image_url(val)
+                                if cleaned:
+                                    image_url = cleaned
+                                    break
+                        if image_url: break
+                    except: pass
 
         # Fallback image extraction: scan for any large product image on page
         if not image_url:

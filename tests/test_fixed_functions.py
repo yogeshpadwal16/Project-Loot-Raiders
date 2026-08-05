@@ -184,7 +184,7 @@ class TestFixedFunctions(unittest.TestCase):
         with self.assertLogs(level="WARNING") as log_watcher:
             res = check_quality_firewall(499, "Apple iPhone 15 Pro", "https://m.media-amazon.com/images/I/amazon-logo.png")
             self.assertFalse(res)
-            self.assertTrue(any("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]" in log for log in log_watcher.output))
+            self.assertTrue(any("[REJECTED: NO REAL PRODUCT IMAGE]" in log for log in log_watcher.output))
 
         # Test Case D: Valid payload
         res = check_quality_firewall(499, "Apple iPhone 15 Pro", "https://m.media-amazon.com/images/I/sample.jpg")

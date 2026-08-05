@@ -130,7 +130,8 @@ class LootRaidersOrchestrator:
         
         # Immediate fallback if photo_url is missing or invalid
         if not photo_url or not photo_url.startswith("http"):
-            photo_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
+            logger.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
+            return None
             
         payload = {
             "chat_id": self.chat_id,

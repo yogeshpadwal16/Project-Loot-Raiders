@@ -7,15 +7,24 @@ logger = logging.getLogger("loot_raiders.media_scraper")
 
 def upgrade_image_url_to_high_res(url: str) -> str:
     """
-    Upgrades low-res thumbnail URLs to high-res versions for Amazon and Flipkart.
+    Upgrades low-res thumbnail URLs to high-res versions for Amazon and Flipkart, enforcing strict logo bans.
     """
     if not url:
-        return url
-    if "amazon" in url.lower():
-        # Replace thumbnail tags like ._AC_UL320_ or ._SX342_ with ._AC_SL1500_
+        return ""
+    url = url.strip()
+    if url.startswith("//"):
+        url = "https:" + url
+        
+    url_lower = url.lower()
+    banned_keywords = ["logo", "amazon-logo", "store_logo", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    if any(x in url_lower for x in banned_keywords):
+        return ""
+        
+    if "amazon" in url_lower:
+        if "images/i/" not in url_lower:
+            return ""
         url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', url)
-    elif "flipkart" in url.lower():
-        # Replace thumbnail dimensions like /128/128/ or /416/416/ with /832/832/
+    elif "flipkart" in url_lower:
         url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', url)
     return url
 
@@ -23,9 +32,8 @@ def fetch_opengraph_image(product_url: str, timeout: float = 4.0) -> str:
     """
     Immediate lightweight fallback scrape for og:image/twitter:image.
     """
-    default_banner = "https://lootraiders.com/assets/default_banner.jpg"
     if not product_url or not product_url.startswith("http"):
-        return default_banner
+        return ""
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -41,7 +49,7 @@ def fetch_opengraph_image(product_url: str, timeout: float = 4.0) -> str:
                         return upgrade_image_url_to_high_res(img_url)
     except Exception as e:
         logger.warning(f"Fallback scrape failed: {e}")
-    return default_banner
+    return ""
 
 class MediaScraper:
     def __init__(self, timeout_seconds: float = 4.0):

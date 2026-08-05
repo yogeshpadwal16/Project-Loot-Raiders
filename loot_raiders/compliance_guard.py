@@ -33,12 +33,28 @@ def check_quality_firewall(price, product_title: str, image_url: str) -> bool:
 
     # 3. DROP the post instantly if image_url is missing or a generic store logo
     if not image_url:
-        logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
+        logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
         return False
+        
     img_lower = str(image_url).lower()
-    if "amazon-logo" in img_lower or "logo" in img_lower or "default" in img_lower:
-        logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
+    banned_keywords = ["logo", "amazon-logo", "store_logo", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    if any(x in img_lower for x in banned_keywords):
+        logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
         return False
+
+    # Strict check for E-commerce CDNs
+    if "amazon" in img_lower:
+        if "images/i/" not in img_lower:
+            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
+            return False
+    elif "flipkart" in img_lower:
+        if "rukminim" not in img_lower:
+            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
+            return False
+    elif "myntra" in img_lower:
+        if "myntassets" not in img_lower:
+            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
+            return False
 
     return True
 

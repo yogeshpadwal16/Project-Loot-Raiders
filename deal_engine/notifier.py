@@ -379,6 +379,7 @@ def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
         from selectolax.parser import HTMLParser
         import json
         import re
+        from plugins.generic import clean_and_upgrade_image_url
 
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -397,7 +398,16 @@ def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
             
             # Amazon image parsing
             if "amazon" in url.lower():
-                for sel in ["img#landingImage", "img#imgBlkFront", "img#main-image", "div#imgTagWrapperId img"]:
+                # 1. OpenGraph/Twitter tags
+                og_image = tree.css_first('meta[property="og:image"]') or tree.css_first('meta[name="twitter:image"]')
+                if og_image:
+                    content = og_image.attributes.get("content")
+                    if content and "images/I/" in content:
+                        cleaned = clean_and_upgrade_image_url(content)
+                        if cleaned: return cleaned
+
+                # 2. Amazon Image IDs & selectors
+                for sel in ["img#landingImage", "img#imgBlkFront", "img[data-old-hires]", "img#main-image", "div#imgTagWrapperId img"]:
                     el = tree.css_first(sel)
                     if el:
                         dyn = el.attributes.get("data-a-dynamic-image")
@@ -405,13 +415,28 @@ def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
                             try:
                                 urls = list(json.loads(dyn).keys())
                                 if urls:
-                                    return urls[0]
+                                    cleaned = clean_and_upgrade_image_url(urls[0])
+                                    if cleaned: return cleaned
                             except Exception:
                                 pass
+                        
+                        old_hires = el.attributes.get("data-old-hires")
+                        if old_hires:
+                            cleaned = clean_and_upgrade_image_url(old_hires)
+                            if cleaned: return cleaned
+                            
                         src = el.attributes.get("src")
                         if src and src.startswith("http") and "spinner" not in src:
-                            return src
+                            cleaned = clean_and_upgrade_image_url(src)
+                            if cleaned: return cleaned
                 
+                # 3. Regex match for high-res Amazon image CDN pattern
+                cdn_pattern = r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9+%=-]+(?:\.[_A-Za-z0-9-]+)*(?:\.jpg|\.png|\.webp)'
+                matches = re.findall(cdn_pattern, res.text)
+                for m in matches:
+                    cleaned = clean_and_upgrade_image_url(m)
+                    if cleaned: return cleaned
+
                 # Regex fallback for Amazon image block in JS
                 match = re.search(r"colorImages\':\s*\{\s*\'initial\':\s*(\[.*?\])\s*\}", res.text)
                 if match:
@@ -420,7 +445,8 @@ def scrape_product_image_from_page(url: str, timeout: float = 3.0) -> str:
                         for img in images_data:
                             large_url = img.get("large") or img.get("hiRes")
                             if large_url:
-                                return large_url
+                                cleaned = clean_and_upgrade_image_url(large_url)
+                                if cleaned: return cleaned
                     except Exception:
                         pass
 
@@ -448,18 +474,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
     
-    # 1. Quality Firewall validation check
-    try:
-        from compliance_guard import check_quality_firewall
-    except ImportError:
-        try:
-            from loot_raiders.compliance_guard import check_quality_firewall
-        except ImportError:
-            check_quality_firewall = None
-            
-    if check_quality_firewall:
-        if not check_quality_firewall(price, title, img_url):
-            return False
+    # We will run the firewall check after trying to resolve missing images below
 
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
     buy_url = get_short_deal_link(final_url, unique_id)
@@ -485,7 +500,20 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 db.close()
         else:
             logging.info(f"Page image scrape failed or timed out. Proceeding without image.")
-        
+            
+    # 1. Quality Firewall validation check (relocated after image resolution attempts)
+    try:
+        from compliance_guard import check_quality_firewall
+    except ImportError:
+        try:
+            from loot_raiders.compliance_guard import check_quality_firewall
+        except ImportError:
+            check_quality_firewall = None
+            
+    if check_quality_firewall:
+        if not check_quality_firewall(price, title, img_url):
+            return False
+
     is_amazon = "amazon" in platform.lower()
     from deal_engine.scorer import check_if_glitch
     is_glitch = check_if_glitch(price, mrp, discount, unique_id)
@@ -755,26 +783,9 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    # 5. Native Photo Fallback using default banner (never send text-only)
-    try:
-        fallback_photo = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/1024px-Amazon_logo.svg.png"
-        endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-        payload = {
-            "chat_id": chat_id,
-            "photo": fallback_photo,
-            "caption": caption,
-            "parse_mode": "HTML",
-            "reply_markup": reply_markup_json
-        }
-        res = requests.post(endpoint, json=payload, timeout=25)
-        if res.status_code == 200:
-            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored fallback photo deal to Telegram: {truncated_title[:20]}...")
-            save_telegram_message_info(unique_id, res, caption)
-            return True
-        else:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Native photo send and fallback photo send both failed.")
-    except Exception as fallback_err:
-        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send fallback photo: {fallback_err}")
+    # 5. Do not send static logos as fallbacks - drop the deal instead
+    logging.warning(f"[REJECTED: NO REAL PRODUCT IMAGE] [CorrID: {unique_id}] Native photo send failed, dropping deal.")
+    return False
         
     return False
 

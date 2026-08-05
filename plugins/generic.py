@@ -30,14 +30,16 @@ def clean_and_upgrade_image_url(url: str) -> str:
         url = "https:" + url
     
     url_lower = url.lower()
-    if "logo" in url_lower or "banner" in url_lower or "default" in url_lower:
+    banned_keywords = ["logo", "amazon-logo", "store_logo", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    if any(x in url_lower for x in banned_keywords):
         return ""
-    if "amazon" in url_lower and "images/i/" not in url_lower:
-        return ""
-
-    if "amazon" in url.lower():
+        
+    if "amazon" in url_lower:
+        if "images/i/" not in url_lower:
+            return ""
+        # Upgrade thumbnails like ._AC_UL320_ or ._SX342_ to ._AC_SL1500_
         url = re.sub(r'\._[a-zA-Z0-9_-]+_(?=\.[a-zA-Z]+$)', '._AC_SL1500_', url)
-    elif "flipkart" in url.lower():
+    elif "flipkart" in url_lower:
         url = re.sub(r'/image/\d+/\d+/', '/image/832/832/', url)
     return url
 
