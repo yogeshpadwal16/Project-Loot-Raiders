@@ -389,7 +389,102 @@ class MultiClientMirrorListener:
                 except Exception as e:
                     logging.error(f"[Telethon Single-Run] Sweep failed: {e}", exc_info=True)
             else:
-                logging.error("[Mirror Listener] Both Pyrogram and Telethon failed to initialize for history sweep.")
+                logging.warning("[Mirror Listener] Both Pyrogram and Telethon failed. Falling back to public session-less web scraper for single-run sweep...")
+                try:
+                    import httpx
+                    import re
+                    from bs4 import BeautifulSoup
+                    from deal_engine.mirroring.schemas import ButtonSchema
+                    from deal_engine.mirroring.normalizer import extract_urls_from_text, extract_coupons_from_text, extract_seller_info
+                    
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    }
+                    
+                    channels = get_source_channels()
+                    public_channels = [ch for ch in channels if not (ch.startswith("+") or "joinchat" in ch)]
+                    
+                    async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30) as client:
+                        for ch in public_channels:
+                            url = f"https://t.me/s/{ch}"
+                            resp = await client.get(url)
+                            if resp.status_code == 200:
+                                soup = BeautifulSoup(resp.text, "html.parser")
+                                messages = soup.find_all("div", class_="tgme_widget_message")
+                                logging.info(f"[Web Scraper Single-Run] Sweeping last {limit} messages from: {ch} (Found {len(messages)} elements)")
+                                
+                                for msg in messages[-limit:]:
+                                    post_ref = msg.get("data-post", "")
+                                    if not post_ref or "/" not in post_ref:
+                                        continue
+                                    try:
+                                        msg_id = int(post_ref.split("/")[-1])
+                                    except ValueError:
+                                        continue
+                                        
+                                    # Stage 2: Message Reception
+                                    logging.info(f"[INGEST] Web Scraper swept message {msg_id} from {ch}")
+                                    
+                                    # Extract content
+                                    text_elem = msg.find("div", class_="tgme_widget_message_text")
+                                    full_text = text_elem.get_text(separator="\n").strip() if text_elem else ""
+                                    
+                                    # Extract URLs
+                                    extracted_urls = extract_urls_from_text(full_text)
+                                    if text_elem:
+                                        for a in text_elem.find_all("a"):
+                                            href = a.get("href")
+                                            if href and href.startswith("http") and href not in extracted_urls:
+                                                extracted_urls.append(href)
+                                                
+                                    buttons = []
+                                    btn_container = msg.find("div", class_="tgme_widget_message_inline_keyboard")
+                                    if btn_container:
+                                        for btn in btn_container.find_all("a", class_="tgme_widget_message_inline_button"):
+                                            btn_text = btn.get_text(strip=True)
+                                            btn_href = btn.get("href")
+                                            buttons.append(ButtonSchema(text=btn_text, url=btn_href))
+                                            if btn_href and btn_href.startswith("http") and btn_href not in extracted_urls:
+                                                extracted_urls.append(btn_href)
+                                                
+                                    photo_wrap = msg.find("a", class_="tgme_widget_message_photo_wrap")
+                                    photo_url = None
+                                    media_type = "none"
+                                    if photo_wrap:
+                                        style = photo_wrap.get("style", "")
+                                        match = re.search(r"background-image:\s*url\(['\"]?(.*?)['\"]?\)", style)
+                                        if match:
+                                            photo_url = match.group(1)
+                                            media_type = "photo"
+                                            
+                                    coupons = extract_coupons_from_text(full_text)
+                                    seller = extract_seller_info(full_text)
+                                    
+                                    normalized = NormalizedMessage(
+                                        channel_id=ch,
+                                        channel_name=ch,
+                                        message_id=msg_id,
+                                        is_edited=False,
+                                        raw_text=full_text,
+                                        caption="",
+                                        media_type=media_type,
+                                        media_file_id=photo_url,
+                                        extracted_urls=extracted_urls,
+                                        buttons=buttons,
+                                        seller=seller,
+                                        coupon_codes=coupons,
+                                        metadata={
+                                            "client": "web_scraper",
+                                            "photo_url": photo_url
+                                        }
+                                    )
+                                    logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS.")
+                                    try:
+                                        await asyncio.to_thread(self._process_inline, normalized)
+                                    except Exception as proc_err:
+                                        logging.error(f"[Single-Run Web Scraper] [CorrID: {normalized.correlation_id}] Inline processing failed: {proc_err}")
+                except Exception as run_err:
+                    logging.error(f"[Web Scraper Single-Run] Sweep failed: {run_err}", exc_info=True)
 
     async def _start_web_scraper(self) -> bool:
         """Initializes and runs the public web scraper polling fallback task."""

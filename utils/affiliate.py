@@ -13,8 +13,8 @@ def get_best_affiliate_url(expanded_url: str, platform: str, settings: dict) -> 
     platform_lower = platform.lower()
     
     # Direct affiliate overrides (highly preferred for Amazon and Flipkart if configured)
-    amazon_tag = settings.get("amazon_tag", "lootraiders-21").strip()
-    flipkart_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID").strip()
+    amazon_tag = (settings.get("amazon_tag") or "lootraiders-21").strip()
+    flipkart_affid = (settings.get("flipkart_affid") or "YOUR_FLIPKART_AFFILIATE_ID").strip()
     
     if platform_lower == "amazon" and amazon_tag and amazon_tag != "YOUR_AMAZON_TAG" and amazon_tag != "":
         asin = extract_amazon_asin(expanded_url)

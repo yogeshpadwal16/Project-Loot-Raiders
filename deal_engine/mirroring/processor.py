@@ -190,15 +190,15 @@ class DealMirrorProcessor:
                                 return int(m.group(1))
                             except (ValueError, IndexError):
                                 pass
-                        return 0
-                    
                     price_patterns = [
-                        r'(?:price|deal\s+price|deal|now|at\s+just|at|for)\s*:?\s*(?:rs\.?|₹)\s*(\d+)',
-                        r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-)\s*(?:rs\.?|₹)?\s*\d+',
+                        r'(?:price|deal\s+price|offer\s+price|deal|now|at\s+just|at|for|starts?\s+at|from|@|flat|only)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-|\s+to\s+)\s*(?:rs\.?|₹)?\s*\d+',
                         r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
+                        r'(\d+)\s*(?:/-|rs\b|inr\b)',
+                        r'@\s*(\d+)',
                     ]
                     mrp_patterns = [
-                        r'(?:mrp|original\s+price|was|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                        r'(?:mrp|original\s+price|was|list\s+price|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
                         r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
                         r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
                     ]
@@ -228,7 +228,7 @@ class DealMirrorProcessor:
                         logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
                         lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
                         for line in lines:
-                            if (len(line) >= 10 and 'http' not in line and
+                            if (len(line) >= 8 and 'http' not in line and
                                     not line.startswith('#') and
                                     not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
                                 title = line[:120]
@@ -245,25 +245,31 @@ class DealMirrorProcessor:
                     if scraped_data:
                         scraped = scraped_data
                         if not title or title == "Competitor Deal":
-                            title = scraped_data.get("title", "Product Deal")
-                        if price == 0:
+                            if scraped_data.get("title"):
+                                title = scraped_data["title"]
+                        if price == 0 and scraped_data.get("price"):
                             price = scraped_data.get("price", 0)
-                        if mrp == 0:
+                        if mrp == 0 and scraped_data.get("mrp"):
                             mrp = scraped_data.get("mrp", 0)
-                        if not img_url:
+                        if not img_url and scraped_data.get("image_url"):
                             img_url = scraped_data.get("image_url", "")
                 
-                # Extract the price directly from the original Telegram message text using regex if scraping failed
+                # Extract any numbers from raw_text as emergency fallback
                 if price == 0 and message.raw_text:
-                    match_prices = re.findall(r'(?:Rs\.?|₹)\s*([\d,]+)', message.raw_text, flags=re.IGNORECASE)
-                    if match_prices:
+                    match_prices = re.findall(r'(?:Rs\.?|₹)?\s*([\d,]{2,7})', message.raw_text, flags=re.IGNORECASE)
+                    valid_nums = []
+                    for mp in match_prices:
                         try:
-                            price = int(match_prices[0].replace(',', ''))
-                            if len(match_prices) > 1:
-                                mrp = int(match_prices[1].replace(',', ''))
-                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted price {price} from message text.")
+                            val = int(mp.replace(',', ''))
+                            if 49 <= val <= 200000:
+                                valid_nums.append(val)
                         except Exception:
                             pass
+                    if valid_nums:
+                        price = min(valid_nums)
+                        if len(valid_nums) > 1:
+                            mrp = max(valid_nums)
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted emergency price {price} from message text.")
                 
                 # If no price can be extracted from either the web page or the message text, DISCARD the deal silently
                 if price <= 0 or price is None:

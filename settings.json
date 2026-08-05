@@ -1,6 +1,6 @@
 {
-  "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
-  "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
+  "telegram_bot_token": "8888375196:AAEXd53Yhz-ZSTQjZoIhX5UqEyQcB2x7TRU",
+  "telegram_chat_id": "@LootRaidersDeals",
   "telegram_invite_link": "https://t.me/LootRaidersDeals",
   "gemini_api_key": "YOUR_GEMINI_API_KEY",
   "amazon_tag": "YOUR_AMAZON_TAG",

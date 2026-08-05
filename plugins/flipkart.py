@@ -50,7 +50,8 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                         
                     pid = extract_flipkart_pid(raw_url)
                     if not pid:
-                        pid = str(hash(card.text[:40]))
+                        import hashlib
+                        pid = hashlib.md5(card.text[:40].encode()).hexdigest()[:16]
                         
                     # Preserving the original SEO-rich product URL and appending the affiliate tracking tag
                     # Ensure URL is absolute (Selenium can sometimes return relative paths)

@@ -215,32 +215,8 @@ def load_settings() -> dict:
 
 def save_settings(settings: dict):
     try:
-        # Don't save environment variables overrides back to local settings.json
+        # Preserve actual settings without replacing them with dummy YOUR_ placeholders
         to_save = settings.copy()
-        for env_key, setting_key in [
-            ("TELEGRAM_BOT_TOKEN", "telegram_bot_token"),
-            ("TELEGRAM_CHAT_ID", "telegram_chat_id"),
-            ("TELEGRAM_INVITE_LINK", "telegram_invite_link"),
-            ("GEMINI_API_KEY", "gemini_api_key"),
-            ("FLIPKART_AFFID", "flipkart_affid"),
-            ("AMAZON_TAG", "amazon_tag"),
-            ("CUELINKS_PUB_ID", "cuelinks_pub_id"),
-            ("EARNKARO_PUB_ID", "earnkaro_pub_id"),
-            ("DISCORD_WEBHOOK_URL", "discord_webhook_url"),
-            ("SENDGRID_API_KEY", "sendgrid_api_key"),
-            ("SMTP_SERVER", "smtp_server"),
-            ("SMTP_PORT", "smtp_port"),
-            ("SMTP_USERNAME", "smtp_username"),
-            ("SMTP_PASSWORD", "smtp_password"),
-            ("SMTP_FROM", "smtp_from"),
-            ("SMTP_TO", "smtp_to"),
-            ("NOTIFICATION_URIS", "notification_uris"),
-            ("SHLINK_API_URL", "shlink_api_url"),
-            ("SHLINK_API_KEY", "shlink_api_key"),
-            ("N8N_WEBHOOK_URL", "n8n_webhook_url"),
-        ]:
-            if os.environ.get(env_key) and to_save.get(setting_key) == os.environ.get(env_key):
-                to_save[setting_key] = f"YOUR_{env_key}"
             
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(to_save, f, indent=2)
