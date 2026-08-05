@@ -630,16 +630,22 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         auto_cart_url = None  # Drop invalid auto-cart URL rather than crash
     
     price_val = int(price) if price else 0
-    reply_markup = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": f"🛍 BUY NOW — ₹{price_val:,} 🛍",
-                    "url": buy_url
-                }
-            ]
+    inline_keyboard = [
+        [
+            {
+                "text": f"🛍 BUY NOW — ₹{price_val:,} 🛍",
+                "url": buy_url
+            }
         ]
-    }
+    ]
+    if settings.get("enable_auto_cart_button", False) and auto_cart_url:
+        inline_keyboard.append([
+            {
+                "text": "🛒 ADD TO CART 🛒",
+                "url": auto_cart_url
+            }
+        ])
+    reply_markup = {"inline_keyboard": inline_keyboard}
     reply_markup_json = json.dumps(reply_markup)
 
     # 4. Upload raw product image or dynamic image card to Telegram

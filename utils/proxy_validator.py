@@ -53,10 +53,13 @@ def get_validated_proxy_pool(settings: dict) -> List[str]:
     
     raw_list = settings.get("proxy_list", [])
     if not raw_list:
-        return []
+        if settings.get("auto_harvest_proxies", False):
+            raw_list = harvest_free_proxies()
+        else:
+            return []
 
-    # Return cached pool if still fresh
-    if _validated_pool and (now - _last_check_time) < _CACHE_TTL:
+    # Return cached pool if still fresh (use time-based check so empty results are also cached)
+    if _last_check_time > 0 and (now - _last_check_time) < _CACHE_TTL:
         return _validated_pool.copy()
 
     valid_proxies = [p.strip() for p in raw_list if p.strip()]
@@ -101,3 +104,33 @@ def get_next_working_proxy(settings: dict) -> Optional[str]:
         return selected
 
     return None
+
+
+def harvest_free_proxies() -> List[str]:
+    """
+    Harvests free public HTTP proxies from reliable public API endpoints.
+    """
+    import re
+    apis = [
+        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=3000&country=all&ssl=all&anonymity=all",
+        "https://www.proxy-list.download/api/v1/get?type=http",
+        "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"
+    ]
+    proxies = []
+    headers = {"User-Agent": "Mozilla/5.0"}
+    for api in apis:
+        try:
+            res = requests.get(api, headers=headers, timeout=5.0)
+            if res.status_code == 200:
+                lines = res.text.splitlines()
+                for line in lines:
+                    line = line.strip()
+                    if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$', line):
+                        proxies.append(line)
+        except Exception as e:
+            logger.warning(f"Failed to harvest from {api}: {e}")
+            
+    proxies = list(set(proxies))
+    random.shuffle(proxies)
+    return proxies[:50]
+

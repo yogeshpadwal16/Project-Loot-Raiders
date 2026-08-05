@@ -30,6 +30,25 @@ def get_scraper_state():
         _state_ref = scraper_state
     return _state_ref
 
+
+import queue
+
+_sse_subscribers = []
+
+def broadcast_sse_event(data: dict):
+    global _sse_subscribers
+    event_str = f"data: {json.dumps(data)}\n\n"
+    inactive_subs = []
+    for q in _sse_subscribers:
+        try:
+            q.put_nowait(event_str)
+        except Exception:
+            inactive_subs.append(q)
+    for q in inactive_subs:
+        if q in _sse_subscribers:
+            _sse_subscribers.remove(q)
+
+
 class ScraperAPIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Log REST requests to execution.log
@@ -144,7 +163,34 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             return
         
         # API Endpoints
-        if self.path == '/api/status':
+        if clean_path == '/api/deals/stream':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            q = queue.Queue()
+            _sse_subscribers.append(q)
+            
+            try:
+                while True:
+                    try:
+                        event = q.get(timeout=15)
+                        self.wfile.write(event.encode('utf-8'))
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": keep-alive\n\n")
+                        self.wfile.flush()
+            except Exception:
+                pass
+            finally:
+                if q in _sse_subscribers:
+                    _sse_subscribers.remove(q)
+            return
+
+        elif self.path == '/api/status':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()

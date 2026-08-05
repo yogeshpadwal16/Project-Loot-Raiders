@@ -120,14 +120,32 @@ class DealMirrorProcessor:
         from config.settings import load_settings
         settings = load_settings()
         
-        # 1. Verify links exist in message
-        if not message.extracted_urls:
+        # 1. Verify links exist in message (or run visual AI extraction if image is present)
+        extracted_urls = list(message.extracted_urls or [])
+        img_url = message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
+        extracted_data = {}
+        
+        if not extracted_urls and img_url and settings.get("enable_visual_ai_extraction", False):
+            gemini_key = settings.get("gemini_api_key", "")
+            if gemini_key and "YOUR_" not in gemini_key:
+                logging.info(f"[PARSE] [CorrID: {correlation_id}] No URLs but image is present — running Gemini Visual AI extraction")
+                try:
+                    from loot_raiders.ai_summarizer import VisualDealExtractor
+                    extractor = VisualDealExtractor(gemini_key)
+                    extracted_data = extractor.extract_deal_from_image(img_url)
+                    if extracted_data and extracted_data.get("url"):
+                        extracted_urls.append(extracted_data["url"])
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Gemini Visual AI extracted URL: {extracted_data['url']}")
+                except Exception as ai_err:
+                    logging.error(f"Gemini Visual AI extraction failed: {ai_err}")
+
+        if not extracted_urls:
             logging.info(f"[PARSE] [CorrID: {correlation_id}] No URLs in message {message.message_id}. Skipping.")
             return
 
         db = SessionLocal()
         try:
-            for raw_url in message.extracted_urls:
+            for raw_url in extracted_urls:
                 # Skip known bad paths
                 from deal_engine.channel_mirror import _should_skip_url
                 if _should_skip_url(raw_url):
@@ -155,6 +173,13 @@ class DealMirrorProcessor:
                 # Priority A: Parse from Telegram message text (message.raw_text)
                 # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
                 title, price, mrp, img_url = "", 0, 0, message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
+                if extracted_data:
+                    if extracted_data.get("title"):
+                        title = extracted_data["title"]
+                    if extracted_data.get("price"):
+                        price = extracted_data["price"]
+                    if extracted_data.get("mrp"):
+                        mrp = extracted_data["mrp"]
                 
                 if message.raw_text and message.raw_text.strip():
                     import re
