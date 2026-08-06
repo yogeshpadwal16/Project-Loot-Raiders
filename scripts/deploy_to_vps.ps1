@@ -33,12 +33,14 @@ rm -f /home/ubuntu/loot_raiders.tar.gz
 
 cd /var/www/loot-raiders
 
-# Setup Python Virtual Environment and Install dependencies
-python3 -m venv venv || python3 -m venv --without-pip venv
-./venv/bin/python -m ensurepip --upgrade 2>/dev/null || true
-./venv/bin/pip install --upgrade pip
-./venv/bin/pip install -r requirements.txt
-./venv/bin/playwright install chromium
+# Setup Python Virtual Environment and Install dependencies (only if venv is missing)
+if [ ! -d "venv" ]; then
+    python3 -m venv venv || python3 -m venv --without-pip venv
+    ./venv/bin/python -m ensurepip --upgrade 2>/dev/null || true
+    ./venv/bin/pip install --upgrade pip
+    ./venv/bin/pip install -r requirements.txt
+    ./venv/bin/playwright install chromium
+fi
 
 # Daemonize process with PM2 using ecosystem configuration
 pm2 delete loot-raiders 2>/dev/null || true

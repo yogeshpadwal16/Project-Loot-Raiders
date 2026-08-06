@@ -89,38 +89,118 @@ def get_predictive_buying_advice(product_id: str, current_price: int) -> dict:
 
 def get_gemini_ai_desirability_score(title: str, price: int, mrp: int, discount: float, platform: str) -> float:
     """
-    Calls Gemini API to rank the desirability of a deal (0-100) based on title, price, discount.
+    Uses OmniRoute to rank deal desirability from 0-100.
+
+    OmniRoute handles provider/model routing and fallback through the
+    Loot-Raiders combo. The function name is retained for compatibility
+    with existing callers.
     """
     settings = load_settings()
-    api_key = settings.get("gemini_api_key", "")
-    if not api_key or "YOUR_" in api_key or api_key.strip() == "":
+
+    base_url = settings.get(
+        "omniroute_base_url",
+        "http://localhost:20128/v1"
+    ).rstrip("/")
+
+    api_key = settings.get("omniroute_api_key", "")
+    model = settings.get("omniroute_model", "Loot-Raiders")
+
+    if not api_key:
+        logging.warning(
+            "OmniRoute API key is not configured; skipping AI desirability score."
+        )
         return None
 
+    prompt = f"""
+You are the deal intelligence evaluator for an Indian ecommerce loot-deals service.
+
+Judge whether this is genuinely an unusually good buying opportunity.
+
+Product: {title}
+Platform: {platform}
+Selling price: INR {price}
+Listed MRP: INR {mrp}
+Advertised discount: {discount}%
+
+IMPORTANT SCORING RULES:
+
+1. Do NOT assume a large advertised discount means a great deal.
+   Ecommerce MRPs are frequently inflated.
+
+2. Judge the selling price against the likely real-world market value of
+   this type of product.
+
+3. Consider product desirability, brand reputation, category, selling
+   price, realistic savings, and whether the price looks unusually low.
+
+4. Generic accessories and low-value products such as USB cables,
+   charging cables, cases, covers, screen protectors, holders, straps,
+   pouches, keychains and similar items should normally score below 35,
+   even when their advertised discount is very high.
+
+5. A popular branded product at a genuinely exceptional price can score
+   80-95.
+
+6. Scores above 95 should be extremely rare and reserved for obvious
+   pricing errors, glitches, or extraordinary historically-low prices.
+
+7. An ordinary sale price should score around 40-60.
+
+8. A weak, misleading, overpriced, or low-value deal should score 0-35.
+
+Score from 0.0 to 100.0.
+
+Respond with ONLY the numeric score.
+Example: 72.5
+"""
+
+    payload = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.1,
+        "max_tokens": 256,
+        "stream": False
+    }
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        prompt = f"""
-        You are an expert shopping deal evaluator. Rate the desirability of this deal on a scale of 0.0 to 100.0.
-        A score of 100.0 means a massive pricing error, price glitch, or legendary low price on a popular brand.
-        A score of 50.0 is an average discount. A score of 0.0 is a bad deal or overpriced.
+        response = requests.post(
+            f"{base_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        response.raise_for_status()
 
-        Product: {title}
-        Platform: {platform}
-        Price: {price}
-        MRP: {mrp}
-        Discount: {discount}%
+        data = response.json()
+        score_text = data["choices"][0]["message"]["content"].strip()
 
-        Respond with only a float number (e.g. 87.5).
-        """
-        response = model.generate_content(prompt)
-        score_str = response.text.strip()
-        match = re.search(r'[\d\.]+', score_str)
-        if match:
-            return float(match.group(0))
+        match = re.search(r'\d+(?:\.\d+)?', score_text)
+        if not match:
+            logging.warning(
+                f"OmniRoute returned an invalid desirability score: {score_text!r}"
+            )
+            return None
+
+        score = float(match.group(0))
+        return max(0.0, min(100.0, score))
+
+    except requests.RequestException as e:
+        logging.error(f"OmniRoute AI desirability request failed: {e}")
+    except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as e:
+        logging.error(f"Invalid OmniRoute AI desirability response: {e}")
     except Exception as e:
-        logging.error(f"Failed to get Gemini AI desirability score: {e}")
+        logging.error(f"Unexpected OmniRoute AI desirability error: {e}")
+
     return None
 
 def get_heuristic_ai_ranking(
@@ -133,14 +213,15 @@ def get_heuristic_ai_ranking(
     product_id: str = None
 ) -> float:
     """
-    Heuristic-based deal desirability scorer. Analyzes product category,
-    brand tier, price point, and discount to generate a score 0-100.
-    Replaces Gemini API — instant, free, always works.
+    Heuristic-based product desirability scorer (0-100).
+    Evaluates product category, brand tier, and price-band desirability.
+    Does NOT include deal-quality signals (discount, history, absolute savings)
+    which are scored independently in calculate_deal_score().
     """
     if not title:
         return None
         
-    cache_key = (product_id, price) if product_id else (title, price)
+    cache_key = (product_id, title, price, platform)
     cached = _ai_score_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -148,104 +229,97 @@ def get_heuristic_ai_ranking(
     title_lower = title.lower()
     score = 50.0  # Base score
     
-    # 1. Category desirability scoring
-    HIGH_VALUE_CATEGORIES = {
-        "laptop": 25, "smartphone": 22, "phone": 22, "iphone": 28, "macbook": 28,
-        "tablet": 20, "ipad": 25, "monitor": 18, "television": 18, "tv": 18,
-        "headphone": 15, "earphone": 12, "earbuds": 12, "airpods": 20,
-        "watch": 15, "smartwatch": 15, "camera": 20, "lens": 15,
-        "processor": 18, "gpu": 20, "graphics card": 22, "ssd": 14, "ram": 12,
-        "washing machine": 16, "refrigerator": 16, "air conditioner": 18, "ac": 18,
-        "microwave": 12, "vacuum": 14, "robot vacuum": 16,
-        "speaker": 12, "soundbar": 14, "projector": 16,
-        "console": 20, "playstation": 22, "xbox": 22, "nintendo": 20,
-        "trimmer": 8, "shaver": 8, "grooming": 6,
-        "shoe": 10, "sneaker": 12, "running shoe": 10,
-        "backpack": 6, "luggage": 8, "suitcase": 8,
-        "perfume": 8, "fragrance": 8,
-        "jacket": 8, "hoodie": 6, "jeans": 6, "shirt": 4, "t-shirt": 3,
-        "kurta": 4, "saree": 5, "dress": 6,
-    }
-    
+    # 1. Low-value accessory check & penalty
     LOW_VALUE_CATEGORIES = {
-        "cable": -15, "adapter": -12, "charger cable": -10, "otg": -15,
-        "case": -12, "cover": -12, "back cover": -15, "tempered glass": -15,
-        "screen protector": -15, "screen guard": -15, "protector": -12,
-        "keychain": -20, "sticker": -20, "decal": -20,
-        "holder": -12, "stand": -10, "mount": -8,
-        "pouch": -12, "strap": -12, "band": -8,
-        "pen": -10, "pencil": -10, "eraser": -15, "notebook": -8,
-        "socks": -10, "handkerchief": -15, "napkin": -15,
+        "cable": -20, "adapter": -15, "charger cable": -15, "otg": -15,
+        "case": -15, "cover": -15, "back cover": -18, "tempered glass": -18,
+        "screen protector": -18, "screen guard": -18, "protector": -15,
+        "keychain": -25, "sticker": -25, "decal": -25,
+        "holder": -15, "stand": -12, "mount": -10,
+        "pouch": -15, "strap": -15, "band": -10,
+        "pen": -12, "pencil": -12, "eraser": -18, "notebook": -10,
+        "socks": -12, "handkerchief": -18, "napkin": -18,
     }
     
-    category_bonus = 0
-    for keyword, bonus in HIGH_VALUE_CATEGORIES.items():
-        if keyword in title_lower:
-            category_bonus = max(category_bonus, bonus)
+    is_accessory = False
+    accessory_penalty = 0
     for keyword, penalty in LOW_VALUE_CATEGORIES.items():
         if keyword in title_lower:
-            category_bonus = min(category_bonus, penalty)
-    score += category_bonus
+            is_accessory = True
+            accessory_penalty = min(accessory_penalty, penalty)
+            
+    if is_accessory:
+        score += accessory_penalty
+    else:
+        # Category desirability scoring for primary products
+        HIGH_VALUE_CATEGORIES = {
+            "laptop": 25, "macbook": 28, "smartphone": 22, "phone": 22, "iphone": 28,
+            "tablet": 20, "ipad": 25, "monitor": 18, "television": 18, "tv": 18,
+            "headphone": 15, "earphone": 12, "earbuds": 12, "airpods": 20,
+            "watch": 15, "smartwatch": 15, "camera": 20, "lens": 15,
+            "processor": 18, "gpu": 20, "graphics card": 22, "ssd": 14, "ram": 12,
+            "washing machine": 16, "refrigerator": 16, "air conditioner": 18, "ac": 18,
+            "microwave": 12, "vacuum": 14, "robot vacuum": 16,
+            "speaker": 12, "soundbar": 14, "projector": 16,
+            "console": 20, "playstation": 22, "xbox": 22, "nintendo": 20,
+            "trimmer": 8, "shaver": 8, "grooming": 6,
+            "shoe": 10, "sneaker": 12, "running shoe": 10,
+            "backpack": 6, "luggage": 8, "suitcase": 8,
+            "perfume": 8, "fragrance": 8,
+            "jacket": 8, "hoodie": 6, "jeans": 6, "shirt": 4, "t-shirt": 3,
+            "kurta": 4, "saree": 5, "dress": 6,
+        }
+        category_bonus = 0
+        for keyword, bonus in HIGH_VALUE_CATEGORIES.items():
+            if keyword in title_lower:
+                category_bonus = max(category_bonus, bonus)
+        score += category_bonus
     
     # 2. Brand tier scoring
-    PREMIUM_BRANDS = [
-        "apple", "samsung", "sony", "bose", "dyson", "lg", "oneplus",
-        "dell", "hp", "lenovo", "asus", "acer", "msi", "nothing",
-        "nike", "adidas", "puma", "reebok", "new balance", "asics",
-        "boat", "jbl", "sennheiser", "marshall",
-        "philips", "bosch", "whirlpool", "godrej", "havells",
-        "levi", "us polo", "tommy hilfiger", "calvin klein",
+    FLAGSHIP_BRANDS = [
+        "apple", "samsung", "sony", "bose", "dyson", "lg", "dell", "hp",
+        "lenovo", "asus", "acer", "msi", "nike", "adidas", "puma", "reebok",
+        "new balance", "asics", "sennheiser", "marshall", "bosch", "whirlpool"
     ]
-    BUDGET_BRANDS = [
-        "generic", "local", "unbranded", "no brand",
+    MID_POPULAR_BRANDS = [
+        "boat", "jbl", "oneplus", "nothing", "realme", "redmi", "xiaomi",
+        "philips", "godrej", "havells", "levi", "us polo", "tommy hilfiger", "calvin klein"
+    ]
+    BUDGET_GENERIC_BRANDS = [
+        "generic", "local", "unbranded", "no brand"
     ]
     
-    for brand in PREMIUM_BRANDS:
+    brand_score = 0
+    if not (is_accessory and any(b in title_lower for b in BUDGET_GENERIC_BRANDS)):
+        for brand in FLAGSHIP_BRANDS:
+            if brand in title_lower:
+                brand_score = 8
+                break
+        if brand_score == 0:
+            for brand in MID_POPULAR_BRANDS:
+                if brand in title_lower:
+                    brand_score = 4
+                    break
+    for brand in BUDGET_GENERIC_BRANDS:
         if brand in title_lower:
-            score += 8
+            brand_score = -12
             break
-    for brand in BUDGET_BRANDS:
-        if brand in title_lower:
-            score -= 10
-            break
+    score += brand_score
     
-    # 3. Price sweet-spot scoring (most desirable: ₹500–₹5000)
+    # 3. Price-band / mass-market desirability
     if 500 <= price <= 5000:
-        score += 10  # Mass-market sweet spot
-    elif 5000 < price <= 15000:
-        score += 5   # Mid-range
-    elif price > 15000:
-        score += 3   # Aspirational but fewer buyers
+        score += 5   # Mass-market sweet spot
+    elif 5000 < price <= 50000:
+        score += 5   # Mid-to-high aspirational range
+    elif price > 50000:
+        score += 3   # Ultra premium
     elif price < 200:
-        score -= 10  # Too cheap = likely junk
-    
-    # 4. Discount magnitude bonus (on top of category)
-    if discount >= 80:
-        score += 15
-    elif discount >= 70:
-        score += 10
-    elif discount >= 60:
-        score += 5
-    elif discount >= 50:
-        score += 3
-    
-    # 5. Verified historical low bonus
-    if is_verified_low:
-        score += 10
-    
-    # 6. Absolute savings impact
-    savings = max(0, mrp - price)
-    if savings >= 5000:
-        score += 8
-    elif savings >= 2000:
-        score += 5
-    elif savings >= 1000:
-        score += 3
+        score -= 10  # Very cheap = likely low quality/junk
     
     # Clamp to 0-100
     score = max(0.0, min(100.0, score))
     
-    reason = f"Heuristic: cat={category_bonus:+d}, price_range={'sweet' if 500<=price<=5000 else 'other'}, disc={discount:.0f}%"
+    reason = f"Heuristic: is_accessory={is_accessory}, brand_score={brand_score:+d}"
     logging.info(f"[AI Ranker] Heuristic Score -> {score:.0f}, {reason} for: {title[:40]}...")
     
     _ai_score_cache.set(cache_key, score)
@@ -266,7 +340,7 @@ def calculate_deal_score(
 ) -> float:
     """
     Calculates a normalized score (0 to 100) for a deal based on settings.json weights,
-    Gemini AI desirability rankings, and real-time click feedback loops.
+    heuristic product desirability, OmniRoute secondary input, and click feedback loops.
     """
     settings = load_settings()
     rules = settings.get("scoring_rules", {})
@@ -279,21 +353,26 @@ def calculate_deal_score(
     })
     
     # 1. Discount Score (s_disc)
-    # Scale discount from 30% (score 0) to 80% (score 100)
-    if discount < 30.0:
-        s_disc = 0.0
-    elif discount >= 80.0:
-        s_disc = 100.0
+    # Adaptive scaling: High-MRP items (electronics/appliances >= 15k) scale from 15% discount
+    if mrp >= 15000:
+        if discount < 15.0:
+            s_disc = 0.0
+        elif discount >= 50.0:
+            s_disc = 100.0
+        else:
+            s_disc = ((discount - 15.0) / (50.0 - 15.0)) * 100.0
     else:
-        s_disc = ((discount - 30.0) / (80.0 - 30.0)) * 100.0
+        if discount < 20.0:
+            s_disc = 0.0
+        elif discount >= 80.0:
+            s_disc = 100.0
+        else:
+            s_disc = ((discount - 20.0) / (80.0 - 20.0)) * 100.0
         
     # 2. Absolute Savings Score (s_save)
-    # Scale absolute savings from ₹0 (score 0) to ₹3000 (score 100)
+    # Scale absolute savings up to ₹10,000 (score 100)
     savings = max(0, mrp - price)
-    if savings >= 3000:
-        s_save = 100.0
-    else:
-        s_save = (savings / 3000.0) * 100.0
+    s_save = min(100.0, (savings / 10000.0) * 100.0)
         
     # 3. History Score (s_hist)
     # Verified low price gets 100, otherwise 40
@@ -320,29 +399,37 @@ def calculate_deal_score(
         finally:
             db.close()
 
-    # Query optional Gemini AI desirability score, or fall back to heuristic AI ranking score
-    ai_score = None
+    # Always calculate the deterministic heuristic AI ranking.
+    # This remains the primary product-desirability signal.
+    heuristic_ai_score = get_heuristic_ai_ranking(
+        title=title,
+        platform=platform,
+        price=price,
+        mrp=mrp,
+        discount=discount,
+        is_verified_low=is_verified_low,
+        product_id=product_id
+    )
+
+    # OmniRoute is an optional secondary opinion.
+    # It must never become a hard dependency or replace deterministic scoring.
+    llm_ai_score = None
     if settings.get("gemini_ai_scoring_enabled", False):
-        ai_score = get_gemini_ai_desirability_score(title, price, mrp, discount, platform)
-        
-    if ai_score is None:
-        ai_score = get_heuristic_ai_ranking(
-            title=title,
-            platform=platform,
-            price=price,
-            mrp=mrp,
-            discount=discount,
-            is_verified_low=is_verified_low,
-            product_id=product_id
+        llm_ai_score = get_gemini_ai_desirability_score(
+            title, price, mrp, discount, platform
         )
 
-    # Dynamic Weight Normalization based on whether AI score is available
+    # Use heuristic score in the weighted scoring model.
+    ai_score = heuristic_ai_score
+
+    active_weights = dict(weights)
+
     if ai_score is not None:
-        active_weights = dict(weights)
         if "ai_ranking" not in active_weights:
             active_weights["ai_ranking"] = 0.25
-            
+
         total_weight = sum(active_weights.values())
+
         weighted_sum = (
             (s_disc * active_weights.get("discount", 0.0)) +
             (s_save * active_weights.get("savings", 0.0)) +
@@ -351,9 +438,12 @@ def calculate_deal_score(
             (s_trust * active_weights.get("trust", 0.0)) +
             (ai_score * active_weights.get("ai_ranking", 0.0))
         )
+
         final_score = weighted_sum / total_weight
+
     else:
         total_weight = sum(weights.values())
+
         weighted_sum = (
             (s_disc * weights.get("discount", 0.0)) +
             (s_save * weights.get("savings", 0.0)) +
@@ -361,8 +451,20 @@ def calculate_deal_score(
             (s_urg * weights.get("urgency", 0.0)) +
             (s_trust * weights.get("trust", 0.0))
         )
+
         final_score = weighted_sum / total_weight
-    
+
+    # OmniRoute may adjust the deterministic result only slightly.
+    # Maximum influence: +/- 5 points.
+    ai_adjustment = 0.0
+
+    if llm_ai_score is not None and heuristic_ai_score is not None:
+        disagreement = llm_ai_score - heuristic_ai_score
+
+        # Scale disagreement down heavily and clamp it.
+        ai_adjustment = max(-5.0, min(5.0, disagreement * 0.10))
+
+        final_score += ai_adjustment
     # 6. Real-time Feedback Popularity Bonus (s_feedback)
     # Add +2 points for every 10 clicks, capped at +15 points max boost
     feedback_bonus = 0.0
@@ -422,11 +524,23 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
     sudden massive drops compared to tracked historical price averages, and
     category-aware heuristics (no external API required).
     """
-    # Heuristic 1: Extreme discount
-    if discount >= 85.0:
+    title_lower = title.lower() if title else ""
+    LOW_VALUE_ACCESSORIES = [
+        "cable", "adapter", "case", "cover", "tempered glass", "screen protector",
+        "screen guard", "keychain", "sticker", "holder", "stand", "mount", "pouch", "strap"
+    ]
+    GENERIC_BUDGET_TERMS = [
+        "generic", "unbranded", "local", "no brand"
+    ]
+    
+    is_cheap_accessory = any(kw in title_lower for kw in LOW_VALUE_ACCESSORIES)
+    is_generic = any(kw in title_lower for kw in GENERIC_BUDGET_TERMS)
+
+    # Heuristic 1: Extreme discount (on non-generic, non-accessory items)
+    if discount >= 85.0 and not is_cheap_accessory and not is_generic:
         return True
         
-    # Heuristic 2: Large historical drop
+    # Heuristic 2: Large historical drop (confirmed by tracked prices)
     if unique_id:
         db = SessionLocal()
         try:
@@ -445,7 +559,6 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
     # Heuristic 3: Category-aware glitch detection for high discounts (70-85%)
     # High-value electronics at extreme discounts are almost always price errors
     if discount >= 70.0 and title:
-        title_lower = title.lower()
         HIGH_VALUE_ELECTRONICS = [
             "laptop", "smartphone", "phone", "iphone", "macbook", "ipad",
             "tablet", "monitor", "television", "tv", "processor", "gpu",
@@ -454,12 +567,10 @@ def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None
         ]
         is_high_value = any(kw in title_lower for kw in HIGH_VALUE_ELECTRONICS)
         
-        if is_high_value and price < 5000:
-            # A high-value item under ₹5000 with 70%+ discount is almost certainly a glitch
+        if is_high_value and price < 5000 and not is_generic:
             logging.info(f"[Glitch Detector] Category-heuristic glitch: {title[:40]}... at ₹{price} ({discount:.0f}% OFF)")
             return True
-        elif is_high_value and price < 15000 and discount >= 75.0:
-            # High-value item at extreme discount range — likely glitch
+        elif is_high_value and price < 15000 and discount >= 75.0 and not is_generic:
             logging.info(f"[Glitch Detector] Probable glitch: {title[:40]}... at ₹{price} ({discount:.0f}% OFF)")
             return True
             

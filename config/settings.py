@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import time as _time
 
@@ -39,6 +39,9 @@ def load_settings() -> dict:
         "telegram_chat_id": "YOUR_TELEGRAM_CHAT_ID",
         "telegram_invite_link": "https://t.me/LootRaidersDeals",
         "gemini_api_key": "YOUR_GEMINI_API_KEY",
+        "omniroute_base_url": "http://localhost:20128/v1",
+        "omniroute_api_key": "",
+        "omniroute_model": "Loot-Raiders",
         "amazon_tag": "YOUR_AMAZON_TAG",
         "flipkart_affid": "YOUR_FLIPKART_AFFILIATE_ID",
         "cuelinks_pub_id": "",
@@ -114,6 +117,18 @@ def load_settings() -> dict:
     env_gemini_key = os.environ.get("GEMINI_API_KEY")
     if env_gemini_key:
         saved["gemini_api_key"] = env_gemini_key
+
+    env_omniroute_url = os.environ.get("OMNIROUTE_BASE_URL")
+    if env_omniroute_url:
+        saved["omniroute_base_url"] = env_omniroute_url.rstrip("/")
+
+    env_omniroute_key = os.environ.get("OMNIROUTE_API_KEY")
+    if env_omniroute_key:
+        saved["omniroute_api_key"] = env_omniroute_key
+
+    env_omniroute_model = os.environ.get("OMNIROUTE_MODEL")
+    if env_omniroute_model:
+        saved["omniroute_model"] = env_omniroute_model
     env_flipkart = os.environ.get("FLIPKART_AFFID")
     if env_flipkart:
         saved["flipkart_affid"] = env_flipkart
@@ -225,3 +240,5 @@ def save_settings(settings: dict):
     except Exception as e:
         import logging
         logging.error(f"Failed to save settings.json: {e}")
+
+

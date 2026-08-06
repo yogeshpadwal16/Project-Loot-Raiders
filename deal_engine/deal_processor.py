@@ -202,8 +202,8 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
             return False
             
         title = scraped.get("title", "Product Deal")
-        price = scraped.get("price", 0)
-        mrp = scraped.get("mrp", 0)
+        price = int(scraped.get("price") or 0)
+        mrp = int(scraped.get("mrp") or 0)
         img_url = scraped.get("image_url", "")
         rating = scraped.get("rating")
         reviews = scraped.get("reviews")
@@ -219,12 +219,12 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
                 logging.warning(f"[Deal Processor] OG image fallback failed: {og_err}")
 
         
-        if price == 0:
+        if price <= 0:
             logging.warning(f"[Deal Processor] Scraped price is 0. Skipping deal.")
             return False
             
         discount = 0.0
-        if mrp > price:
+        if mrp > 0 and price > 0 and mrp > price:
             discount = ((mrp - price) / mrp) * 100.0
             
         # 4.5 Check if we already have this deal at the exact same price

@@ -69,6 +69,10 @@ scratch/
 omega_history.json
 TELEGRAM_STRING_SESSION.txt
 
+# Backup and temporary files
+*.bak
+*.pre-*
+
 # Vector database storage
 database/chroma_db/
 

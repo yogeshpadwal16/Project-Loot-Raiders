@@ -4,7 +4,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 
 # Load credentials
-api_id_str = os.environ.get("TELEGRAM_API_ID", "39413198").strip()
+api_id_str = os.environ.get("TELEGRAM_API_ID", "YOUR_TELEGRAM_API_ID").strip()
 api_hash = os.environ.get("TELEGRAM_API_HASH", "YOUR_TELEGRAM_API_HASH").strip()
 
 try:

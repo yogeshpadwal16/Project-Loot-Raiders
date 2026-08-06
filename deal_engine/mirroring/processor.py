@@ -296,8 +296,11 @@ class DealMirrorProcessor:
                         logging.info(f"[PARSE] [CorrID: {correlation_id}] Skip: Invalid product image (logo/banner) and no raw competitor photo fallback.")
                         continue
                 
+                price = int(price) if price else 0
+                mrp = int(mrp) if mrp else 0
+                
                 discount = 0.0
-                if mrp > price:
+                if mrp > 0 and price > 0 and mrp > price:
                     discount = ((mrp - price) / mrp) * 100.0
 
                     
