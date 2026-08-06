@@ -39,8 +39,8 @@ except Exception as e:
     settings = {}
 
 # Telegram Client credentials
-TELEGRAM_API_ID = os.environ.get("TELEGRAM_API_ID") or settings.get("telegram_api_id") or "39413198"
-TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH") or settings.get("telegram_api_hash") or "d648fd457db96dffa53ae18d3d1869d8"
+TELEGRAM_API_ID = os.environ.get("TELEGRAM_API_ID") or settings.get("telegram_api_id") or "YOUR_TELEGRAM_API_ID"
+TELEGRAM_API_HASH = os.environ.get("TELEGRAM_API_HASH") or settings.get("telegram_api_hash") or "YOUR_TELEGRAM_API_HASH"
 if not os.environ.get("TELEGRAM_API_ID") or not os.environ.get("TELEGRAM_API_HASH"):
     logging.info("[Mirror Config] Loaded fallback/configured TELEGRAM_API_ID and TELEGRAM_API_HASH.")
 

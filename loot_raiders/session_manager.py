@@ -40,17 +40,50 @@ class SessionManager:
             api_id = acc.get("api_id")
             api_hash = acc.get("api_hash")
             
+            # Use environment overrides if placeholders are present or values are missing
+            if not api_id or "YOUR_TELEGRAM" in str(api_id):
+                env_api_id = os.environ.get("TELEGRAM_API_ID")
+                if env_api_id:
+                    api_id = env_api_id
+            
+            if not api_hash or "YOUR_TELEGRAM" in str(api_hash):
+                env_api_hash = os.environ.get("TELEGRAM_API_HASH")
+                if env_api_hash:
+                    api_hash = env_api_hash
+                    
+            if api_id:
+                try:
+                    api_id = int(api_id)
+                except (ValueError, TypeError):
+                    pass
+            
             # Setup SOCKS5 proxy if configured
             proxy_conf = acc.get("proxy")
             proxy = None
             if proxy_conf and proxy_conf.get("hostname"):
-                proxy = {
-                    "scheme": proxy_conf.get("scheme", "socks5"),
-                    "hostname": proxy_conf.get("hostname"),
-                    "port": int(proxy_conf.get("port", 1080)),
-                    "username": proxy_conf.get("username"),
-                    "password": proxy_conf.get("password")
-                }
+                hostname = proxy_conf.get("hostname")
+                port = proxy_conf.get("port", 1080)
+                username = proxy_conf.get("username")
+                password = proxy_conf.get("password")
+                
+                # Check environment overrides/placeholders
+                if hostname == "YOUR_PROXY_HOST" or not hostname:
+                    hostname = os.environ.get("SOCKS5_PROXY_HOST")
+                if str(port) == "YOUR_PROXY_PORT" or not port:
+                    port = os.environ.get("SOCKS5_PROXY_PORT") or 1080
+                if username == "YOUR_PROXY_USERNAME" or not username:
+                    username = os.environ.get("SOCKS5_PROXY_USER")
+                if password == "YOUR_PROXY_PASSWORD" or not password:
+                    password = os.environ.get("SOCKS5_PROXY_PASS")
+                
+                if hostname:
+                    proxy = {
+                        "scheme": proxy_conf.get("scheme", "socks5"),
+                        "hostname": hostname,
+                        "port": int(port),
+                        "username": username or None,
+                        "password": password or None
+                    }
             
             logger.info(f"Initializing Hydrogram client: {session_name} (Proxy: {'Enabled' if proxy else 'None'})")
             

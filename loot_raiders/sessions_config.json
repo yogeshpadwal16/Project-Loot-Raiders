@@ -2,14 +2,14 @@
   "accounts": [
     {
       "session_name": "loot_mirror_userbot_1",
-      "api_id": 39413198,
-      "api_hash": "d648fd457db96dffa53ae18d3d1869d8",
+      "api_id": "YOUR_TELEGRAM_API_ID",
+      "api_hash": "YOUR_TELEGRAM_API_HASH",
       "proxy": {
         "scheme": "socks5",
         "hostname": "127.0.0.1",
         "port": 1080,
-        "username": "proxy_user",
-        "password": "proxy_password"
+        "username": "YOUR_PROXY_USERNAME",
+        "password": "YOUR_PROXY_PASSWORD"
       },
       "enabled": false
     }

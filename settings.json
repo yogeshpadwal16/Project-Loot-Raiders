@@ -1,8 +1,11 @@
 {
-  "telegram_bot_token": "8888375196:AAEXd53Yhz-ZSTQjZoIhX5UqEyQcB2x7TRU",
+  "telegram_bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
   "telegram_chat_id": "@LootRaidersDeals",
   "telegram_invite_link": "https://t.me/LootRaidersDeals",
   "gemini_api_key": "YOUR_GEMINI_API_KEY",
+  "omniroute_base_url": "http://localhost:20128/v1",
+  "omniroute_api_key": "YOUR_OMNIROUTE_API_KEY",
+  "omniroute_model": "Loot-Raiders",
   "amazon_tag": "YOUR_AMAZON_TAG",
   "flipkart_affid": "YOUR_FLIPKART_AFFID",
   "cuelinks_pub_id": "",
@@ -10,7 +13,7 @@
   "discord_webhook_url": "",
   "sendgrid_api_key": "",
   "notification_uris": [
-    "tgram://8888375196:AAEXd53Yhz-ZSTQjZoIhX5UqEyQcB2x7TRU/@LootRaidersDeals"
+    "tgram://YOUR_TELEGRAM_BOT_TOKEN/@LootRaidersDeals"
   ],
   "shlink_api_url": "YOUR_SHLINK_API_URL",
   "shlink_api_key": "YOUR_SHLINK_API_KEY",
