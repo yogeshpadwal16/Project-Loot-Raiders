@@ -167,7 +167,7 @@ class DealMirrorProcessor:
         if not platform or not unique_id:
             # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
             logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
-            from deal_engine.mirroring.normalizer import extract_store_url_from_competitor_landing_page
+            from deal_engine.deal_processor import extract_store_url_from_competitor_landing_page
             candidates = extract_store_url_from_competitor_landing_page(expanded_url)
             if candidates:
                 expanded_url = candidates
