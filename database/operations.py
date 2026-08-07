@@ -143,11 +143,13 @@ def initialize_database_selectors():
 
 def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0) -> str:
     logging.info(f"[DB Save] Entering save_deal_to_db for '{title[:30]}' (ID: {unique_id})")
+    from database.repository import SQLAlchemyDealRepository
+    repo = SQLAlchemyDealRepository()
     db = SessionLocal()
     try:
         # Check if exact product unique_id exists
         logging.info(f"[DB Save] Querying product table for ID: {unique_id}")
-        product = db.query(Product).filter_by(id=unique_id).first()
+        product = repo.get_product_by_id(db, unique_id)
         logging.info(f"[DB Save] Product database query finished. Found: {product is not None}")
         
         # If product does not exist, check for semantic duplicates in vector catalog
@@ -159,22 +161,14 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
                 if similar_id:
                     logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{similar_id}'")
                     unique_id = similar_id
-                    product = db.query(Product).filter_by(id=unique_id).first()
+                    product = repo.get_product_by_id(db, unique_id)
             except Exception as vector_err:
                 logging.error(f"Failed to run semantic similarity check: {vector_err}")
                 
         # Insert if still not found
         if not product:
             logging.info(f"[DB Save] Creating new Product entry in DB: {unique_id}")
-            product = Product(
-                id=unique_id,
-                platform=platform,
-                title=title,
-                image_url=img_url,
-                url=final_url
-            )
-            db.add(product)
-            db.flush()
+            product = repo.create_product(db, unique_id, platform, title, img_url, final_url)
             logging.info(f"[DB Save] Product entry flushed. Indexing vector...")
             
             # Index inside vector catalog for future match alerts
@@ -186,21 +180,10 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
         else:
             logging.info(f"[DB Save] Updating existing Product entry: {unique_id}")
             # Update parent properties to keep link fresh
-            product.title = title
-            product.image_url = img_url
-            product.url = final_url
+            product = repo.update_product(db, unique_id, title, img_url, final_url)
         
         logging.info(f"[DB Save] Adding PriceHistory record for: {unique_id}")
-        price_hist = PriceHistory(
-            product_id=unique_id,
-            price=price,
-            mrp=mrp,
-            discount=discount,
-            is_verified_low=is_verified_low,
-            deal_score=deal_score,
-            timestamp=time.time()
-        )
-        db.add(price_hist)
+        price_hist = repo.add_price_history(db, unique_id, price, mrp, discount, is_verified_low, deal_score)
         logging.info(f"[DB Save] Committing database transaction...")
         db.commit()
         logging.info(f"[DB Save] Database transaction committed successfully for: {unique_id}")
@@ -301,11 +284,13 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
         
     # Fallback: Compare against our local historical deals database
     if unique_id:
+        from database.repository import SQLAlchemyDealRepository
+        repo = SQLAlchemyDealRepository()
         db = SessionLocal()
         try:
-            prices = db.query(PriceHistory.price).filter_by(product_id=unique_id).all()
+            prices = repo.get_price_history(db, unique_id)
             if prices:
-                prices_list = [p[0] for p in prices]
+                prices_list = [p.price for p in prices]
                 min_price = min(prices_list)
                 max_price = max(prices_list)
                 
