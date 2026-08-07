@@ -26,6 +26,7 @@ scp -o StrictHostKeyChecking=no -i $KEY_PATH $TAR_PATH "ubuntu@${IP}:/home/ubunt
 
 Write-Host "=== 3. Executing deployment commands on remote VPS ===" -ForegroundColor Cyan
 $SSH_CMD = @"
+pm2 stop all 2>/dev/null || true
 sudo mkdir -p /var/www/loot-raiders
 sudo tar -xzf /home/ubuntu/loot_raiders.tar.gz -C /var/www/loot-raiders
 sudo chown -R ubuntu:ubuntu /var/www/loot-raiders
