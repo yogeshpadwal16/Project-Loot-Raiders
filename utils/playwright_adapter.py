@@ -180,6 +180,18 @@ class PlaywrightSeleniumAdapter:
         except Exception as e:
             raise Exception(f"Element not found on page: {selector}: {e}")
 
+    def select(self, selector):
+        try:
+            return self.find_element("css selector", selector)
+        except Exception:
+            return None
+
+    def select_all(self, selector):
+        try:
+            return self.find_elements("css selector", selector)
+        except Exception:
+            return []
+
     def _map_selector(self, by, selector):
         by_str = str(by).lower()
         if "xpath" in by_str:
