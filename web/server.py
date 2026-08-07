@@ -26,8 +26,11 @@ _state_ref = None
 def get_scraper_state():
     global _state_ref
     if _state_ref is None:
-        from core.engine import scraper_state
-        _state_ref = scraper_state
+        try:
+            from core.engine import scraper_state
+            _state_ref = scraper_state
+        except ImportError:
+            pass
     return _state_ref
 
 
@@ -1359,7 +1362,10 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-def start_api_server(port=5555):
+def start_api_server(port=5555, state=None):
+    global _state_ref
+    if state is not None:
+        _state_ref = state
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
     
