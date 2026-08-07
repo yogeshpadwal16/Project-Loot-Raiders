@@ -78,3 +78,4 @@ aiolimiter==1.2.1
 edge-tts==6.1.12
 feedparser
 google-generativeai
+scrapling[all]
