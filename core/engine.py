@@ -75,6 +75,222 @@ def init_driver():
 # ==========================================
 # CORE SCANNERS MAIN LOOP
 # ==========================================
+def _process_single_scraped_deal(deal, platform: str, settings: dict, history: set, driver):
+    unique_id = deal["id"]
+    price = deal["price"]
+    mrp = deal["mrp"]
+    discount = deal["discount"]
+    title = deal["title"]
+    img_url = deal["image_url"]
+    from utils.affiliate import get_best_affiliate_url
+    final_url = get_best_affiliate_url(deal["url"], platform, settings)
+    is_lightning = deal["is_lightning"]
+    rating = deal.get("rating")
+    reviews = deal.get("reviews")
+    has_bank_offer = deal.get("has_bank_offer", False)
+    
+    # Concurrency and duplicate detection
+    from utils.deduplicator import find_duplicate_deal, release_in_flight_deal
+    is_dup, matched_id = find_duplicate_deal(
+        title=title,
+        price=price,
+        platform=platform,
+        url=final_url,
+        time_window_hours=24
+    )
+    
+    if is_dup and matched_id == "in-flight":
+        logging.info(f"Skipping concurrent in-flight deal: {title[:35]}")
+        return
+        
+    if is_dup and matched_id:
+        logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{matched_id}'")
+        unique_id = matched_id
+    
+    # Fetch latest price from DB to see if it's a duplicate or if the price changed
+    price_changed = True
+    is_price_drop = False
+    db = SessionLocal()
+    try:
+        latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
+        if latest:
+            if latest.price == price:
+                price_changed = False
+                is_price_drop = False
+            else:
+                price_changed = True
+                is_price_drop = price < latest.price
+        else:
+            # New product is treated as a price drop
+            price_changed = True
+            is_price_drop = True
+    except Exception as db_err:
+        logging.error(f"Error querying latest price for duplicate check: {db_err}")
+    finally:
+        db.close()
+        
+    if not price_changed:
+        logging.info(f"Skipping deal: '{title[:35]}' | Reason: Price has not changed (₹{price}) since last scan.")
+        release_in_flight_deal(title, platform, final_url)
+        return
+        
+    # Filter out low-value cheap products or minor savings spams
+    # Title keyword blocklist check
+    blocklist = settings.get("blocklist_keywords", [])
+    title_lower = title.lower()
+    blocked_match = None
+    for b_word in blocklist:
+        if b_word.lower().strip() in title_lower:
+            blocked_match = b_word
+            break
+    if blocked_match:
+        logging.info(f"Skipping blocklisted accessory deal: {title[:35]}... (Matched: '{blocked_match}')")
+        release_in_flight_deal(title, platform, final_url)
+        return
+        
+    min_price = settings.get("min_deal_price", 299)
+    min_savings = settings.get("min_deal_savings", 250)
+    savings = mrp - price
+    
+    if price < min_price or savings < min_savings:
+        logging.info(f"Skipping basic/cheap deal: {title[:35]}... (Price: ₹{price}, Savings: ₹{savings})")
+        release_in_flight_deal(title, platform, final_url)
+        return
+        
+    # Extract base URL to check price tracker history
+    clean_url = final_url.split("?")[0].split("&")[0]
+    is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
+    
+    # Calculate final AI Deal score
+    deal_score = calculate_deal_score(
+        platform, price, mrp, discount, is_verified_low, is_lightning, 
+        product_id=unique_id, title=title, rating=rating, reviews=reviews, 
+        has_bank_offer=has_bank_offer
+    )
+    
+    # Persist inside Knowledge Base database and get resolved semantic ID
+    unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
+    history.add(unique_id)
+    
+    # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
+    if should_publish_deal(platform, deal_score) and is_price_drop:
+        # 10. Deal Intelligence Engine check to suppress recurring / non-loot listing spams
+        from utils.deduplicator import is_genuine_loot_deal
+        db_sess = SessionLocal()
+        try:
+            is_genuine, suppression_reason = is_genuine_loot_deal(unique_id, title, price, mrp, discount, db_sess)
+        except Exception as eval_err:
+            logging.error(f"Error evaluating deal intelligence logic: {eval_err}")
+            is_genuine = True
+            suppression_reason = "error_fallback"
+        finally:
+            db_sess.close()
+            
+        if not is_genuine:
+            logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+            release_in_flight_deal(title, platform, final_url)
+            return
+        else:
+            logging.info(f"Accepted genuine loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+        
+        # Publication Frequency Guard — suppress re-posts within 6h at same price
+        import datetime as _dt
+        db_freq = SessionLocal()
+        try:
+            prod_freq = db_freq.query(Product).filter_by(id=unique_id).first()
+            if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
+                hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
+                price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
+                today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
+                daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
+                if daily_date != today_str:
+                    daily_count = 0
+                
+                if hours_ago < 6.0 and price >= price_at_last:
+                    logging.info(
+                        f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                        f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
+                    )
+                    release_in_flight_deal(title, platform, final_url)
+                    return
+                
+                if daily_count >= 3:
+                    logging.info(
+                        f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                        f"already posted {daily_count}x today (cap: 3/day)"
+                    )
+                    release_in_flight_deal(title, platform, final_url)
+                    return
+        except Exception as freq_err:
+            logging.error(f"[Publication Guard] DB check error: {freq_err}")
+        finally:
+            db_freq.close()
+            
+        bank_offers = []
+        coupon_detail = ""
+        review_grade = "N/A"
+        
+        try:
+            enriched = scrape_product_details(final_url, driver=driver)
+            if enriched:
+                img_url = enriched.get("image_url") or img_url
+                bank_offers = enriched.get("bank_offers", [])
+                coupon_detail = enriched.get("coupon_detail", "")
+                review_grade = enriched.get("review_grade", "N/A")
+        except Exception as enrich_err:
+            logging.warning(f"Failed to enrich scraped deal {unique_id} before dispatch: {enrich_err}")
+            
+        auto_cart_url = None
+        try:
+            from utils.affiliate import generate_auto_cart_url
+            auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
+        except Exception:
+            pass
+            
+        enqueue_alert(
+            platform=platform,
+            title=title,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            img_url=img_url,
+            final_url=final_url,
+            is_verified_low=is_verified_low,
+            deal_score=deal_score,
+            unique_id=unique_id,
+            bank_offers=bank_offers,
+            coupon_detail=coupon_detail,
+            review_grade=review_grade,
+            auto_cart_url=auto_cart_url
+        )
+        time.sleep(0.5)
+        
+        # Update publication tracking so this product won't be spammed again
+        db_pub = SessionLocal()
+        try:
+            today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+            prod_record = db_pub.query(Product).filter_by(id=unique_id).first()
+            if prod_record:
+                prod_record.last_published_at = time.time()
+                prod_record.last_published_price = price
+                if getattr(prod_record, 'daily_post_date', '') == today_str:
+                    prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
+                else:
+                    prod_record.daily_post_count = 1
+                    prod_record.daily_post_date = today_str
+                db_pub.commit()
+        except Exception as pub_upd_err:
+            db_pub.rollback()
+            logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
+        finally:
+            db_pub.close()
+    else:
+        if not should_publish_deal(platform, deal_score):
+            logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
+        else:
+            logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
+
 def scrape_platform(platform: str, config: dict, history: set):
     if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
         return
@@ -140,225 +356,15 @@ def scrape_platform(platform: str, config: dict, history: set):
                 logging.info(f"Scraper execution halted by user request on stream {platform}.")
                 break
                 
-            unique_id = deal["id"]
-            price = deal["price"]
-            mrp = deal["mrp"]
-            discount = deal["discount"]
-            title = deal["title"]
-            img_url = deal["image_url"]
-            from utils.affiliate import get_best_affiliate_url
-            final_url = get_best_affiliate_url(deal["url"], platform, settings)
-            is_lightning = deal["is_lightning"]
-            rating = deal.get("rating")
-            reviews = deal.get("reviews")
-            has_bank_offer = deal.get("has_bank_offer", False)
-            
-            # Concurrency and duplicate detection
-            from utils.deduplicator import find_duplicate_deal, release_in_flight_deal
-            is_dup, matched_id = find_duplicate_deal(
-                title=title,
-                price=price,
-                platform=platform,
-                url=final_url,
-                time_window_hours=24
-            )
-            
-            if is_dup and matched_id == "in-flight":
-                logging.info(f"Skipping concurrent in-flight deal: {title[:35]}")
-                continue
-                
-            if is_dup and matched_id:
-                logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{matched_id}'")
-                unique_id = matched_id
-            
-            # Fetch latest price from DB to see if it's a duplicate or if the price changed
-            price_changed = True
-            is_price_drop = False
-            db = SessionLocal()
             try:
-                latest = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
-                if latest:
-                    if latest.price == price:
-                        price_changed = False
-                        is_price_drop = False
-                    else:
-                        price_changed = True
-                        is_price_drop = price < latest.price
-                else:
-                    # New product is treated as a price drop
-                    price_changed = True
-                    is_price_drop = True
-            except Exception as db_err:
-                logging.error(f"Error querying latest price for duplicate check: {db_err}")
-            finally:
-                db.close()
-                
-            if not price_changed:
-                logging.info(f"Skipping deal: '{title[:35]}' | Reason: Price has not changed (₹{price}) since last scan.")
-                release_in_flight_deal(title, platform, final_url)
-                continue
-                
-            # Filter out low-value cheap products or minor savings spams
-            settings = load_settings()
-            
-            # Title keyword blocklist check
-            blocklist = settings.get("blocklist_keywords", [])
-            title_lower = title.lower()
-            blocked_match = None
-            for b_word in blocklist:
-                if b_word.lower().strip() in title_lower:
-                    blocked_match = b_word
-                    break
-            if blocked_match:
-                logging.info(f"Skipping blocklisted accessory deal: {title[:35]}... (Matched: '{blocked_match}')")
-                release_in_flight_deal(title, platform, final_url)
-                continue
-                
-            min_price = settings.get("min_deal_price", 299)
-            min_savings = settings.get("min_deal_savings", 250)
-            savings = mrp - price
-            
-            if price < min_price or savings < min_savings:
-                logging.info(f"Skipping basic/cheap deal: {title[:35]}... (Price: ₹{price}, Savings: ₹{savings})")
-                release_in_flight_deal(title, platform, final_url)
-                continue
-                
-            # Extract base URL to check price tracker history
-            clean_url = final_url.split("?")[0].split("&")[0]
-            is_verified_low = verify_historical_low(driver, clean_url, price, unique_id, discount)
-            
-            # Calculate final AI Deal score
-            deal_score = calculate_deal_score(
-                platform, price, mrp, discount, is_verified_low, is_lightning, 
-                product_id=unique_id, title=title, rating=rating, reviews=reviews, 
-                has_bank_offer=has_bank_offer
-            )
-            
-            # Persist inside Knowledge Base database and get resolved semantic ID
-            unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
-            history.add(unique_id)
-            
-            # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
-            if should_publish_deal(platform, deal_score) and is_price_drop:
-                # 10. Deal Intelligence Engine check to suppress recurring / non-loot listing spams
-                from utils.deduplicator import is_genuine_loot_deal
-                db_sess = SessionLocal()
+                _process_single_scraped_deal(deal, platform, settings, history, driver)
+            except Exception as deal_err:
+                logging.error(f"Error processing scraped deal {deal.get('title', 'Unknown')} on platform {platform}: {deal_err}", exc_info=True)
                 try:
-                    is_genuine, suppression_reason = is_genuine_loot_deal(unique_id, title, price, mrp, discount, db_sess)
-                except Exception as eval_err:
-                    logging.error(f"Error evaluating deal intelligence logic: {eval_err}")
-                    is_genuine = True
-                    suppression_reason = "error_fallback"
-                finally:
-                    db_sess.close()
-                    
-                if not is_genuine:
-                    logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
-                    release_in_flight_deal(title, platform, final_url)
-                    continue
-                else:
-                    logging.info(f"Accepted genuine loot deal: '{title[:35]}' | Reason: {suppression_reason}")
-                
-                # Publication Frequency Guard — suppress re-posts within 6h at same price
-                # This directly fixes the 3x-same-product-in-8-seconds spam bug
-                import datetime as _dt
-                db_freq = SessionLocal()
-                try:
-                    prod_freq = db_freq.query(Product).filter_by(id=unique_id).first()
-                    if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
-                        hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
-                        price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
-                        today_str = _dt.datetime.now().strftime('%Y-%m-%d')
-                        daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
-                        daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
-                        if daily_date != today_str:
-                            daily_count = 0
-                        
-                        if hours_ago < 6.0 and price >= price_at_last:
-                            logging.info(
-                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
-                                f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
-                            )
-                            release_in_flight_deal(title, platform, final_url)
-                            continue
-                        
-                        if daily_count >= 3:
-                            logging.info(
-                                f"[Publication Guard] Suppressed: '{title[:30]}' — "
-                                f"already posted {daily_count}x today (cap: 3/day)"
-                            )
-                            release_in_flight_deal(title, platform, final_url)
-                            continue
-                except Exception as freq_err:
-                    logging.error(f"[Publication Guard] DB check error: {freq_err}")
-                finally:
-                    db_freq.close()
-                    
-                bank_offers = []
-                coupon_detail = ""
-                review_grade = "N/A"
-                
-                try:
-                    enriched = scrape_product_details(final_url, driver=driver)
-                    if enriched:
-                        img_url = enriched.get("image_url") or img_url
-                        bank_offers = enriched.get("bank_offers", [])
-                        coupon_detail = enriched.get("coupon_detail", "")
-                        review_grade = enriched.get("review_grade", "N/A")
-                except Exception as enrich_err:
-                    logging.warning(f"Failed to enrich scraped deal {unique_id} before dispatch: {enrich_err}")
-                    
-                auto_cart_url = None
-                try:
-                    from utils.affiliate import generate_auto_cart_url
-                    settings = load_settings()
-                    auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
-                except Exception:
+                    from utils.deduplicator import release_in_flight_deal
+                    release_in_flight_deal(deal.get('title', ''), platform, deal.get('url', ''))
+                except:
                     pass
-                    
-                enqueue_alert(
-                    platform=platform,
-                    title=title,
-                    price=price,
-                    mrp=mrp,
-                    discount=discount,
-                    img_url=img_url,
-                    final_url=final_url,
-                    is_verified_low=is_verified_low,
-                    deal_score=deal_score,
-                    unique_id=unique_id,
-                    bank_offers=bank_offers,
-                    coupon_detail=coupon_detail,
-                    review_grade=review_grade,
-                    auto_cart_url=auto_cart_url
-                )
-                time.sleep(0.5)
-                
-                # Update publication tracking so this product won't be spammed again
-                import datetime as _dt
-                db_pub = SessionLocal()
-                try:
-                    today_str = _dt.datetime.now().strftime('%Y-%m-%d')
-                    prod_record = db_pub.query(Product).filter_by(id=unique_id).first()
-                    if prod_record:
-                        prod_record.last_published_at = time.time()
-                        prod_record.last_published_price = price
-                        if getattr(prod_record, 'daily_post_date', '') == today_str:
-                            prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
-                        else:
-                            prod_record.daily_post_count = 1
-                            prod_record.daily_post_date = today_str
-                        db_pub.commit()
-                except Exception as pub_upd_err:
-                    db_pub.rollback()
-                    logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
-                finally:
-                    db_pub.close()
-            else:
-                if not should_publish_deal(platform, deal_score):
-                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
-                else:
-                    logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
                 
     except Exception as out_err:
         logging.error(f"Scraper interface failure on stream {platform}: {out_err}")
