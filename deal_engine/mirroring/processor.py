@@ -142,244 +142,225 @@ class DealMirrorProcessor:
         if not extracted_urls:
             logging.info(f"[PARSE] [CorrID: {correlation_id}] No URLs in message {message.message_id}. Skipping.")
             return
-
         db = SessionLocal()
         try:
             for raw_url in extracted_urls:
-                # Skip known bad paths
-                from deal_engine.channel_mirror import _should_skip_url
-                if _should_skip_url(raw_url):
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipping non-deal link: {raw_url}")
-                    continue
-                
-                # 2. Expand link
-                expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
-                
-                # Resolve competitor landing pages
-                platform, unique_id = self._parse_url_metadata(expanded_url)
-                if not platform or not unique_id:
-                    # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
-                    candidates = extract_store_url_from_competitor_landing_page(expanded_url)
-                    if candidates:
-                        expanded_url = candidates
-                        platform, unique_id = self._parse_url_metadata(expanded_url)
-                
-                if not platform or not unique_id:
-                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not resolve store identifier for: {expanded_url}")
-                    continue
-                    
-                # 4. Scrape details
-                # Priority A: Parse from Telegram message text (message.raw_text)
-                # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
-                title, price, mrp, img_url = "", 0, 0, message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
-                if extracted_data:
-                    if extracted_data.get("title"):
-                        title = extracted_data["title"]
-                    if extracted_data.get("price"):
-                        price = extracted_data["price"]
-                    if extracted_data.get("mrp"):
-                        mrp = extracted_data["mrp"]
-                
-                if message.raw_text and message.raw_text.strip():
-                    import re
-                    def extract_deal_number(pattern: str, text: str) -> int:
-                        m = re.search(pattern, text.replace(',', ''), flags=re.IGNORECASE)
-                        if m:
-                            try:
-                                return int(m.group(1))
-                            except (ValueError, IndexError):
-                                pass
-                    price_patterns = [
-                        r'(?:price|deal\s+price|offer\s+price|deal|now|at\s+just|at|for|starts?\s+at|from|@|flat|only)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
-                        r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-|\s+to\s+)\s*(?:rs\.?|₹)?\s*\d+',
-                        r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
-                        r'(\d+)\s*(?:/-|rs\b|inr\b)',
-                        r'@\s*(\d+)',
-                    ]
-                    mrp_patterns = [
-                        r'(?:mrp|original\s+price|was|list\s+price|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
-                        r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
-                        r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
-                    ]
-                    
-                    msg_clean = message.raw_text.replace(',', '')
-                    for pat in price_patterns:
-                        extracted = extract_deal_number(pat, msg_clean)
-                        if extracted > 0:
-                            price = extracted
-                            break
-                            
-                    for pat in mrp_patterns:
-                        extracted = extract_deal_number(pat, msg_clean)
-                        if extracted > 0 and extracted != price:
-                            mrp = extracted
-                            break
-                            
-                    if price > 0 and mrp == 0:
-                        all_prices = [int(n) for n in re.findall(r'(?:rs\.?|₹)\s*(\d+)', msg_clean, flags=re.IGNORECASE)]
-                        larger = [p for p in all_prices if p > price]
-                        if larger:
-                            mrp = min(larger)
-                        else:
-                            mrp = int(price * 1.4)
-                            
-                    if price > 0:
-                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
-                        lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
-                        for line in lines:
-                            if (len(line) >= 8 and 'http' not in line and
-                                    not line.startswith('#') and
-                                    not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
-                                title = line[:120]
-                                break
-                        if not title:
-                            title = "Competitor Deal"
-                
-                # Fallback to lightweight scraper if price is 0 or image is missing
-                scraped = {}
-                if price == 0 or not img_url:
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] price={price} or image is missing — attempting lightweight HTTP scrape")
-                    from deal_engine.deal_processor import scrape_product_lightweight
-                    scraped_data = scrape_product_lightweight(expanded_url)
-                    if scraped_data:
-                        scraped = scraped_data
-                        if not title or title == "Competitor Deal":
-                            if scraped_data.get("title"):
-                                title = scraped_data["title"]
-                        if price == 0 and scraped_data.get("price"):
-                            price = scraped_data.get("price", 0)
-                        if mrp == 0 and scraped_data.get("mrp"):
-                            mrp = scraped_data.get("mrp", 0)
-                        if not img_url and scraped_data.get("image_url"):
-                            img_url = scraped_data.get("image_url", "")
-                
-                # Extract any numbers from raw_text as emergency fallback
-                if price == 0 and message.raw_text:
-                    match_prices = re.findall(r'(?:Rs\.?|₹)?\s*([\d,]{2,7})', message.raw_text, flags=re.IGNORECASE)
-                    valid_nums = []
-                    for mp in match_prices:
-                        try:
-                            val = int(mp.replace(',', ''))
-                            if 49 <= val <= 200000:
-                                valid_nums.append(val)
-                        except Exception:
-                            pass
-                    if valid_nums:
-                        price = min(valid_nums)
-                        if len(valid_nums) > 1:
-                            mrp = max(valid_nums)
-                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted emergency price {price} from message text.")
-                
-                # If no price can be extracted from either the web page or the message text, DISCARD the deal silently
-                if price <= 0 or price is None:
-                    logging.info(f"[PARSE] [CorrID: {correlation_id}] Discarding deal silently: No valid price extracted.")
-                    continue
-                
-                # Validate image_url: If resolved URL is logo/banner, fallback to Telegram competitor photo or skip
-                is_valid_product_image = True
-                if img_url:
-                    img_lower = img_url.lower()
-                    if "logo" in img_lower or "banner" in img_lower or "default" in img_lower:
-                        is_valid_product_image = False
-                    elif "amazon" in img_lower and "images/i/" not in img_lower:
-                        is_valid_product_image = False
-                else:
-                    is_valid_product_image = False
-                    
-                if not is_valid_product_image:
-                    raw_photo = message.media_file_id if message.media_file_id else message.metadata.get("photo_url")
-                    if raw_photo:
-                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Resolved image is static logo/banner. Falling back to competitor raw photo: {raw_photo}")
-                        img_url = raw_photo
-                    else:
-                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Skip: Invalid product image (logo/banner) and no raw competitor photo fallback.")
-                        continue
-                
-                price = int(price) if price else 0
-                mrp = int(mrp) if mrp else 0
-                
-                discount = 0.0
-                if mrp > 0 and price > 0 and mrp > price:
-                    discount = ((mrp - price) / mrp) * 100.0
-
-                    
-                rating = scraped.get("rating")
-                reviews = scraped.get("reviews")
-                has_bank_offer = scraped.get("has_bank_offer", False)
-                
-                # Bypassed: Smart Filter and keyword blacklists are disabled for unrestricted mirroring
-                
-                # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
-                product_already_posted = False
-                if platform and unique_id:
-                    prod = db.query(Product).filter_by(id=unique_id).first()
-                    if prod:
-                        product_already_posted = True
-                        
-                if not product_already_posted and expanded_url:
-                    from utils.deduplicator import get_canonical_url
-                    canon_url = get_canonical_url(expanded_url)
-                    if canon_url:
-                        prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
-                        if prod:
-                            product_already_posted = True
-                
-                if product_already_posted:
-                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({unique_id}) was already posted to channel.")
-                    continue
-                
-                # 6. Check price trends
-                is_verified_low = True
                 try:
-                    settings = load_settings()
-                    if settings.get("external_price_tracker_enabled", False):
-                        from utils.playwright_adapter import get_playwright_driver
-                        temp_driver = get_playwright_driver(settings)
-                        try:
-                            is_verified_low = verify_historical_low(temp_driver, expanded_url, price, unique_id, discount)
-                        finally:
-                            temp_driver.quit()
-                    else:
-                        is_verified_low = verify_historical_low(None, expanded_url, price, unique_id, discount)
-                except Exception as verify_err:
-                    logging.warning(f"[PARSE] [CorrID: {correlation_id}] Historical check failed, defaulting to True: {verify_err}")
-                    
-                # 7. Scorer & Database Commit
-                deal_score = calculate_deal_score(
-                    platform, price, mrp, discount, is_verified_low, False,
-                    product_id=unique_id, title=title, rating=rating, reviews=reviews,
-                    has_bank_offer=has_bank_offer
-                )
-                
-                unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, expanded_url, is_verified_low, unique_id, deal_score)
-                
-                # 8. Affiliate URL Generator
-                settings = load_settings()
-                final_url = get_best_affiliate_url(expanded_url, platform, settings)
-                auto_cart_url = generate_auto_cart_url(expanded_url, platform, settings)
-                
-                # 9. Publisher dispatch
-                enqueue_alert(
-                    platform=platform,
-                    title=title,
-                    price=price,
-                    mrp=mrp,
-                    discount=discount,
-                    img_url=img_url,
-                    final_url=final_url,
-                    is_verified_low=is_verified_low,
-                    deal_score=deal_score,
-                    unique_id=unique_id,
-                    bank_offers=scraped.get("bank_offers", []),
-                    coupon_detail=scraped.get("coupon_detail", ""),
-                    review_grade=scraped.get("review_grade", "N/A"),
-                    auto_cart_url=auto_cart_url,
-                    is_mirror=True
-                )
-                logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
+                    self._process_single_raw_url(raw_url, correlation_id, message, extracted_data, db)
+                except Exception as url_err:
+                    logging.error(f"[PARSE] [CorrID: {correlation_id}] Error processing URL {raw_url}: {url_err}", exc_info=True)
         finally:
             db.close()
+
+    def _process_single_raw_url(self, raw_url: str, correlation_id: str, message, extracted_data: Optional[dict], db):
+        # Skip known bad paths
+        from deal_engine.channel_mirror import _should_skip_url
+        if _should_skip_url(raw_url):
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipping non-deal link: {raw_url}")
+            return
+        
+        # 2. Expand link
+        expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
+        
+        # Resolve competitor landing pages
+        platform, unique_id = self._parse_url_metadata(expanded_url)
+        if not platform or not unique_id:
+            # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
+            from deal_engine.mirroring.normalizer import extract_store_url_from_competitor_landing_page
+            candidates = extract_store_url_from_competitor_landing_page(expanded_url)
+            if candidates:
+                expanded_url = candidates
+                platform, unique_id = self._parse_url_metadata(expanded_url)
+        
+        if not platform or not unique_id:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not resolve store identifier for: {expanded_url}")
+            return
+            
+        # 4. Scrape details
+        # Priority A: Parse from Telegram message text (message.raw_text)
+        # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
+        title, price, mrp, img_url = "", 0, 0, message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
+        if extracted_data:
+            if extracted_data.get("title"):
+                title = extracted_data["title"]
+            if extracted_data.get("price"):
+                price = extracted_data["price"]
+            if extracted_data.get("mrp"):
+                mrp = extracted_data["mrp"]
+        
+        if message.raw_text and message.raw_text.strip():
+            import re
+            def extract_deal_number(pattern: str, text: str) -> int:
+                m = re.search(pattern, text.replace(',', ''), flags=re.IGNORECASE)
+                if m:
+                    try:
+                        return int(m.group(1))
+                    except (ValueError, IndexError):
+                        pass
+                return 0
+            
+            price_patterns = [
+                r'(?:price|deal\s+price|offer\s+price|deal|now|at\s+just|at|for|starts?\s+at|from|@|flat|only)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-|\s+to\s+)\s*(?:rs\.?|₹)?\s*\d+',
+                r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
+                r'(\d+)\s*(?:/-|rs\b|inr\b)',
+                r'@\s*(\d+)',
+            ]
+            mrp_patterns = [
+                r'(?:mrp|original\s+price|was|list\s+price|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
+                r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
+                r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
+            ]
+            
+            # Match rules
+            for pat in price_patterns:
+                p_val = extract_deal_number(pat, message.raw_text)
+                if p_val > 0:
+                    price = p_val
+                    break
+            for pat in mrp_patterns:
+                m_val = extract_deal_number(pat, message.raw_text)
+                if m_val > 0:
+                    mrp = m_val
+                    break
+                    
+            if price > 0 and mrp > 0:
+                logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
+                lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
+                for line in lines:
+                    if (len(line) >= 8 and 'http' not in line and
+                            not line.startswith('#') and
+                            not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
+                        title = line[:120]
+                        break
+        
+        # Scrape target page fallback if price is missing or title is dummy
+        if not title or title == "Competitor Deal" or price == 0 or mrp == 0 or not img_url:
+            from core.engine import scrape_product_details
+            scraped_data = scrape_product_details(expanded_url)
+            if scraped_data:
+                scraped = scraped_data
+                if not title or title == "Competitor Deal":
+                    if scraped_data.get("title"):
+                        title = scraped_data["title"]
+                if price == 0 and scraped_data.get("price"):
+                    price = scraped_data.get("price", 0)
+                if mrp == 0 and scraped_data.get("mrp"):
+                    mrp = scraped_data.get("mrp", 0)
+                if not img_url and scraped_data.get("image_url"):
+                    img_url = scraped_data.get("image_url", "")
+        
+        # Extract any numbers from raw_text as emergency fallback
+        if price == 0 and message.raw_text:
+            match_prices = re.findall(r'(?:Rs\.?|₹)?\s*([\d,]{2,7})', message.raw_text, flags=re.IGNORECASE)
+            valid_nums = []
+            for mp in match_prices:
+                try:
+                    val = int(mp.replace(',', ''))
+                    if 49 <= val <= 200000:
+                        valid_nums.append(val)
+                except Exception:
+                    pass
+            if valid_nums:
+                price = min(valid_nums)
+                if len(valid_nums) > 1:
+                    mrp = max(valid_nums)
+                logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted emergency price {price} from message text.")
+        
+        # If no price can be extracted from either the web page or the message text, DISCARD the deal silently
+        if price <= 0 or price is None:
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skip: Missing valid product price.")
+            return
+            
+        if not title or title == "Competitor Deal":
+            title = f"Deal Product ({platform.upper()})"
+            
+        mrp = int(mrp) if mrp else 0
+        
+        discount = 0.0
+        if mrp > 0 and price > 0 and mrp > price:
+            discount = ((mrp - price) / mrp) * 100.0
+            
+        # Get defaults for optional fields if scraper returned none
+        scraped = {}
+        
+        rating = scraped.get("rating")
+        reviews = scraped.get("reviews")
+        has_bank_offer = scraped.get("has_bank_offer", False)
+        
+        # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
+        product_already_posted = False
+        if platform and unique_id:
+            from knowledge_base.models import Product
+            prod = db.query(Product).filter_by(id=unique_id).first()
+            if prod:
+                product_already_posted = True
+                
+        if not product_already_posted and expanded_url:
+            from utils.deduplicator import get_canonical_url
+            canon_url = get_canonical_url(expanded_url)
+            if canon_url:
+                from knowledge_base.models import Product
+                prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
+                if prod:
+                    product_already_posted = True
+        
+        if product_already_posted:
+            logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({unique_id}) was already posted to channel.")
+            return
+        
+        # 6. Check price trends
+        is_verified_low = True
+        try:
+            settings = load_settings()
+            if settings.get("external_price_tracker_enabled", False):
+                from utils.playwright_adapter import get_playwright_driver
+                temp_driver = get_playwright_driver(settings)
+                try:
+                    is_verified_low = verify_historical_low(temp_driver, expanded_url, price, unique_id, discount)
+                finally:
+                    temp_driver.quit()
+            else:
+                is_verified_low = verify_historical_low(None, expanded_url, price, unique_id, discount)
+        except Exception as verify_err:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Historical check failed, defaulting to True: {verify_err}")
+            
+        # 7. Scorer & Database Commit
+        deal_score = calculate_deal_score(
+            platform, price, mrp, discount, is_verified_low, False,
+            product_id=unique_id, title=title, rating=rating, reviews=reviews,
+            has_bank_offer=has_bank_offer
+        )
+        
+        unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, expanded_url, is_verified_low, unique_id, deal_score)
+        
+        # 8. Affiliate URL Generator
+        settings = load_settings()
+        from utils.affiliate import get_best_affiliate_url, generate_auto_cart_url
+        final_url = get_best_affiliate_url(expanded_url, platform, settings)
+        auto_cart_url = generate_auto_cart_url(expanded_url, platform, settings)
+        
+        # 9. Publisher dispatch
+        from deal_engine.notifier import enqueue_alert
+        enqueue_alert(
+            platform=platform,
+            title=title,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            img_url=img_url,
+            final_url=final_url,
+            is_verified_low=is_verified_low,
+            deal_score=deal_score,
+            unique_id=unique_id,
+            bank_offers=scraped.get("bank_offers", []),
+            coupon_detail=scraped.get("coupon_detail", ""),
+            review_grade=scraped.get("review_grade", "N/A"),
+            auto_cart_url=auto_cart_url,
+            is_mirror=True
+        )
+        logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
 
     def _expand_url_with_retry(self, url: str, correlation_id: str = "") -> str:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
@@ -418,6 +399,7 @@ class DealMirrorProcessor:
 
     def _parse_url_metadata(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         url_lower = url.lower()
+        import hashlib
         if "amazon.in" in url_lower:
             from utils.parser import extract_amazon_asin
             asin = extract_amazon_asin(url)
@@ -428,12 +410,12 @@ class DealMirrorProcessor:
             return "flipkart", pid
         elif "myntra.com" in url_lower:
             match = re.search(r'/(\d+)/buy', url)
-            return "myntra", f"myntra_{match.group(1)}" if match else f"myntra_{str(hash(url))}"
+            return "myntra", f"myntra_{match.group(1)}" if match else f"myntra_{hashlib.md5(url.encode()).hexdigest()[:16]}"
         elif "meesho.com" in url_lower:
             match = re.search(r'/p/([a-zA-Z0-9]+)', url)
-            return "meesho", f"meesho_{match.group(1)}" if match else f"meesho_{str(hash(url))}"
+            return "meesho", f"meesho_{match.group(1)}" if match else f"meesho_{hashlib.md5(url.encode()).hexdigest()[:16]}"
         elif "ajio.com" in url_lower:
-            return "ajio", f"ajio_{str(hash(url))}"
+            return "ajio", f"ajio_{hashlib.md5(url.encode()).hexdigest()[:16]}"
         elif "jiomart.com" in url_lower:
             prod_id = None
             if "/p/" in url:
@@ -445,7 +427,7 @@ class DealMirrorProcessor:
                 except Exception:
                     pass
             if not prod_id:
-                prod_id = str(abs(hash(url)))
+                prod_id = hashlib.md5(url.encode()).hexdigest()[:16]
             return "jiomart", f"jiomart_{prod_id}"
         return None, None
 

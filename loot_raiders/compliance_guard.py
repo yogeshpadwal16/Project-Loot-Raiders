@@ -37,8 +37,16 @@ def check_quality_firewall(price, product_title: str, image_url: str) -> bool:
         return False
         
     img_lower = str(image_url).lower()
-    banned_keywords = ["logo", "amazon-logo", "store_logo", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    banned_keywords = ["brand-logo", "store-logo", "header-logo", "footer-logo", "logo-brand", "logo-store", "amazon-logo", "store_logo", "logo_brand", "logo_store", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    is_logo = False
     if any(x in img_lower for x in banned_keywords):
+        is_logo = True
+    else:
+        url_path = img_lower.split('?')[0]
+        if url_path.endswith(('/logo.png', '/logo.jpg', '/logo.jpeg', '/logo.gif', '/logo.svg', '/logo.webp')):
+            is_logo = True
+            
+    if is_logo:
         logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
         return False
 

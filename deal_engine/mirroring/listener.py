@@ -592,80 +592,84 @@ class MultiClientMirrorListener:
                             new_messages.sort(key=lambda x: x[0])
                             
                             for msg_id, msg in new_messages:
-                                # Stage 2: Message Reception
-                                logging.info(f"[INGEST] Web Scraper received message {msg_id} from {ch}")
-                                
-                                # Extract content
-                                text_elem = msg.find("div", class_="tgme_widget_message_text")
-                                full_text = text_elem.get_text(separator="\n").strip() if text_elem else ""
-                                
-                                # Extract raw links from text
-                                from deal_engine.mirroring.normalizer import extract_urls_from_text, extract_coupons_from_text, extract_seller_info
-                                extracted_urls = extract_urls_from_text(full_text)
-                                
-                                # Extract additional links from hyperlinked anchors
-                                if text_elem:
-                                    for a in text_elem.find_all("a"):
-                                        href = a.get("href")
-                                        if href and href.startswith("http") and href not in extracted_urls:
-                                            extracted_urls.append(href)
-                                            
-                                # Extract inline keyboard buttons
-                                buttons = []
-                                btn_container = msg.find("div", class_="tgme_widget_message_inline_keyboard")
-                                if btn_container:
-                                    for btn in btn_container.find_all("a", class_="tgme_widget_message_inline_button"):
-                                        btn_text = btn.get_text(strip=True)
-                                        btn_href = btn.get("href")
-                                        buttons.append(ButtonSchema(text=btn_text, url=btn_href))
-                                        if btn_href and btn_href.startswith("http") and btn_href not in extracted_urls:
-                                            extracted_urls.append(btn_href)
-                                            
-                                # Extract photo URL if present
-                                photo_wrap = msg.find("a", class_="tgme_widget_message_photo_wrap")
-                                photo_url = None
-                                media_type = "none"
-                                if photo_wrap:
-                                    style = photo_wrap.get("style", "")
-                                    match = re.search(r"background-image:\s*url\(['\"]?(.*?)['\"]?\)", style)
-                                    if match:
-                                        photo_url = match.group(1)
-                                        media_type = "photo"
-                                        
-                                coupons = extract_coupons_from_text(full_text)
-                                seller = extract_seller_info(full_text)
-                                
-                                # Stage 5: Message Normalization
-                                normalized = NormalizedMessage(
-                                    channel_id=ch,
-                                    channel_name=ch,
-                                    message_id=msg_id,
-                                    is_edited=False,
-                                    raw_text=full_text,
-                                    caption="",
-                                    media_type=media_type,
-                                    media_file_id=photo_url,
-                                    extracted_urls=extracted_urls,
-                                    buttons=buttons,
-                                    seller=seller,
-                                    coupon_codes=coupons,
-                                    metadata={
-                                        "client": "web_scraper",
-                                        "photo_url": photo_url
-                                    }
-                                )
-                                logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
-                                
-                                # Stage 3: Queue Insertion
-                                logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
-                                success = await asyncio.to_thread(self.queue.enqueue, normalized)
-                                if success:
-                                    logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
-                                else:
-                                    logging.warning(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
-                                    asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
+                                try:
+                                    # Stage 2: Message Reception
+                                    logging.info(f"[INGEST] Web Scraper received message {msg_id} from {ch}")
                                     
-                                last_seen_msg_ids[ch] = msg_id
+                                    # Extract content
+                                    text_elem = msg.find("div", class_="tgme_widget_message_text")
+                                    full_text = text_elem.get_text(separator="\n").strip() if text_elem else ""
+                                    
+                                    # Extract raw links from text
+                                    from deal_engine.mirroring.normalizer import extract_urls_from_text, extract_coupons_from_text, extract_seller_info
+                                    extracted_urls = extract_urls_from_text(full_text)
+                                    
+                                    # Extract additional links from hyperlinked anchors
+                                    if text_elem:
+                                        for a in text_elem.find_all("a"):
+                                            href = a.get("href")
+                                            if href and href.startswith("http") and href not in extracted_urls:
+                                                extracted_urls.append(href)
+                                                
+                                    # Extract inline keyboard buttons
+                                    buttons = []
+                                    btn_container = msg.find("div", class_="tgme_widget_message_inline_keyboard")
+                                    if btn_container:
+                                        for btn in btn_container.find_all("a", class_="tgme_widget_message_inline_button"):
+                                            btn_text = btn.get_text(strip=True)
+                                            btn_href = btn.get("href")
+                                            buttons.append(ButtonSchema(text=btn_text, url=btn_href))
+                                            if btn_href and btn_href.startswith("http") and btn_href not in extracted_urls:
+                                                extracted_urls.append(btn_href)
+                                                
+                                    # Extract photo URL if present
+                                    photo_wrap = msg.find("a", class_="tgme_widget_message_photo_wrap")
+                                    photo_url = None
+                                    media_type = "none"
+                                    if photo_wrap:
+                                        style = photo_wrap.get("style", "")
+                                        match = re.search(r"background-image:\s*url\(['\"]?(.*?)['\"]?\)", style)
+                                        if match:
+                                            photo_url = match.group(1)
+                                            media_type = "photo"
+                                            
+                                    coupons = extract_coupons_from_text(full_text)
+                                    seller = extract_seller_info(full_text)
+                                    
+                                    # Stage 5: Message Normalization
+                                    normalized = NormalizedMessage(
+                                        channel_id=ch,
+                                        channel_name=ch,
+                                        message_id=msg_id,
+                                        is_edited=False,
+                                        raw_text=full_text,
+                                        caption="",
+                                        media_type=media_type,
+                                        media_file_id=photo_url,
+                                        extracted_urls=extracted_urls,
+                                        buttons=buttons,
+                                        seller=seller,
+                                        coupon_codes=coupons,
+                                        metadata={
+                                            "client": "web_scraper",
+                                            "photo_url": photo_url
+                                        }
+                                    )
+                                    logging.info(f"[PARSE] [CorrID: {normalized.correlation_id}] Normalization PASS. Raw links: {normalized.extracted_urls}")
+                                    
+                                    # Stage 3: Queue Insertion
+                                    logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Attempting enqueue...")
+                                    success = await asyncio.to_thread(self.queue.enqueue, normalized)
+                                    if success:
+                                        logging.info(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue PASS.")
+                                    else:
+                                        logging.warning(f"[QUEUE] [CorrID: {normalized.correlation_id}] Enqueue FAIL. Falling back to inline processing...")
+                                        asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
+                                        
+                                    last_seen_msg_ids[ch] = msg_id
+                                except Exception as msg_err:
+                                    logging.error(f"[INGEST] Error processing message {msg_id} from {ch}: {msg_err}", exc_info=True)
+                                    
                         except Exception as ch_err:
                             logging.error(f"[Web Scraper] Error scraping channel {ch}: {ch_err}", exc_info=True)
                             
