@@ -6,6 +6,7 @@ from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from deal_engine.scorer import calculate_deal_score
 from config.settings import load_settings
+from utils.deduplicator import find_similar_product, add_product_to_vector_db
 
 def initialize_database_selectors():
     db = SessionLocal()
@@ -156,7 +157,6 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
         if not product:
             try:
                 logging.info(f"[DB Save] Product not in DB. Running find_similar_product check...")
-                from utils.deduplicator import find_similar_product
                 similar_id = find_similar_product(title)
                 if similar_id:
                     logging.info(f"Deduplicator: Map deal '{title[:35]}' to parent matched ID '{similar_id}'")
@@ -173,7 +173,6 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
             
             # Index inside vector catalog for future match alerts
             try:
-                from utils.deduplicator import add_product_to_vector_db
                 add_product_to_vector_db(unique_id, title)
             except Exception as index_err:
                 logging.error(f"Failed to index new deal vector embedding: {index_err}")

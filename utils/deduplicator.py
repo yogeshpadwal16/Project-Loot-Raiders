@@ -7,6 +7,7 @@ import threading
 from typing import Tuple, Optional
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory
+from utils.semantic_dedup import find_semantic_duplicate, add_deal_vector
 
 # Setup logging
 logger = logging.getLogger("IntelligentDeduplicator")
@@ -127,7 +128,6 @@ def find_duplicate_deal(
             
     # 2. Query Semantic Vector Database (ChromaDB)
     try:
-        from utils.semantic_dedup import find_semantic_duplicate
         matched_id = find_semantic_duplicate(title=title, price=price, threshold=SIMILARITY_THRESHOLD / 100.0)
         if matched_id:
             logger.info(f"ChromaDB semantic duplicate match: '{title[:30]}' mapped to {matched_id}")
@@ -221,7 +221,6 @@ def find_similar_product(title: str, distance_threshold: float = 0.15) -> Option
     """Fallback compatibility method mapping directly to our fast fuzzy matcher."""
     # Try querying persistent ChromaDB first
     try:
-        from utils.semantic_dedup import find_semantic_duplicate
         matched_id = find_semantic_duplicate(title=title, price=0, threshold=1.0 - distance_threshold)
         if matched_id:
             logger.info(f"ChromaDB similar product match: {matched_id} ('{title[:30]}')")
@@ -277,7 +276,6 @@ def add_product_to_vector_db(product_id: str, title: str) -> bool:
     MOCKED_VECTOR_DB[product_id] = title
     logger.info(f"Mock-indexed product '{product_id}' -> '{title[:30]}' in memory.")
     try:
-        from utils.semantic_dedup import add_deal_vector
         add_deal_vector(product_id=product_id, title=title, price=0)
     except Exception as index_err:
         logger.error(f"Failed to add product to persistent vector DB: {index_err}")
