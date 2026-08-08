@@ -16,6 +16,10 @@ ENV/
 # Environment Variables
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+secrets.json
 
 # IDE
 .vscode/
