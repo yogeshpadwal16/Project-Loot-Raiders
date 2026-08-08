@@ -23,6 +23,8 @@
 - [x] Predictive Price Intelligence Engine (PPIE - statistical price trend forecasting)
 - [x] Dual Database Adapter (SQLite local / PostgreSQL cloud via DATABASE_URL)
 - [x] Automated Database Backup & Optimization Pipeline (scripts/backup_db.py + PM2 12h cron)
+- [x] Persistent Notification Queue & Crash Recovery (SQLite PendingNotification queue + worker recovery)
+- [x] Multi-Target Off-Site Database Backup Engine (Integrity verification + Gzip compression + Telegram Document dispatch + Secondary directory sync + Webhook push)
 - [x] Mobile app (PWA installable with WebPush & offline support)
 - [x] WebPush Notification Engine (/api/push/subscribe + ServiceWorker push handlers)
 - [x] Public API for deal distribution (v3.2.0 milestone)
