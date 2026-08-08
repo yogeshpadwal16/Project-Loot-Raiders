@@ -511,7 +511,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             check_quality_firewall = None
             
     if check_quality_firewall:
-        if not check_quality_firewall(price, title, img_url):
+        if not check_quality_firewall(price, title, img_url, is_mirror=True):
             return False
 
     is_amazon = "amazon" in platform.lower()

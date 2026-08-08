@@ -14,55 +14,37 @@ def inject_disclosure_to_text(text: str) -> str:
     return f"{text}\n\n{DISCLOSURE_TEXT}"
 
 
-def check_quality_firewall(price, product_title: str, image_url: str) -> bool:
+def check_quality_firewall(price, product_title: str, image_url: str = None, is_mirror: bool = False) -> bool:
     """
-    Quality firewall validation check. Drops posts with invalid price, dummy titles, or generic logo images.
+    Quality firewall validation check.
+    Guarantees that invalid prices or empty payloads are caught.
+    For mirrored competitor deals, bypasses strict CDN restrictions so 100% of competitor deals pass.
+    Allows deals missing raw CDN images to proceed because PIL image generator will build a product deal card image.
     """
     import logging
 
-    # 1. DROP the post instantly if price <= 0 or price is None
+    # 1. DROP the post if price <= 0 or price is None
     if price is None or price <= 0:
         logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
         return False
 
-    # 2. DROP the post instantly if product_title is "Product Deal", "Title", "Deal", or under 5 characters
+    # 2. DROP the post if product_title is completely missing or generic default
     title_clean = (product_title or "").strip()
-    if title_clean in ["Product Deal", "Title", "Deal"] or len(title_clean) < 5:
+    if title_clean in ["Product Deal", "Title", "Deal"] or len(title_clean) < 3:
         logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
         return False
 
-    # 3. DROP the post instantly if image_url is missing or a generic store logo
-    if not image_url:
-        logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
-        return False
-        
-    img_lower = str(image_url).lower()
-    banned_keywords = ["brand-logo", "store-logo", "header-logo", "footer-logo", "logo-brand", "logo-store", "amazon-logo", "store_logo", "logo_brand", "logo_store", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
-    is_logo = False
-    if any(x in img_lower for x in banned_keywords):
-        is_logo = True
-    else:
-        url_path = img_lower.split('?')[0]
-        if url_path.endswith(('/logo.png', '/logo.jpg', '/logo.jpeg', '/logo.gif', '/logo.svg', '/logo.webp')):
-            is_logo = True
-            
-    if is_logo:
-        logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
-        return False
+    # If it's a mirrored deal, approve it immediately (as long as price > 0 and title is valid)
+    if is_mirror:
+        return True
 
-    # Strict check for E-commerce CDNs
-    if "amazon" in img_lower:
-        if "images/i/" not in img_lower:
-            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
-            return False
-    elif "flipkart" in img_lower:
-        if "rukminim" not in img_lower:
-            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
-            return False
-    elif "myntra" in img_lower:
-        if "myntassets" not in img_lower:
+    # 3. Check for obvious non-image placeholder/logo keywords if image_url is provided
+    if image_url:
+        img_lower = str(image_url).lower()
+        banned_keywords = ["amazon-logo", "store_logo", "logo_brand", "logo_store", "placeholder", "banner", "fallback", "avatar", "sprite"]
+        if any(x in img_lower for x in banned_keywords):
             logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
             return False
 
+    # If image_url is missing, return True so notifier.py generates a PIL deal card image!
     return True
-
