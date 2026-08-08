@@ -153,24 +153,27 @@ class DealMirrorProcessor:
             db.close()
 
     def _process_single_raw_url(self, raw_url: str, correlation_id: str, message: NormalizedMessage, extracted_data: dict, db):
-        """Scrapes a single URL, validates product imagery, and processes data."""
+        """Processes a single URL extraction, scraping, and deal logic workflow."""
         expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
         platform, unique_id = self._parse_url_metadata(expanded_url)
         
-        # Perform scraping
-        scraped = scrape_product_details(expanded_url, platform)
-        if not scraped or not scraped.get("title"):
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Failed to scrape essential data for {expanded_url}")
-            return
-
-        title = scraped.get("title")
-        img_url = scraped.get("image_url", message.media_file_id)
-        if not img_url:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] No product image found for {title}. Skipping.")
+        if not platform or not unique_id:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Unrecognized domain or ID for URL: {expanded_url}")
             return
             
-        price = float(scraped.get("price", 0))
-        mrp = float(scraped.get("mrp", price))
+        scraped = scrape_product_details(expanded_url)
+        if not scraped:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Scraper failed for {expanded_url}")
+            return
+            
+        img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
+        if not img_url:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] No product image found. Skipping.")
+            return
+
+        title = scraped.get("title", "Unknown Product")
+        price = scraped.get("price", 0)
+        mrp = scraped.get("mrp", price)
         discount = scraped.get("discount", 0)
         rating = scraped.get("rating", 0)
         reviews = scraped.get("reviews", 0)
