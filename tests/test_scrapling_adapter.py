@@ -19,10 +19,10 @@ class TestScraplingAdapter(unittest.TestCase):
 
     def test_fetch_success_fast_mode(self):
         """Test fetching a page in fast mode (HTTP)."""
-        response = self.adapter.fetch("https://httpbin.org/get", mode="fast")
+        response = self.adapter.fetch("https://www.google.com", mode="fast")
         self.assertIsInstance(response, ScrapedResponse)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("headers", response.content)
+        self.assertIn("html", response.content.lower())
 
     def test_fetch_error_invalid_url(self):
         """Verify internal exceptions are shielded and re-raised as ScraperFetchError."""

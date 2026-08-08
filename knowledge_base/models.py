@@ -178,3 +178,30 @@ class WishlistItem(Base):
     created_at = Column(Float, default=time.time)
 
 
+class PendingNotification(Base):
+    """Stores alerts to be dispatched persistently in database to prevent loss on server reboots."""
+    __tablename__ = 'pending_notifications'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    platform = Column(String)
+    title = Column(String)
+    price = Column(Integer)
+    mrp = Column(Integer)
+    discount = Column(Float)
+    image_url = Column(String)
+    url = Column(String)
+    is_verified_low = Column(Boolean, default=False)
+    deal_score = Column(Float, default=0.0)
+    unique_id = Column(String, index=True)
+    bank_offers = Column(String)  # Stored as serialized JSON list/dict
+    coupon_detail = Column(String, default="")
+    review_grade = Column(String, default="N/A")
+    auto_cart_url = Column(String, nullable=True)
+    is_mirror = Column(Boolean, default=False)
+    priority_level = Column(Integer, default=4)
+    timestamp = Column(Float, default=time.time)
+    retries = Column(Integer, default=0)
+    status = Column(String, default='pending')  # 'pending', 'completed', 'failed'
+
+
+

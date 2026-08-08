@@ -9,7 +9,7 @@ import re
 from datetime import datetime
 from config.settings import load_settings, save_settings
 from database.db_session import SessionLocal
-from knowledge_base.models import Product, PriceHistory
+from knowledge_base.models import Product, PriceHistory, PendingNotification
 from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 from deal_engine.wishlist import check_deal_against_keyword_alerts
@@ -1522,9 +1522,15 @@ def notifier_worker():
             
         try:
             success = _process_and_broadcast_alert_job(job)
-            if not success:
+            db_id = job.get("db_id")
+            if success:
+                if db_id:
+                    db_update_notification_status(db_id, 'completed')
+            else:
                 retries = job.get("retries", 0)
                 job["retries"] = retries + 1
+                if db_id:
+                    db_update_notification_status(db_id, 'pending', retries=job["retries"])
                 backoff = (2 ** retries) * 5
                 logging.warning(f"Notification broadcast failed. Retrying job in {backoff} seconds...")
                 platform = job.get("platform", "unknown")
@@ -1564,9 +1570,15 @@ def mirror_notifier_worker():
             
         try:
             success = _process_and_broadcast_alert_job(job)
-            if not success:
+            db_id = job.get("db_id")
+            if success:
+                if db_id:
+                    db_update_notification_status(db_id, 'completed')
+            else:
                 retries = job.get("retries", 0)
                 job["retries"] = retries + 1
+                if db_id:
+                    db_update_notification_status(db_id, 'pending', retries=job["retries"])
                 backoff = (2 ** retries) * 5
                 logging.warning(f"Mirror Notification broadcast failed. Retrying job in {backoff} seconds...")
                 threading.Timer(backoff, lambda: mirror_notification_queue.put(job)).start()
@@ -1577,6 +1589,110 @@ def mirror_notifier_worker():
             logging.error(f'[Mirror Broadcaster Worker] Error processing alert job: {job_err}', exc_info=True)
             try: mirror_notification_queue.task_done()
             except Exception: pass
+
+def db_save_pending_notification(job: dict, priority_level: int) -> int:
+    """Saves a pending notification to the database and returns its ID."""
+    db = SessionLocal()
+    try:
+        bank_offers_str = json.dumps(job.get("bank_offers", []))
+        notif = PendingNotification(
+            platform=job.get("platform"),
+            title=job.get("title"),
+            price=job.get("price"),
+            mrp=job.get("mrp"),
+            discount=job.get("discount"),
+            image_url=job.get("image_url"),
+            url=job.get("url"),
+            is_verified_low=job.get("is_verified_low", False),
+            deal_score=job.get("deal_score", 0.0),
+            unique_id=job.get("unique_id"),
+            bank_offers=bank_offers_str,
+            coupon_detail=job.get("coupon_detail", ""),
+            review_grade=job.get("review_grade", "N/A"),
+            auto_cart_url=job.get("auto_cart_url"),
+            is_mirror=job.get("is_mirror", False),
+            priority_level=priority_level,
+            retries=job.get("retries", 0),
+            status='pending'
+        )
+        db.add(notif)
+        db.commit()
+        db.refresh(notif)
+        return notif.id
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Failed to save pending notification to DB: {e}")
+        return None
+    finally:
+        db.close()
+
+def db_update_notification_status(db_id: int, status: str, retries: int = None):
+    """Updates the status of a pending notification in the database."""
+    if not db_id:
+        return
+    db = SessionLocal()
+    try:
+        notif = db.query(PendingNotification).filter_by(id=db_id).first()
+        if notif:
+            notif.status = status
+            if retries is not None:
+                notif.retries = retries
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        logging.error(f"Failed to update notification status in DB (ID: {db_id}): {e}")
+    finally:
+        db.close()
+
+def recover_pending_notifications():
+    """Queries all pending notifications from DB and re-enqueues them on startup."""
+    db = SessionLocal()
+    try:
+        pending = db.query(PendingNotification).filter_by(status='pending').all()
+        if not pending:
+            return
+        logging.info(f"[Notifier] Found {len(pending)} pending notifications in DB. Recovering and re-enqueueing...")
+        global queue_counter
+        for notif in pending:
+            try:
+                bank_offers = json.loads(notif.bank_offers) if notif.bank_offers else []
+            except Exception:
+                bank_offers = []
+                
+            job = {
+                "platform": notif.platform,
+                "title": notif.title,
+                "price": notif.price,
+                "mrp": notif.mrp,
+                "discount": notif.discount,
+                "image_url": notif.image_url,
+                "url": notif.url,
+                "is_verified_low": notif.is_verified_low,
+                "deal_score": notif.deal_score,
+                "unique_id": notif.unique_id,
+                "bank_offers": bank_offers,
+                "coupon_detail": notif.coupon_detail,
+                "review_grade": notif.review_grade,
+                "auto_cart_url": notif.auto_cart_url,
+                "retries": notif.retries,
+                "is_mirror": notif.is_mirror,
+                "db_id": notif.id
+            }
+            
+            if notif.is_mirror:
+                mirror_notification_queue.put(job)
+                logging.info(f"[Notifier] Recovered and enqueued mirror deal: {notif.title[:30]}")
+            else:
+                timestamp = notif.timestamp or time.time()
+                with queue_counter_lock:
+                    queue_counter += 1
+                    cnt = queue_counter
+                notification_queue.put((notif.priority_level, timestamp, cnt, job))
+                logging.info(f"[Notifier] Recovered and enqueued scraper deal: {notif.title[:30]}")
+    except Exception as e:
+        logging.error(f"Error during pending notifications recovery: {e}")
+    finally:
+        db.close()
 
 def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, deal_score: float, unique_id: str,
                   bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, is_mirror: bool = False):
@@ -1601,6 +1717,9 @@ def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: flo
     }
     
     if is_mirror:
+        priority_level = 4
+        db_id = db_save_pending_notification(job, priority_level)
+        job["db_id"] = db_id
         mirror_notification_queue.put(job)
         logging.info(f"[Notifier] Enqueued mirror deal to dedicated queue: {title[:30]}")
     else:
@@ -1613,6 +1732,9 @@ def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: flo
         else:
             priority_level = 4
             
+        db_id = db_save_pending_notification(job, priority_level)
+        job["db_id"] = db_id
+        
         with queue_counter_lock:
             queue_counter += 1
             cnt = queue_counter
@@ -1621,6 +1743,11 @@ def enqueue_alert(platform: str, title: str, price: int, mrp: int, discount: flo
         logging.info(f"[Notifier] Enqueued scraper deal to priority queue (level {priority_level}): {title[:30]}")
 
 def start_notifier():
+    try:
+        recover_pending_notifications()
+    except Exception as recovery_err:
+        logging.error(f"Failed to run pending notifications recovery: {recovery_err}")
+
     t1 = threading.Thread(target=notifier_worker, daemon=True)
     t1.start()
     t2 = threading.Thread(target=mirror_notifier_worker, daemon=True)

@@ -58,7 +58,8 @@ def init_db():
     from knowledge_base.models import (
         Product, PriceHistory, ClickLog, SelectorMatrix, DealVote, 
         UserWalletCard, UserScore, ReferralLog, ChannelGrowthLog,
-        MirroredMessage, SourceChannel, ProcessingLog, SystemHealth, RetryHistory
+        MirroredMessage, SourceChannel, ProcessingLog, SystemHealth, RetryHistory,
+        PendingNotification
     )
     Base.metadata.create_all(bind=engine)
     
