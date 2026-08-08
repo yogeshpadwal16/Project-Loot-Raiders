@@ -19,6 +19,25 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
 LOG_FILE = os.path.join(BASE_DIR, "execution.log")
 
+# Loot Brain Singleton Setup
+from loot_brain.memory.store import MemoryStore
+from loot_brain.agents.registry import AgentRegistry
+from loot_brain.agents.deal_intelligence import DealIntelligenceAgent
+from loot_brain.agents.scraper_agent import ScraperAgent
+from loot_brain.agents.affiliate_agent import AffiliateAgent
+from loot_brain.agents.telegram_agent import TelegramAgent
+from loot_brain.orchestrator.engine import LootBrainOrchestrator
+from loot_brain.learning.subconscious import SubconsciousLoop
+
+brain_store = MemoryStore()
+brain_registry = AgentRegistry()
+brain_registry.register(DealIntelligenceAgent())
+brain_registry.register(ScraperAgent())
+brain_registry.register(AffiliateAgent())
+brain_registry.register(TelegramAgent())
+brain_orchestrator = LootBrainOrchestrator(registry=brain_registry, memory_store=brain_store)
+brain_subconscious = SubconsciousLoop(memory_store=brain_store)
+
 # We will import these dynamically to prevent circular imports during start
 # core.engine will import web.server, so web.server should lazy-import from core.engine inside methods
 _state_ref = None
@@ -80,7 +99,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             '/api/status', 
             '/api/deals', 
             '/api/config',
+            '/api/brain/status',
+            '/api/brain/memories',
+            '/api/brain/learning/policies',
+            '/api/brain/pipeline/process',
             '/api/analytics',
+
             '/api/scraper/health',
             '/api/lootmap/events',
             '/api/rewards/scratch',
