@@ -152,141 +152,28 @@ class DealMirrorProcessor:
         finally:
             db.close()
 
-    def _process_single_raw_url(self, raw_url: str, correlation_id: str, message, extracted_data: Optional[dict], db):
-        # Skip known bad paths
-        from deal_engine.channel_mirror import _should_skip_url
-        if _should_skip_url(raw_url):
-            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipping non-deal link: {raw_url}")
-            return
-        
-        # 2. Expand link
+    def _process_single_raw_url(self, raw_url: str, correlation_id: str, message: NormalizedMessage, extracted_data: dict, db):
+        """Scrapes a single URL, validates product imagery, and processes data."""
         expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
-        
-        # Resolve competitor landing pages
         platform, unique_id = self._parse_url_metadata(expanded_url)
-        if not platform or not unique_id:
-            # Attempt landing page parsing for non-direct links (e.g. linktree, link shorteners)
-            logging.info(f"[PARSE] [CorrID: {correlation_id}] Non-store URL: {expanded_url}. Scanning landing page...")
-            from deal_engine.deal_processor import extract_store_url_from_competitor_landing_page
-            candidates = extract_store_url_from_competitor_landing_page(expanded_url)
-            if candidates:
-                expanded_url = candidates
-                platform, unique_id = self._parse_url_metadata(expanded_url)
         
-        if not platform or not unique_id:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Could not resolve store identifier for: {expanded_url}")
+        # Perform scraping
+        scraped = scrape_product_details(expanded_url, platform)
+        if not scraped or not scraped.get("title"):
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Failed to scrape essential data for {expanded_url}")
+            return
+
+        title = scraped.get("title")
+        img_url = scraped.get("image_url", message.media_file_id)
+        if not img_url:
+            logging.warning(f"[PARSE] [CorrID: {correlation_id}] No product image found for {title}. Skipping.")
             return
             
-        # 4. Scrape details
-        # Priority A: Parse from Telegram message text (message.raw_text)
-        # Priority B: Fallback to lightweight HTTP scrape (BeautifulSoup — no browser)
-        title, price, mrp, img_url = "", 0, 0, message.media_file_id if (message.media_file_id and message.media_file_id.startswith("http")) else ""
-        if extracted_data:
-            if extracted_data.get("title"):
-                title = extracted_data["title"]
-            if extracted_data.get("price"):
-                price = extracted_data["price"]
-            if extracted_data.get("mrp"):
-                mrp = extracted_data["mrp"]
-        
-        if message.raw_text and message.raw_text.strip():
-            import re
-            def extract_deal_number(pattern: str, text: str) -> int:
-                m = re.search(pattern, text.replace(',', ''), flags=re.IGNORECASE)
-                if m:
-                    try:
-                        return int(m.group(1))
-                    except (ValueError, IndexError):
-                        pass
-                return 0
-            
-            price_patterns = [
-                r'(?:price|deal\s+price|offer\s+price|deal|now|at\s+just|at|for|starts?\s+at|from|@|flat|only)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
-                r'(?:rs\.?|₹)\s*(\d+)\s*(?:/|-|\s+to\s+)\s*(?:rs\.?|₹)?\s*\d+',
-                r'(?:rs\.?|₹)\s*(\d[\d,]{1,6})',
-                r'(\d+)\s*(?:/-|rs\b|inr\b)',
-                r'@\s*(\d+)',
-            ]
-            mrp_patterns = [
-                r'(?:mrp|original\s+price|was|list\s+price|m\.?r\.?p\.?)\s*:?\s*(?:rs\.?|₹)?\s*(\d+)',
-                r'(?:rs\.?|₹)\s*\d+\s*(?:/|-)\s*(?:rs\.?|₹)?\s*(\d+)',
-                r'(?:slash(?:ed)?|cut|was|original)\s+(?:rs\.?|₹)?\s*(\d+)',
-            ]
-            
-            # Match rules
-            for pat in price_patterns:
-                p_val = extract_deal_number(pat, message.raw_text)
-                if p_val > 0:
-                    price = p_val
-                    break
-            for pat in mrp_patterns:
-                m_val = extract_deal_number(pat, message.raw_text)
-                if m_val > 0:
-                    mrp = m_val
-                    break
-                    
-            if price > 0 and mrp > 0:
-                logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted from message text: Price=Rs.{price} MRP=Rs.{mrp}")
-                lines = [l.strip() for l in message.raw_text.split('\n') if l.strip()]
-                for line in lines:
-                    if (len(line) >= 8 and 'http' not in line and
-                            not line.startswith('#') and
-                            not re.match(r'^[\d₹%\-\s,.:Rs]+$', line, flags=re.IGNORECASE)):
-                        title = line[:120]
-                        break
-        
-        # Scrape target page fallback if price is missing or title is dummy
-        if not title or title == "Competitor Deal" or price == 0 or mrp == 0 or not img_url:
-            from core.engine import scrape_product_details
-            scraped_data = scrape_product_details(expanded_url)
-            if scraped_data:
-                scraped = scraped_data
-                if not title or title == "Competitor Deal":
-                    if scraped_data.get("title"):
-                        title = scraped_data["title"]
-                if price == 0 and scraped_data.get("price"):
-                    price = scraped_data.get("price", 0)
-                if mrp == 0 and scraped_data.get("mrp"):
-                    mrp = scraped_data.get("mrp", 0)
-                if not img_url and scraped_data.get("image_url"):
-                    img_url = scraped_data.get("image_url", "")
-        
-        # Extract any numbers from raw_text as emergency fallback
-        if price == 0 and message.raw_text:
-            match_prices = re.findall(r'(?:Rs\.?|₹)?\s*([\d,]{2,7})', message.raw_text, flags=re.IGNORECASE)
-            valid_nums = []
-            for mp in match_prices:
-                try:
-                    val = int(mp.replace(',', ''))
-                    if 49 <= val <= 200000:
-                        valid_nums.append(val)
-                except Exception:
-                    pass
-            if valid_nums:
-                price = min(valid_nums)
-                if len(valid_nums) > 1:
-                    mrp = max(valid_nums)
-                logging.info(f"[PARSE] [CorrID: {correlation_id}] Scrape failed. Extracted emergency price {price} from message text.")
-        
-        # If no price can be extracted from either the web page or the message text, DISCARD the deal silently
-        if price <= 0 or price is None:
-            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skip: Missing valid product price.")
-            return
-            
-        if not title or title == "Competitor Deal":
-            title = f"Deal Product ({platform.upper()})"
-            
-        mrp = int(mrp) if mrp else 0
-        
-        discount = 0.0
-        if mrp > 0 and price > 0 and mrp > price:
-            discount = ((mrp - price) / mrp) * 100.0
-            
-        # Get defaults for optional fields if scraper returned none
-        scraped = {}
-        
-        rating = scraped.get("rating")
-        reviews = scraped.get("reviews")
+        price = float(scraped.get("price", 0))
+        mrp = float(scraped.get("mrp", price))
+        discount = scraped.get("discount", 0)
+        rating = scraped.get("rating", 0)
+        reviews = scraped.get("reviews", 0)
         has_bank_offer = scraped.get("has_bank_offer", False)
         
         # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
