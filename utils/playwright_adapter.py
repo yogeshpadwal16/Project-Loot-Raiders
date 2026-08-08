@@ -17,6 +17,12 @@ class PlaywrightElementAdapter:
         except Exception as e:
             return ""
 
+    def inner_text(self):
+        try:
+            return self.locator.inner_text()
+        except Exception:
+            return ""
+
     @property
     def tag_name(self):
         try:
