@@ -661,16 +661,19 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     import json
     
     # Safety: Telegram requires absolute URLs for inline keyboard buttons
-    if buy_url and not buy_url.startswith("http"):
-        logging.warning(f"[Notifier] Fixing relative buy_url for {unique_id}: {buy_url[:80]}")
-        if "flipkart" in platform.lower():
-            buy_url = f"https://www.flipkart.com{buy_url}" if buy_url.startswith("/") else f"https://www.flipkart.com/{buy_url}"
-        elif "amazon" in platform.lower():
-            buy_url = f"https://www.amazon.in{buy_url}" if buy_url.startswith("/") else f"https://www.amazon.in/{buy_url}"
+    if not buy_url or not buy_url.startswith("http"):
+        if not buy_url: buy_url = "https://lootraiders.com"
+        elif buy_url.startswith("/"):
+            if "flipkart" in platform.lower():
+                buy_url = f"https://www.flipkart.com{buy_url}"
+            elif "amazon" in platform.lower():
+                buy_url = f"https://www.amazon.in{buy_url}"
+            else:
+                buy_url = f"https://{buy_url.lstrip('/')}"
         else:
             buy_url = f"https://{buy_url}"
     if auto_cart_url and not auto_cart_url.startswith("http"):
-        auto_cart_url = None  # Drop invalid auto-cart URL rather than crash
+        auto_cart_url = None
     
     price_val = int(price) if price else 0
     inline_keyboard = [
