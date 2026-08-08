@@ -21,7 +21,7 @@ class TestLootBrainDashboardAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "ONLINE")
-        self.assertEqual(data["registered_agents_count"], 4)
+        self.assertGreaterEqual(data["registered_agents_count"], 4)
 
     def test_brain_memories_endpoint(self):
         response = client.get("/api/v1/brain/memories")

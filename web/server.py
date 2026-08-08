@@ -24,6 +24,7 @@ from loot_brain.memory.store import MemoryStore
 from loot_brain.agents.registry import AgentRegistry
 from loot_brain.agents.deal_intelligence import DealIntelligenceAgent
 from loot_brain.agents.scraper_agent import ScraperAgent
+from loot_brain.agents.scraper_healer import ScraperHealerAgent
 from loot_brain.agents.affiliate_agent import AffiliateAgent
 from loot_brain.agents.telegram_agent import TelegramAgent
 from loot_brain.orchestrator.engine import LootBrainOrchestrator
@@ -33,6 +34,7 @@ brain_store = MemoryStore()
 brain_registry = AgentRegistry()
 brain_registry.register(DealIntelligenceAgent())
 brain_registry.register(ScraperAgent())
+brain_registry.register(ScraperHealerAgent())
 brain_registry.register(AffiliateAgent())
 brain_registry.register(TelegramAgent())
 brain_orchestrator = LootBrainOrchestrator(registry=brain_registry, memory_store=brain_store)

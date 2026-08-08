@@ -1,78 +1,78 @@
 {
     "amazon_master_lightning_deals": {
         "url": "https://www.amazon.in/gp/goldbox?pct-off=35-",
-        "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card']",
-        "title_selector": "span.a-truncate-full, .a-truncate-full",
-        "link_selector": "a[data-testid='product-card-link'], a.a-link-normal",
-        "image_selector": "img[class*='ProductCardImage-module__image'], img"
+        "card_selector": "div[data-testid='product-card'], div[class*='ProductCard-module__card'], div[data-component-type='s-search-result'], div.sg-col-inner, div[class*='dealCard'], div[data-deal-id], div.a-cardui",
+        "title_selector": "span.a-truncate-full, .a-truncate-full, h2 span, span.a-text-normal, [class*='ProductCardTitle']",
+        "link_selector": "a[data-testid='product-card-link'], a.a-link-normal, a[href*='/dp/'], a[href*='/gp/product/']",
+        "image_selector": "img[class*='ProductCardImage-module__image'], img.s-image, img.a-dynamic-image, img"
     },
     "amazon_sitewide_search_deals": {
         "url": "https://www.amazon.in/s?k=deals+of+the+day&pct-off=40-",
-        "card_selector": "div[data-component-type='s-search-result']",
-        "title_selector": "h2 span",
-        "link_selector": "a.a-link-normal",
-        "image_selector": "img.s-image"
+        "card_selector": "div[data-component-type='s-search-result'], div.sg-col-inner, div[data-asin]",
+        "title_selector": "h2 span, span.a-text-normal, h2 a span",
+        "link_selector": "a.a-link-normal, a[href*='/dp/']",
+        "image_selector": "img.s-image, img"
     },
     "amazon_electronics_deals": {
         "url": "https://www.amazon.in/s?k=electronics&pct-off=30-",
-        "card_selector": "div[data-component-type='s-search-result']",
-        "title_selector": "h2 span",
-        "link_selector": "a.a-link-normal",
-        "image_selector": "img.s-image"
+        "card_selector": "div[data-component-type='s-search-result'], div.sg-col-inner, div[data-asin]",
+        "title_selector": "h2 span, span.a-text-normal",
+        "link_selector": "a.a-link-normal, a[href*='/dp/']",
+        "image_selector": "img.s-image, img"
     },
     "amazon_appliances_deals": {
         "url": "https://www.amazon.in/s?k=home+appliances&pct-off=30-",
-        "card_selector": "div[data-component-type='s-search-result']",
-        "title_selector": "h2 span",
-        "link_selector": "a.a-link-normal",
-        "image_selector": "img.s-image"
+        "card_selector": "div[data-component-type='s-search-result'], div.sg-col-inner, div[data-asin]",
+        "title_selector": "h2 span, span.a-text-normal",
+        "link_selector": "a.a-link-normal, a[href*='/dp/']",
+        "image_selector": "img.s-image, img"
     },
     "flipkart_sitewide_offers": {
         "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1, div[class*='KzDlHZ']",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img.DCY me, img._2r_T1I, img"
     },
     "flipkart_clearance_master_feed": {
         "url": "https://www.flipkart.com/search?q=clearance sale",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1, div[class*='KzDlHZ']",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img.DCY me, img._2r_T1I, img"
     },
     "flipkart_electronics_deals": {
         "url": "https://www.flipkart.com/search?q=electronics&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img"
     },
     "flipkart_appliances_deals": {
         "url": "https://www.flipkart.com/search?q=appliances&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img"
     },
     "myntra_deals": {
         "url": "https://www.myntra.com/deals?f=discount%3A50.0",
-        "card_selector": "li.product-base",
-        "title_selector": "h4.product-product, h3.product-brand",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "li.product-base, div.product-base, div.product-tuple-image, section[class*='product']",
+        "title_selector": "h4.product-product, h3.product-brand, div.product-product, h4[class*='product']",
+        "link_selector": "a[href*='/buy/'], a",
+        "image_selector": "img.product-thumb, img"
     },
     "ajio_deals": {
         "url": "https://www.ajio.com/s/discount-50-percent-and-above",
-        "card_selector": "div.item",
-        "title_selector": "div.name",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div.item, div.riltrx-card, div[class*='item']",
+        "title_selector": "div.name, div.brand, [class*='name']",
+        "link_selector": "a[href*='/p/'], a",
+        "image_selector": "img.riltrx-img, img"
     },
     "meesho_deals": {
         "url": "https://www.meesho.com/search?q=offers",
-        "card_selector": "a[href*='/p/']",
-        "title_selector": "p[class*='ProductTitle']",
+        "card_selector": "a[href*='/p/'], div[class*='ProductList'] > div",
+        "title_selector": "p[class*='ProductTitle'], p",
         "link_selector": "a",
         "image_selector": "img"
     },
