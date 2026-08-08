@@ -2,6 +2,7 @@
 import os
 import time
 import logging
+import threading
 from typing import Optional
 import chromadb
 from fastembed import TextEmbedding
@@ -13,33 +14,39 @@ _chroma_client = None
 _collection = None
 _embedding_model = None
 
+_init_lock = threading.Lock()
+
 def get_embedding_model() -> TextEmbedding:
     global _embedding_model
     if _embedding_model is None:
-        logger.info("[Semantic Dedup] Initializing local FastEmbed TextEmbedding model...")
-        # Uses default 'BAAI/bge-small-en-v1.5' (very lightweight, 100MB, high performance)
-        _embedding_model = TextEmbedding()
+        with _init_lock:
+            if _embedding_model is None:
+                logger.info("[Semantic Dedup] Initializing local FastEmbed TextEmbedding model...")
+                # Uses default 'BAAI/bge-small-en-v1.5' (very lightweight, 100MB, high performance)
+                _embedding_model = TextEmbedding()
     return _embedding_model
 
 def get_chroma_collection():
     global _chroma_client, _collection
     if _collection is None:
-        try:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            chroma_path = os.path.join(base_dir, "database", "chroma_db")
-            os.makedirs(chroma_path, exist_ok=True)
-            
-            logger.info(f"[Semantic Dedup] Initializing ChromaDB persistent client at {chroma_path}...")
-            _chroma_client = chromadb.PersistentClient(path=chroma_path)
-            
-            # Using cosine similarity space for vector distance matching
-            _collection = _chroma_client.get_or_create_collection(
-                name="scraped_deals_vectors",
-                metadata={"hnsw:space": "cosine"}
-            )
-        except Exception as e:
-            logger.error(f"[Semantic Dedup] Failed to initialize ChromaDB collection: {e}")
-            raise
+        with _init_lock:
+            if _collection is None:
+                try:
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    chroma_path = os.path.join(base_dir, "database", "chroma_db")
+                    os.makedirs(chroma_path, exist_ok=True)
+                    
+                    logger.info(f"[Semantic Dedup] Initializing ChromaDB persistent client at {chroma_path}...")
+                    _chroma_client = chromadb.PersistentClient(path=chroma_path)
+                    
+                    # Using cosine similarity space for vector distance matching
+                    _collection = _chroma_client.get_or_create_collection(
+                        name="scraped_deals_vectors",
+                        metadata={"hnsw:space": "cosine"}
+                    )
+                except Exception as e:
+                    logger.error(f"[Semantic Dedup] Failed to initialize ChromaDB collection: {e}")
+                    raise
     return _collection
 
 def add_deal_vector(product_id: str, title: str, price: int, timestamp: float = None):
@@ -126,7 +133,7 @@ def find_semantic_duplicate(
             similarity = 1.0 - distance
             
             # Filter by matching price, time window, and similarity threshold
-            if metadata.get("price") == price:
+            if price is None or price == 0 or metadata.get("price") == price:
                 if metadata.get("timestamp", 0) >= cutoff_time:
                     if similarity >= threshold:
                         logger.info(

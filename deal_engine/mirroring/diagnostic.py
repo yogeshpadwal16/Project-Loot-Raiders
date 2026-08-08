@@ -5,8 +5,14 @@ import sys
 import os
 import asyncio
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Set up logging to stdout
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', handlers=[logging.StreamHandler(sys.stdout)])
+
 
 from database.db_session import SessionLocal, init_db
 from knowledge_base.models import Product, PriceHistory, ProcessingLog

@@ -3,9 +3,16 @@ import subprocess
 import sys
 import os
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def run_step(command, description):
     print(f"\n[AUDIT STEP] {description}...")
-    result = subprocess.run(command, shell=True)
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    result = subprocess.run(command, shell=True, env=env)
     if result.returncode != 0:
         print(f"[FAIL] {description}")
         return False

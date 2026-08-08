@@ -142,11 +142,16 @@ def initialize_database_selectors():
     finally:
         db.close()
 
-def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0) -> str:
+def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: float, img_url: str, final_url: str, is_verified_low: bool, unique_id: str, deal_score: float = 0.0, db = None) -> str:
     logging.info(f"[DB Save] Entering save_deal_to_db for '{title[:30]}' (ID: {unique_id})")
     from database.repository import SQLAlchemyDealRepository
     repo = SQLAlchemyDealRepository()
-    db = SessionLocal()
+    
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+        
     try:
         # Check if exact product unique_id exists
         logging.info(f"[DB Save] Querying product table for ID: {unique_id}")
@@ -208,7 +213,8 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
         db.rollback()
         logging.error(f"Failed to save deal to database: {e}")
     finally:
-        db.close()
+        if close_db:
+            db.close()
     return unique_id
 
 def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: str):

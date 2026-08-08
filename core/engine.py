@@ -168,128 +168,123 @@ def _process_single_scraped_deal(deal, platform: str, settings: dict, history: s
         has_bank_offer=has_bank_offer
     )
     
-    # Persist inside Knowledge Base database and get resolved semantic ID
-    unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score)
-    history.add(unique_id)
-    
-    # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
-    if should_publish_deal(platform, deal_score) and is_price_drop:
-        # 10. Deal Intelligence Engine check to suppress recurring / non-loot listing spams
-        from utils.deduplicator import is_genuine_loot_deal
-        db_sess = SessionLocal()
-        try:
-            is_genuine, suppression_reason = is_genuine_loot_deal(unique_id, title, price, mrp, discount, db_sess)
-        except Exception as eval_err:
-            logging.error(f"Error evaluating deal intelligence logic: {eval_err}")
-            is_genuine = True
-            suppression_reason = "error_fallback"
-        finally:
-            db_sess.close()
-            
-        if not is_genuine:
-            logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
-            release_in_flight_deal(title, platform, final_url)
-            return
-        else:
-            logging.info(f"Accepted genuine loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+    db_sess = SessionLocal()
+    try:
+        # Persist inside Knowledge Base database and get resolved semantic ID
+        unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, final_url, is_verified_low, unique_id, deal_score, db=db_sess)
+        history.add(unique_id)
         
-        # Publication Frequency Guard — suppress re-posts within 6h at same price
-        import datetime as _dt
-        db_freq = SessionLocal()
-        try:
-            prod_freq = db_freq.query(Product).filter_by(id=unique_id).first()
-            if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
-                hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
-                price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
+        # Dispatch notifications if score is above the configured threshold and it's a price drop / new product
+        if should_publish_deal(platform, deal_score) and is_price_drop:
+            # 10. Deal Intelligence Engine check to suppress recurring / non-loot listing spams
+            from utils.deduplicator import is_genuine_loot_deal
+            try:
+                is_genuine, suppression_reason = is_genuine_loot_deal(unique_id, title, price, mrp, discount, db_sess)
+            except Exception as eval_err:
+                logging.error(f"Error evaluating deal intelligence logic: {eval_err}")
+                is_genuine = True
+                suppression_reason = "error_fallback"
+                
+            if not is_genuine:
+                logging.info(f"Suppressed recurring/non-loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+                release_in_flight_deal(title, platform, final_url)
+                return
+            else:
+                logging.info(f"Accepted genuine loot deal: '{title[:35]}' | Reason: {suppression_reason}")
+            
+            # Publication Frequency Guard — suppress re-posts within 6h at same price
+            import datetime as _dt
+            try:
+                prod_freq = db_sess.query(Product).filter_by(id=unique_id).first()
+                if prod_freq and getattr(prod_freq, 'last_published_at', 0) and prod_freq.last_published_at > 0:
+                    hours_ago = (time.time() - prod_freq.last_published_at) / 3600.0
+                    price_at_last = getattr(prod_freq, 'last_published_price', 0) or 0
+                    today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                    daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
+                    daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
+                    if daily_date != today_str:
+                        daily_count = 0
+                    
+                    if hours_ago < 6.0 and price >= price_at_last:
+                        logging.info(
+                            f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                            f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
+                        )
+                        release_in_flight_deal(title, platform, final_url)
+                        return
+                    
+                    if daily_count >= 3:
+                        logging.info(
+                            f"[Publication Guard] Suppressed: '{title[:30]}' — "
+                            f"already posted {daily_count}x today (cap: 3/day)"
+                        )
+                        release_in_flight_deal(title, platform, final_url)
+                        return
+            except Exception as freq_err:
+                logging.error(f"[Publication Guard] DB check error: {freq_err}")
+                
+            bank_offers = []
+            coupon_detail = ""
+            review_grade = "N/A"
+            
+            try:
+                enriched = scrape_product_details(final_url, driver=driver)
+                if enriched:
+                    img_url = enriched.get("image_url") or img_url
+                    bank_offers = enriched.get("bank_offers", [])
+                    coupon_detail = enriched.get("coupon_detail", "")
+                    review_grade = enriched.get("review_grade", "N/A")
+            except Exception as enrich_err:
+                logging.warning(f"Failed to enrich scraped deal {unique_id} before dispatch: {enrich_err}")
+                
+            auto_cart_url = None
+            try:
+                from utils.affiliate import generate_auto_cart_url
+                auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
+            except Exception:
+                pass
+                
+            enqueue_alert(
+                platform=platform,
+                title=title,
+                price=price,
+                mrp=mrp,
+                discount=discount,
+                img_url=img_url,
+                final_url=final_url,
+                is_verified_low=is_verified_low,
+                deal_score=deal_score,
+                unique_id=unique_id,
+                bank_offers=bank_offers,
+                coupon_detail=coupon_detail,
+                review_grade=review_grade,
+                auto_cart_url=auto_cart_url
+            )
+            time.sleep(0.5)
+            
+            # Update publication tracking so this product won't be spammed again
+            try:
                 today_str = _dt.datetime.now().strftime('%Y-%m-%d')
-                daily_count = getattr(prod_freq, 'daily_post_count', 0) or 0
-                daily_date = getattr(prod_freq, 'daily_post_date', '') or ''
-                if daily_date != today_str:
-                    daily_count = 0
-                
-                if hours_ago < 6.0 and price >= price_at_last:
-                    logging.info(
-                        f"[Publication Guard] Suppressed: '{title[:30]}' — "
-                        f"posted {hours_ago:.1f}h ago at Rs.{price_at_last} (now Rs.{price})"
-                    )
-                    release_in_flight_deal(title, platform, final_url)
-                    return
-                
-                if daily_count >= 3:
-                    logging.info(
-                        f"[Publication Guard] Suppressed: '{title[:30]}' — "
-                        f"already posted {daily_count}x today (cap: 3/day)"
-                    )
-                    release_in_flight_deal(title, platform, final_url)
-                    return
-        except Exception as freq_err:
-            logging.error(f"[Publication Guard] DB check error: {freq_err}")
-        finally:
-            db_freq.close()
-            
-        bank_offers = []
-        coupon_detail = ""
-        review_grade = "N/A"
-        
-        try:
-            enriched = scrape_product_details(final_url, driver=driver)
-            if enriched:
-                img_url = enriched.get("image_url") or img_url
-                bank_offers = enriched.get("bank_offers", [])
-                coupon_detail = enriched.get("coupon_detail", "")
-                review_grade = enriched.get("review_grade", "N/A")
-        except Exception as enrich_err:
-            logging.warning(f"Failed to enrich scraped deal {unique_id} before dispatch: {enrich_err}")
-            
-        auto_cart_url = None
-        try:
-            from utils.affiliate import generate_auto_cart_url
-            auto_cart_url = generate_auto_cart_url(final_url, platform, settings)
-        except Exception:
-            pass
-            
-        enqueue_alert(
-            platform=platform,
-            title=title,
-            price=price,
-            mrp=mrp,
-            discount=discount,
-            img_url=img_url,
-            final_url=final_url,
-            is_verified_low=is_verified_low,
-            deal_score=deal_score,
-            unique_id=unique_id,
-            bank_offers=bank_offers,
-            coupon_detail=coupon_detail,
-            review_grade=review_grade,
-            auto_cart_url=auto_cart_url
-        )
-        time.sleep(0.5)
-        
-        # Update publication tracking so this product won't be spammed again
-        db_pub = SessionLocal()
-        try:
-            today_str = _dt.datetime.now().strftime('%Y-%m-%d')
-            prod_record = db_pub.query(Product).filter_by(id=unique_id).first()
-            if prod_record:
-                prod_record.last_published_at = time.time()
-                prod_record.last_published_price = price
-                if getattr(prod_record, 'daily_post_date', '') == today_str:
-                    prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
-                else:
-                    prod_record.daily_post_count = 1
-                    prod_record.daily_post_date = today_str
-                db_pub.commit()
-        except Exception as pub_upd_err:
-            db_pub.rollback()
-            logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
-        finally:
-            db_pub.close()
-    else:
-        if not should_publish_deal(platform, deal_score):
-            logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
+                prod_record = db_sess.query(Product).filter_by(id=unique_id).first()
+                if prod_record:
+                    prod_record.last_published_at = time.time()
+                    prod_record.last_published_price = price
+                    if getattr(prod_record, 'daily_post_date', '') == today_str:
+                        prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
+                    else:
+                        prod_record.daily_post_count = 1
+                        prod_record.daily_post_date = today_str
+                    db_sess.commit()
+            except Exception as pub_upd_err:
+                db_sess.rollback()
+                logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
         else:
-            logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
+            if not should_publish_deal(platform, deal_score):
+                logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
+            else:
+                logging.info(f"Skipping deal broadcast: {title[:35]}... (Price increased from last scan)")
+    finally:
+        db_sess.close()
 
 def scrape_platform(platform: str, config: dict, history: set):
     if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:

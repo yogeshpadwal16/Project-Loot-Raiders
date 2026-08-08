@@ -7,6 +7,11 @@ import os
 import sys
 import subprocess
 
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 def main():
     print("\n==========================================================================")
     print("LOOT RAIDERS PIPELINE HEALTH CHECKER")
@@ -18,6 +23,7 @@ def main():
     # Propagate environment variables and override PYTHONPATH
     env = os.environ.copy()
     env["PYTHONPATH"] = base_dir
+    env["PYTHONIOENCODING"] = "utf-8"
     
     # Build command utilizing the same python interpreter (within .venv)
     cmd = [sys.executable, "-m", "deal_engine.mirroring.diagnostic"]

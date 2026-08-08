@@ -333,7 +333,7 @@ class DealMirrorProcessor:
             has_bank_offer=has_bank_offer
         )
         
-        unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, expanded_url, is_verified_low, unique_id, deal_score)
+        unique_id = save_deal_to_db(platform, title, price, mrp, discount, img_url, expanded_url, is_verified_low, unique_id, deal_score, db)
         
         # 8. Affiliate URL Generator
         settings = load_settings()

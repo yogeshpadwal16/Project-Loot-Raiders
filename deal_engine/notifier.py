@@ -628,6 +628,21 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                                       buying_advice=buying_advice, unique_id=unique_id)
     
     local_card_path = None
+    try:
+        logging.info(f"[Notifier] Generating local PIL deal card for {unique_id}...")
+        local_card_path = generate_deal_image(
+            unique_id=unique_id,
+            platform=platform,
+            title=truncated_title,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            original_image_url=img_url,
+            is_verified_low=is_verified_low,
+            deal_score=deal_score
+        )
+    except Exception as img_gen_err:
+        logging.error(f"[Notifier] Failed to generate local PIL deal card: {img_gen_err}")
     has_real_image = False
 
     # 3. Build Inline Buy Button markup (Feature 3: Verification/Expiration Buttons)
