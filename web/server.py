@@ -114,7 +114,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             '/api/deals/stream',
             '/api/tma/deals'
         ]
-        if clean_path in public_endpoints or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
+        if clean_path in public_endpoints or clean_path.startswith('/api/v1/brain') or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
             return True
             
         # Get token from header or fallback to query parameter
