@@ -785,10 +785,27 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    # 5. Do not send static logos as fallbacks - drop the deal instead
-    logging.warning(f"[REJECTED: NO REAL PRODUCT IMAGE] [CorrID: {unique_id}] Native photo send failed, dropping deal.")
-    return False
-        
+    # Fallback to text-only message if photo send failed so deals are never lost
+    logging.info(f"[POST FALLBACK] [CorrID: {unique_id}] Photo send failed/unavailable. Sending text-only deal alert...")
+    try:
+        endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": caption,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": False,
+            "reply_markup": reply_markup_json
+        }
+        res = requests.post(endpoint, data=payload, timeout=15)
+        if res.status_code == 200:
+            logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Sent text-only deal to Telegram: {truncated_title[:20]}...")
+            save_telegram_message_info(unique_id, res, caption)
+            return True
+        else:
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Text-only deal send failed ({res.status_code}): {res.text}")
+    except Exception as text_err:
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Text-only deal send exception: {text_err}")
+
     return False
 
 def save_telegram_message_info(unique_id: str, res, caption: str):
