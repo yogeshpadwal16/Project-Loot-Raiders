@@ -308,8 +308,8 @@ async def build_morning_news_post() -> tuple:
     # 3. Fetch rates
     rates = await fetch_live_rates()
     
-    # Header: <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>
-    header = "<b>\u0932\u0942\u091f \u0930\u0947\u0921\u0930\u094d\u0938 - \u0938\u093f\u0902\u0927\u0941\u0926\u0941\u0930\u094d\u0917 \u091a\u093e\u0932\u0942 \u0918\u0921\u093e\u092e\u094b\u0921\u0940</b>\n"
+    # Header: 📰 <b>लूट रेडर्स - आजच्या चालू घडामोडी</b>
+    header = "📰 <b>लूट रेडर्स - आजच्या चालू घडामोडी</b>\n"
     
     # Separator
     separator = "———————————————\n\n"

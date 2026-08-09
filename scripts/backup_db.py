@@ -58,10 +58,10 @@ def compress_backup(backup_file: str) -> str:
 def push_to_telegram(file_path: str, caption: str = "") -> bool:
     """Dispatches the database backup document off-site to Telegram admin channel or chat."""
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_BACKUP_CHAT_ID") or os.getenv("TELEGRAM_CHAT_ID")
+    chat_id = os.getenv("TELEGRAM_BACKUP_CHAT_ID")
     
-    if not bot_token or not chat_id:
-        logging.warning("Telegram backup dispatch skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not configured.")
+    if not bot_token or not chat_id or chat_id == os.getenv("TELEGRAM_CHAT_ID"):
+        logging.warning("Telegram backup dispatch skipped: TELEGRAM_BACKUP_CHAT_ID is not configured or matches public channel.")
         return False
         
     url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
