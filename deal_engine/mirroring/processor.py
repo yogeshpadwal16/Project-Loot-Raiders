@@ -161,20 +161,20 @@ class DealMirrorProcessor:
             logging.warning(f"[PARSE] [CorrID: {correlation_id}] Unrecognized domain or ID for URL: {expanded_url}")
             return
             
-        scraped = scrape_product_details(expanded_url)
-        if not scraped:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Scraper failed for {expanded_url}")
-            return
+        scraped = scrape_product_details(expanded_url) or {}
             
         img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
         if not img_url:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] No product image found. Skipping.")
-            return
+            # Fallback product deal banner so zero deals are dropped
+            img_url = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600"
 
-        title = scraped.get("title", "Unknown Product")
-        price = scraped.get("price", 0)
-        mrp = scraped.get("mrp", price)
-        discount = scraped.get("discount", 0)
+        raw_text_clean = (message.raw_text or message.caption or "").strip()
+        first_line = raw_text_clean.split("\n")[0] if raw_text_clean else "Loot Deal Offer"
+        title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
+        
+        price = scraped.get("price") or 1
+        mrp = scraped.get("mrp") or price
+        discount = scraped.get("discount") or (round(((mrp - price) / mrp) * 100, 1) if mrp > price else 0)
         rating = scraped.get("rating", 0)
         reviews = scraped.get("reviews", 0)
         has_bank_offer = scraped.get("has_bank_offer", False)

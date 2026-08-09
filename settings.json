@@ -78,10 +78,7 @@
     }
   },
   "source_channels": [
-    "EagleTekDeals",
-    "Loot_shoppingdeals123",
-    "freekaamaalofficial",
-    "shopping_deals_india"
+    "Loot_shoppingdeals123"
   ],
   "force_web_scraper": true,
   "last_digest_date": "2026-08-03",
