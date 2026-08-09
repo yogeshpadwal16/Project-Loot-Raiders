@@ -308,8 +308,8 @@ async def build_morning_news_post() -> tuple:
     # 3. Fetch rates
     rates = await fetch_live_rates()
     
-    # Header: 📰 <b>लूट रेडर्स - आजच्या चालू घडामोडी</b>
-    header = "📰 <b>लूट रेडर्स - आजच्या चालू घडामोडी</b>\n"
+    # Header: 📰 <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>
+    header = "📰 <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>\n"
     
     # Separator
     separator = "———————————————\n\n"
@@ -407,7 +407,7 @@ async def generate_general_marathi_briefing(headlines: list, rates: dict) -> str
     import google.generativeai as genai
     
     settings = load_settings()
-    api_key = settings.get("gemini_api_key")
+    api_key = os.getenv("GEMINI_API_KEY") or settings.get("gemini_api_key")
     if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
         logger.warning("[BRIEFING_FAIL] Gemini API key not configured. Returning None.")
         return None
