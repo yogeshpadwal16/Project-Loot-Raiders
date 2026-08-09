@@ -253,21 +253,46 @@ class DealMirrorProcessor:
         logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
 
     def _expand_url_with_retry(self, url: str, correlation_id: str = "") -> str:
+        import urllib.parse
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+        store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
         expanded = url
+
+        # Fast-path: Check for nested target URLs in query parameters (dl=, url=, dest=, target=, redirect=)
+        try:
+            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+            for param_key in ["dl", "url", "dest", "target", "redirect", "link"]:
+                param_vals = parsed.get(param_key)
+                if param_vals:
+                    val = urllib.parse.unquote(param_vals[0])
+                    if any(d in val.lower() for d in store_domains):
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Fast-path extracted target URL from query param '{param_key}': {val}")
+                        return val
+        except Exception:
+            pass
+
         try:
             import httpx
-            with httpx.Client(headers=headers, follow_redirects=True, timeout=5.0) as client:
+            with httpx.Client(headers=headers, follow_redirects=True, timeout=12.0) as client:
                 res = client.head(url)
-                if res.status_code >= 400 or str(res.url) == url:
+                res_url_str = str(res.url) if res.url is not None else ""
+                if res.status_code >= 400 or res_url_str == url or not any(d in res_url_str.lower() for d in store_domains):
                     res = client.get(url)
-                expanded = str(res.url)
+                expanded = str(res.url) if res.url is not None else ""
+                
+                # Check expanded URL query parameters for nested store link
+                parsed = urllib.parse.parse_qs(urllib.parse.urlparse(expanded).query)
+                for param_key in ["dl", "url", "dest", "target", "redirect", "link"]:
+                    param_vals = parsed.get(param_key)
+                    if param_vals:
+                        val = urllib.parse.unquote(param_vals[0])
+                        if any(d in val.lower() for d in store_domains):
+                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted target store URL from redirected query param '{param_key}': {val}")
+                            return val
         except Exception as e:
             logging.warning(f"[PARSE] [CorrID: {correlation_id}] Short link expansion failed for {url}: {e}")
 
-            
         # If it's still a non-store URL, use Playwright to resolve JS redirects
-        store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
         if not any(d in expanded.lower() for d in store_domains):
             try:
                 from utils.playwright_adapter import get_playwright_driver
@@ -275,7 +300,7 @@ class DealMirrorProcessor:
                 temp_driver = get_playwright_driver(settings)
                 try:
                     temp_driver.get(expanded)
-                    time.sleep(5)  # Wait for JS redirects to settle
+                    time.sleep(3)  # Wait for JS redirects to settle
                     final_url = temp_driver.page.url
                     if any(d in final_url.lower() for d in store_domains):
                         logging.info(f"[PARSE] [CorrID: {correlation_id}] Playwright resolved JS redirect: {url} -> {final_url}")
