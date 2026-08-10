@@ -16,35 +16,48 @@ def inject_disclosure_to_text(text: str) -> str:
 
 def check_quality_firewall(price, product_title: str, image_url: str = None, is_mirror: bool = False) -> bool:
     """
-    Quality firewall validation check.
-    Guarantees that invalid prices or empty payloads are caught.
-    For mirrored competitor deals, bypasses strict CDN restrictions so 100% of competitor deals pass.
-    Allows deals missing raw CDN images to proceed because PIL image generator will build a product deal card image.
+    STRICT PRE-FLIGHT GUARDRAIL CHECK.
+    Rejects anti-bot scraping errors, suspicious default prices (<= ₹1), missing authentic images, and blacklisted domains.
     """
     import logging
 
-    # 1. DROP the post if price <= 0 or price is None
-    if price is None or price <= 0:
-        logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
-        return False
-
-    # 2. DROP the post if product_title is completely missing or generic default
     title_clean = (product_title or "").strip()
-    if title_clean in ["Product Deal", "Title", "Deal"] or len(title_clean) < 3:
-        logging.warning("[REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)]")
-        return False
+    title_lower = title_clean.lower()
 
-    # If it's a mirrored deal, approve it immediately (as long as price > 0 and title is valid)
-    if is_mirror:
-        return True
-
-    # 3. Check for obvious non-image placeholder/logo keywords if image_url is provided
-    if image_url:
-        img_lower = str(image_url).lower()
-        banned_keywords = ["amazon-logo", "store_logo", "logo_brand", "logo_store", "placeholder", "banner", "fallback", "avatar", "sprite"]
-        if any(x in img_lower for x in banned_keywords):
-            logging.warning("[REJECTED: NO REAL PRODUCT IMAGE]")
+    # 1. ANTI-BOT & SCRAPING ERROR BLACKLIST
+    blacklist_titles = [
+        "site maintenance", "recaptcha", "captcha", "cloudflare",
+        "just a moment", "access denied", "403 forbidden", "502 bad gateway",
+        "amazon.in", "flipkart", "myntra"
+    ]
+    for b in blacklist_titles:
+        if b in title_lower or title_clean.lower() == b:
+            logging.warning(f"[GUARDRAIL REJECT: ANTI-BOT/SCRAPING ERROR] Title: '{product_title}' contained '{b}'")
             return False
 
-    # If image_url is missing, return True so notifier.py generates a PIL deal card image!
+    if len(title_clean) < 3 or title_clean in ["Product Deal", "Title", "Deal", "Amazon.in"]:
+        logging.warning(f"[GUARDRAIL REJECT: INVALID TITLE] [REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)] Title: '{product_title}'")
+        return False
+
+    # 2. SUSPICIOUS PRICE FILTER (Price <= ₹1 or None is treated as scraping failure)
+    if price is None or price <= 1:
+        logging.warning(f"[GUARDRAIL REJECT: SUSPICIOUS PRICE] [REJECTED: INVALID PAYLOAD (Price: 0 / Generic Title)] Price: {price} for title '{product_title}'")
+        return False
+
+    # 3. AUTHENTIC IMAGE VERIFICATION
+    if not image_url or not str(image_url).startswith("http"):
+        logging.warning(f"[GUARDRAIL REJECT: MISSING ORIGINAL PRODUCT IMAGE] Title: '{product_title}'")
+        return False
+
+    img_lower = str(image_url).lower()
+    banned_img_keywords = ["amazon-logo", "store_logo", "logo_brand", "logo_store", "placeholder", "banner", "fallback", "avatar", "sprite", "unsplash"]
+    if any(x in img_lower for x in banned_img_keywords):
+        logging.warning(f"[GUARDRAIL REJECT: PLACEHOLDER/GENERIC IMAGE] [REJECTED: NO REAL PRODUCT IMAGE] Image URL: {image_url}")
+        return False
+
+    # 4. BLACKLISTED DOMAIN CHECK (esakal.com)
+    if "esakal.com" in title_lower or "esakal.com" in img_lower:
+        logging.warning("[GUARDRAIL REJECT: BLACKLISTED DOMAIN esakal.com DETECTED]")
+        return False
+
     return True

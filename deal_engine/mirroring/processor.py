@@ -164,20 +164,25 @@ class DealMirrorProcessor:
         scraped = scrape_product_details(expanded_url) or {}
             
         img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
-        if not img_url:
-            # Fallback product deal banner so zero deals are dropped
-            img_url = "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600"
-
         raw_text_clean = (message.raw_text or message.caption or "").strip()
-        first_line = raw_text_clean.split("\n")[0] if raw_text_clean else "Loot Deal Offer"
+        first_line = raw_text_clean.split("\n")[0] if raw_text_clean else ""
         title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
         
-        price = scraped.get("price") or 1
+        price = scraped.get("price") or 0
         mrp = scraped.get("mrp") or price
         discount = scraped.get("discount") or (round(((mrp - price) / mrp) * 100, 1) if mrp > price else 0)
         rating = scraped.get("rating", 0)
         reviews = scraped.get("reviews", 0)
         has_bank_offer = scraped.get("has_bank_offer", False)
+
+        # PRE-FLIGHT GUARDRAIL VERIFICATION AUDIT
+        try:
+            from loot_raiders.compliance_guard import check_quality_firewall
+            if not check_quality_firewall(price, title, img_url, is_mirror=True):
+                logging.warning(f"[PRE-FLIGHT GUARDRAIL HALT] Deal '{title}' failed guardrail validation. Skipping post.")
+                return
+        except Exception as guard_err:
+            logging.error(f"[GUARDRAIL ERROR] Validation error for deal '{title}': {guard_err}")
         
         # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
         product_already_posted = False
