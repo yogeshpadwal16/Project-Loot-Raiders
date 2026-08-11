@@ -478,7 +478,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
         from deal_engine.deal_processor import scrape_product_lightweight
         fast_res = scrape_product_lightweight(url)
         if fast_res and fast_res.get("price", 0) > 0 and fast_res.get("image_url"):
-            logging.info(f"[Fast-Path Scraper] Fast-path PASS for {url[:50]} (Price: ₹{fast_res['price']})")
+            logging.info(f"[Fast-Path Scraper] Fast-path PASS for {url[:50]} (Price: Rs.{fast_res['price']})")
             return fast_res
     except Exception as fast_err:
         logging.warning(f"[Fast-Path Scraper] Fast-path skipped/failed, falling back to Playwright: {fast_err}")
