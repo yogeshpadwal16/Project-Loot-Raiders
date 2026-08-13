@@ -1,6 +1,14 @@
+import os
+import sys
 import logging
 import asyncio
 import re
+
+# Ensure parent root directory is in sys.path for relative imports under PM2
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 from deal_engine.mirroring import (
     start_mirror_engine, stop_mirror_engine, get_listener, get_queue
 )
@@ -24,8 +32,12 @@ def _should_skip_url(url: str) -> bool:
 def start_channel_mirror():
     """
     Backward-compatible wrapper to initiate the redesigned modular Deal Mirroring Engine.
-    Exposed for core/engine.py background thread launcher.
+    Exposed for core/engine.py background thread launcher & PM2 process.
     """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
     logging.info("[Channel Mirror Wrapper] Initiating redesigned modular Deal Mirroring Engine...")
     start_mirror_engine()
 
@@ -52,3 +64,5 @@ def run_mirror_single_run():
     finally:
         loop.close()
 
+if __name__ == '__main__':
+    start_channel_mirror()

@@ -11,7 +11,8 @@ module.exports = {
       restart_delay: 5000,
       cron_restart: '0 4 * * *',
       env: {
-        PYTHONUNBUFFERED: '1'
+        PYTHONUNBUFFERED: '1',
+        PYTHONPATH: '/var/www/loot-raiders'
       }
     },
     {
@@ -25,6 +26,7 @@ module.exports = {
       restart_delay: 5000,
       env: {
         PYTHONUNBUFFERED: '1',
+        PYTHONPATH: '/var/www/loot-raiders',
         SOURCE_CHANNELS: 'Loot_shoppingdeals123,deals_loot,freekaamaal,desidime_official'
       }
     },
@@ -36,7 +38,8 @@ module.exports = {
       autorestart: false,
       cron_restart: '0 */12 * * *',
       env: {
-        PYTHONUNBUFFERED: '1'
+        PYTHONUNBUFFERED: '1',
+        PYTHONPATH: '/var/www/loot-raiders'
       }
     },
     {
@@ -49,7 +52,8 @@ module.exports = {
       max_memory_restart: '300M',
       restart_delay: 5000,
       env: {
-        PYTHONUNBUFFERED: '1'
+        PYTHONUNBUFFERED: '1',
+        PYTHONPATH: '/var/www/loot-raiders'
       }
     }
   ]
