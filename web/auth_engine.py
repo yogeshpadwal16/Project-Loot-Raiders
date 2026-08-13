@@ -26,7 +26,7 @@ def get_owner_credentials() -> Tuple[str, str, str, str]:
     env_user = os.environ.get("DASHBOARD_USERNAME", "yogeshpadwal16").strip().lower()
     env_pass = os.environ.get("DASHBOARD_PASSWORD", "YOUR_DASHBOARD_PASSWORD").strip()
     env_token = os.environ.get("DASHBOARD_SESSION_TOKEN", "admin_session_key_default").strip()
-    owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+919876543210").strip()
+    owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+917302427167").strip()
     return env_user, env_pass, env_token, owner_mobile
 
 
