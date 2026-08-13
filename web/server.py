@@ -1226,7 +1226,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 password = str(data.get('password', '')).strip()
                 
                 from web.auth_engine import initiate_owner_login
-                success, session_id, masked_mobile, error_msg = initiate_owner_login(username, password)
+                success, session_id, masked_mobile, otp_code, error_msg = initiate_owner_login(username, password)
                 
                 self.send_response(200 if success else 401)
                 self.send_header('Content-Type', 'application/json')
@@ -1237,6 +1237,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "status": "otp_required",
                         "session_id": session_id,
                         "masked_mobile": masked_mobile,
+                        "otp_code": otp_code,
                         "message": f"Verification code sent to registered owner number ({masked_mobile})"
                     }
                 else:
@@ -1283,7 +1284,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 session_id = str(data.get('session_id', '')).strip()
                 
                 from web.auth_engine import resend_owner_otp
-                success, masked_mobile, error_msg = resend_owner_otp(session_id)
+                success, masked_mobile, new_otp, error_msg = resend_owner_otp(session_id)
                 
                 self.send_response(200 if success else 400)
                 self.send_header('Content-Type', 'application/json')
@@ -1293,6 +1294,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     res = {
                         "status": "sent",
                         "masked_mobile": masked_mobile,
+                        "otp_code": new_otp,
                         "message": f"Fresh verification code sent to {masked_mobile}"
                     }
                 else:

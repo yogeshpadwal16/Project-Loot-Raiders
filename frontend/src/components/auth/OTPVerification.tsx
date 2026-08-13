@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Shield, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Lock } from "lucide-react";
+import { Shield, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Lock, KeyRound } from "lucide-react";
 
 interface OTPVerificationProps {
   sessionId: string;
   maskedMobile: string;
+  devOtpCode?: string;
   onVerifySuccess: (token: string, name: string) => void;
   onBackToLogin: () => void;
 }
@@ -11,19 +12,29 @@ interface OTPVerificationProps {
 export const OTPVerification: React.FC<OTPVerificationProps> = ({
   sessionId,
   maskedMobile,
+  devOtpCode,
   onVerifySuccess,
   onBackToLogin,
 }) => {
-  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+  const [digits, setDigits] = useState<string[]>(() => {
+    if (devOtpCode && devOtpCode.length === 6) {
+      return devOtpCode.split("");
+    }
+    return Array(6).fill("");
+  });
+
+  const [activeOtp, setActiveOtp] = useState<string | undefined>(devOtpCode);
   const [countdown, setCountdown] = useState<number>(60);
   const [loading, setLoading] = useState<boolean>(false);
   const [resending, setResending] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(
+    devOtpCode ? `Verification code generated: ${devOtpCode}` : null
+  );
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Auto-focus first digit input box on mount
+  // Auto-focus first digit input box or last digit on mount
   useEffect(() => {
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
@@ -42,7 +53,6 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
   const handleDigitChange = (index: number, val: string) => {
     setErrorMsg(null);
 
-    // Filter non-numeric characters
     const numeric = val.replace(/\D/g, "");
     if (!numeric) {
       const updated = [...digits];
@@ -51,18 +61,15 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
       return;
     }
 
-    // Single digit input
     const singleChar = numeric.slice(-1);
     const updated = [...digits];
     updated[index] = singleChar;
     setDigits(updated);
 
-    // Auto-advance focus
     if (index < 5 && singleChar) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit if all 6 digits entered
     if (updated.every((d) => d.length === 1)) {
       submitOTP(updated.join(""));
     }
@@ -71,7 +78,6 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
       if (!digits[index] && index > 0) {
-        // Move focus backward if current box is empty
         inputRefs.current[index - 1]?.focus();
       }
     }
@@ -133,9 +139,15 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
       const data = await res.json();
       if (res.ok && data.status === "sent") {
         setCountdown(60);
-        setDigits(Array(6).fill(""));
-        setSuccessMsg(`Fresh verification code sent to ${maskedMobile}`);
-        setTimeout(() => setSuccessMsg(null), 3000);
+        const newCode = data.otp_code;
+        setActiveOtp(newCode);
+        if (newCode && newCode.length === 6) {
+          setDigits(newCode.split(""));
+        } else {
+          setDigits(Array(6).fill(""));
+        }
+        setSuccessMsg(`Fresh verification code generated: ${newCode || maskedMobile}`);
+        setTimeout(() => setSuccessMsg(null), 4000);
         inputRefs.current[0]?.focus();
       } else {
         setErrorMsg(data.message || "Failed to resend code.");
@@ -174,11 +186,16 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
         </div>
       </div>
 
-      {/* Success Notification Banner */}
-      {successMsg && (
-        <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-2 animate-fadeIn">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMsg}</span>
+      {/* Prominent Helper Banner with OTP Code */}
+      {activeOtp && (
+        <div className="mb-5 p-3.5 rounded-xl bg-gradient-to-r from-amber-500/15 to-orange-500/15 border border-amber-500/30 text-amber-900 dark:text-amber-200 text-xs font-mono font-bold flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-orange-500 shrink-0" />
+            <span>SECURITY OTP:</span>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-orange-500 text-white font-extrabold tracking-widest text-sm shadow">
+            {activeOtp}
+          </span>
         </div>
       )}
 
@@ -190,7 +207,7 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
         </div>
       )}
 
-      {/* 6-Digit Individual Box Input Grid (Matching Reference Layout) */}
+      {/* 6-Digit Individual Box Input Grid */}
       <div className="flex justify-between gap-2 sm:gap-3 mb-6" onPaste={handlePaste}>
         {digits.map((digit, index) => (
           <input

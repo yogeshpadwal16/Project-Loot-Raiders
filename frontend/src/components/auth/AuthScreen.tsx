@@ -22,6 +22,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
   // OTP state from server
   const [sessionId, setSessionId] = useState<string>("");
   const [maskedMobile, setMaskedMobile] = useState<string>("");
+  const [devOtpCode, setDevOtpCode] = useState<string | undefined>(undefined);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +40,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
       if (res.ok && data.status === "otp_required") {
         setSessionId(data.session_id);
         setMaskedMobile(data.masked_mobile);
+        setDevOtpCode(data.otp_code);
         setStep("otp");
       } else {
         setErrorMsg(data.message || "Invalid username or password.");
@@ -160,6 +162,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
         <OTPVerification
           sessionId={sessionId}
           maskedMobile={maskedMobile}
+          devOtpCode={devOtpCode}
           onVerifySuccess={onLoginSuccess}
           onBackToLogin={() => setStep("login")}
         />

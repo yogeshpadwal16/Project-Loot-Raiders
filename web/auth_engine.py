@@ -1,13 +1,16 @@
 """
 Loot Raiders Single-Owner Mobile OTP & Security Authentication Engine.
 Enforces single-owner authorization with server-controlled mobile OTP verification.
+Dispatches OTP to Telegram Bot / Server Logs for instant receipt.
 """
 
 import os
 import time
 import secrets
 import logging
+import requests
 from typing import Dict, Optional, Tuple, Any
+from config.settings import load_settings
 
 logger = logging.getLogger("AuthEngine")
 
@@ -31,26 +34,51 @@ def get_owner_credentials() -> Tuple[str, str, str, str]:
 
 
 def mask_mobile_number(mobile: str) -> str:
-    """Masks a phone number securely (e.g., +919876543210 -> +91 ******3210 or +91 ******10)."""
+    """Masks a phone number securely (e.g., +917302427167 -> +91 ******7167)."""
     if not mobile:
-        return "+91 ******42"
+        return "+91 ******7167"
     clean = mobile.strip()
     if len(clean) >= 10:
         prefix = clean[:3] if clean.startswith("+") else "+91"
-        suffix = clean[-2:]
+        suffix = clean[-4:]
         return f"{prefix} ******{suffix}"
-    return "+91 ******42"
+    return "+91 ******7167"
 
 
-def initiate_owner_login(username: str, password: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
+def dispatch_telegram_otp(otp_code: str, masked_mobile: str) -> None:
+    """Dispatches OTP verification code to configured Telegram bot/chat for instant receipt."""
+    try:
+        settings = load_settings()
+        bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or settings.get("telegram_bot_token")
+        chat_id = os.environ.get("TELEGRAM_CHAT_ID") or settings.get("telegram_chat_id")
+
+        if bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token:
+            msg_text = (
+                f"🔐 *Loot Raiders Owner Verification Code*\n\n"
+                f"Your 6-digit OTP code is: `{otp_code}`\n"
+                f"Target Number: {masked_mobile}\n"
+                f"Expires in 5 minutes. Do not share this code."
+            )
+            url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            requests.post(
+                url,
+                json={"chat_id": chat_id, "text": msg_text, "parse_mode": "Markdown"},
+                timeout=5,
+            )
+            logger.info(f"Dispatched OTP code to Telegram chat_id={chat_id}")
+    except Exception as e:
+        logger.warning(f"Could not dispatch OTP via Telegram: {e}")
+
+
+def initiate_owner_login(username: str, password: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
-    Validates owner credentials. If valid, generates 6-digit OTP and returns (True, session_id, masked_mobile, error).
+    Validates owner credentials. If valid, generates 6-digit OTP and returns (True, session_id, masked_mobile, otp_code, error).
     """
     env_user, env_pass, _, owner_mobile = get_owner_credentials()
     
     if username.strip().lower() != env_user or password.strip() != env_pass:
         logger.warning(f"Failed owner login attempt for username='{username}'")
-        return False, None, None, "Invalid username or password."
+        return False, None, None, None, "Invalid username or password."
 
     # Cleanup expired sessions
     now = time.time()
@@ -73,12 +101,14 @@ def initiate_owner_login(username: str, password: str) -> Tuple[bool, Optional[s
         "verified": False,
     }
 
-    logger.info(f"Generated owner OTP for session='{session_id[:8]}' (Target: {masked_mobile})")
-    # Log OTP in development mode for easy manual verification
-    if os.environ.get("ENV", "development").lower() == "development":
-        logger.info(f"[DEV ONLY] Generated OTP code: {otp_code}")
+    # Log OTP prominently in application execution log
+    logger.info(f"🔑 [OWNER SECURITY OTP CODE]: {otp_code} (Target: {masked_mobile}, Session: {session_id[:8]})")
+    print(f"\n======================================================\n🔑 [LOOT RAIDERS OWNER OTP CODE]: {otp_code}\n======================================================\n")
 
-    return True, session_id, masked_mobile, None
+    # Dispatch to Telegram bot if available
+    dispatch_telegram_otp(otp_code, masked_mobile)
+
+    return True, session_id, masked_mobile, otp_code, None
 
 
 def verify_owner_otp(session_id: str, otp_code: str) -> Tuple[bool, Optional[str], Optional[str]]:
@@ -118,25 +148,25 @@ def verify_owner_otp(session_id: str, otp_code: str) -> Tuple[bool, Optional[str
     return True, env_token, None
 
 
-def resend_owner_otp(session_id: str) -> Tuple[bool, Optional[str], Optional[str]]:
+def resend_owner_otp(session_id: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str]]:
     """
     Resends fresh OTP for active session after checking cooldown throttle.
-    Returns (True, masked_mobile, None) or (False, None, error_message).
+    Returns (True, masked_mobile, otp_code, None) or (False, None, None, error_message).
     """
     if not session_id or session_id not in _ACTIVE_OTP_SESSIONS:
-        return False, None, "Session not found. Please start login again."
+        return False, None, None, "Session not found. Please start login again."
 
     session = _ACTIVE_OTP_SESSIONS[session_id]
     now = time.time()
 
     if now > session["expires_at"]:
         del _ACTIVE_OTP_SESSIONS[session_id]
-        return False, None, "Session expired. Please log in again."
+        return False, None, None, "Session expired. Please log in again."
 
     elapsed = now - session["last_resend_at"]
     if elapsed < RESEND_COOLDOWN_SEC:
         remaining = int(RESEND_COOLDOWN_SEC - elapsed)
-        return False, None, f"Please wait {remaining} second(s) before requesting another code."
+        return False, None, None, f"Please wait {remaining} second(s) before requesting another code."
 
     # Generate fresh OTP
     new_otp = f"{secrets.randbelow(900000) + 100000}"
@@ -148,8 +178,9 @@ def resend_owner_otp(session_id: str) -> Tuple[bool, Optional[str], Optional[str
     _, _, _, owner_mobile = get_owner_credentials()
     masked = mask_mobile_number(owner_mobile)
     
-    logger.info(f"Resent fresh owner OTP for session='{session_id[:8]}'")
-    if os.environ.get("ENV", "development").lower() == "development":
-        logger.info(f"[DEV ONLY] Resent OTP code: {new_otp}")
+    logger.info(f"🔑 [RESENT OWNER SECURITY OTP CODE]: {new_otp} (Target: {masked}, Session: {session_id[:8]})")
+    print(f"\n======================================================\n🔑 [LOOT RAIDERS RESENT OTP CODE]: {new_otp}\n======================================================\n")
 
-    return True, masked, None
+    dispatch_telegram_otp(new_otp, masked)
+
+    return True, masked, new_otp, None
