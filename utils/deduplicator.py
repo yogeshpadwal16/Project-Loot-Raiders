@@ -4,7 +4,7 @@ import re
 import time
 import logging
 import threading
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory
 from utils.semantic_dedup import find_semantic_duplicate, add_deal_vector
@@ -17,6 +17,101 @@ IN_FLIGHT_LOCK = threading.Lock()
 IN_FLIGHT_DEALS = {}  # fingerprint -> timestamp
 
 SIMILARITY_THRESHOLD = 85.0  # token_sort_ratio threshold (0-100)
+DEFAULT_TTL_SEC = 14400  # 4 hours
+
+_ASYNC_REDIS_CLIENT: Optional[Any] = None
+_IN_MEMORY_DEDUP_CACHE: Dict[str, float] = {}
+
+
+async def _get_async_redis():
+    """Lazy-initializes redis.asyncio Redis client connection pool."""
+    global _ASYNC_REDIS_CLIENT
+    if _ASYNC_REDIS_CLIENT is not None:
+        return _ASYNC_REDIS_CLIENT
+
+    redis_host = os.environ.get("REDIS_HOST", "127.0.0.1")
+    redis_port = int(os.environ.get("REDIS_PORT", 6379))
+    redis_db = int(os.environ.get("REDIS_DB", 0))
+    redis_pass = os.environ.get("REDIS_PASSWORD", None)
+
+    try:
+        import redis.asyncio as aioredis
+        client = aioredis.Redis(
+            host=redis_host,
+            port=redis_port,
+            db=redis_db,
+            password=redis_pass,
+            socket_timeout=2.0,
+            socket_connect_timeout=2.0,
+            decode_responses=True,
+        )
+        await client.ping()
+        _ASYNC_REDIS_CLIENT = client
+        logger.info(f"[Async Redis Deduplicator] Connected to Redis at {redis_host}:{redis_port}")
+        return _ASYNC_REDIS_CLIENT
+    except Exception as e:
+        logger.warning(f"[Async Redis Deduplicator] Redis unavailable ({e}). Operating in-memory deduplication fallback.")
+        _ASYNC_REDIS_CLIENT = None
+        return None
+
+
+async def is_duplicate_and_lock(canonical_key: Optional[str], ttl_seconds: int = DEFAULT_TTL_SEC) -> bool:
+    """
+    Non-blocking async atomic Redis lock check for canonical_key.
+    Executes: redis.set(f"active_deal:{canonical_key}", "1", ex=ttl_seconds, nx=True)
+
+    Returns:
+      True  -> Duplicate found (lock key exists).
+      False -> Lock acquired successfully (new unique deal!).
+    """
+    if not canonical_key:
+        return False
+
+    lock_key = f"active_deal:{canonical_key}"
+    redis_client = await _get_async_redis()
+
+    if redis_client:
+        try:
+            is_new = await redis_client.set(lock_key, "1", ex=ttl_seconds, nx=True)
+            if is_new:
+                logger.debug(f"[Async Redis Lock] Acquired lock for key='{lock_key}' (TTL={ttl_seconds}s)")
+                return False  # Unique deal!
+            else:
+                logger.info(f"[Async Redis Lock] Duplicate deal suppressed for key='{lock_key}'")
+                return True   # Duplicate!
+        except Exception as e:
+            logger.warning(f"[Async Redis Lock] Redis error ({e}). Using in-memory fallback.")
+
+    # In-Memory Fallback Deduplication
+    now = time.time()
+    expired = [k for k, exp in _IN_MEMORY_DEDUP_CACHE.items() if now > exp]
+    for k in expired:
+        del _IN_MEMORY_DEDUP_CACHE[k]
+
+    if lock_key in _IN_MEMORY_DEDUP_CACHE:
+        if now < _IN_MEMORY_DEDUP_CACHE[lock_key]:
+            logger.info(f"[In-Memory Lock] Duplicate deal suppressed for key='{lock_key}'")
+            return True  # Duplicate!
+
+    _IN_MEMORY_DEDUP_CACHE[lock_key] = now + ttl_seconds
+    logger.debug(f"[In-Memory Lock] Acquired lock for key='{lock_key}' (TTL={ttl_seconds}s)")
+    return False  # Unique deal!
+
+
+async def release_deal_lock(canonical_key: Optional[str]) -> None:
+    """Releases lock for canonical_key if deal processing failed and retry is required."""
+    if not canonical_key:
+        return
+    lock_key = f"active_deal:{canonical_key}"
+    redis_client = await _get_async_redis()
+    if redis_client:
+        try:
+            await redis_client.delete(lock_key)
+        except Exception:
+            pass
+    if lock_key in _IN_MEMORY_DEDUP_CACHE:
+        del _IN_MEMORY_DEDUP_CACHE[lock_key]
+
 
 def get_canonical_url(url: str) -> str:
     """Normalizes URL by stripping query parameters, anchors, and tracking codes."""
@@ -59,19 +154,16 @@ def clean_title_for_fuzzy(text: str) -> str:
     if not text:
         return ""
     text = text.lower()
-    # Remove non-alphanumeric characters except spaces
     text = re.sub(r'[^\w\s]', '', text)
-    # Strip double spaces
     text = re.sub(r'\s+', ' ', text).strip()
     
-    # Filter stopwords and common deal words that distort fuzzy match ratios
     stopwords = {
         "grab", "loot", "deal", "deals", "offers", "offer", "buy", "now", "free", "shipping",
         "verified", "hot", "price", "drop", "glitch", "error", "lowest", "rs", "inr", "off",
         "pack", "of", "for", "with", "and", "the", "in", "on", "at", "a", "an"
     }
     words = [w for w in text.split(" ") if w not in stopwords and w]
-    words.sort()  # Alphabetical sorting ensures order independence
+    words.sort()
     return " ".join(words)
 
 def find_duplicate_deal(
@@ -83,11 +175,7 @@ def find_duplicate_deal(
     time_window_hours: int = 24
 ) -> Tuple[bool, Optional[str]]:
     """
-    Core thread-safe duplicate checking engine using multiple signals:
-    - In-flight registry collision (prevents race condition between parallel threads).
-    - Database check by unique ASIN/PID.
-    - Database check by canonical product URL.
-    - Fuzzy title similarity comparison against recently logged price entries.
+    Core thread-safe duplicate checking engine using multiple signals.
     """
     if not title:
         return False, None
@@ -97,7 +185,6 @@ def find_duplicate_deal(
     if not plat and platform:
         plat = platform.lower()
         
-    # Generate signals for in-flight check
     fingerprints = []
     if plat and pid:
         fingerprints.append(f"ID:{plat.upper()}:{pid}")
@@ -106,13 +193,10 @@ def find_duplicate_deal(
         
     cleaned_title = clean_title_for_fuzzy(title)
     if cleaned_title:
-        # Title + Price combo prevents identical deal reposts at same price
         fingerprints.append(f"TITLE:{cleaned_title}_{price}")
         
-    # 1. Validate against In-Flight Deals (Concurrency Lock)
     now = time.time()
     with IN_FLIGHT_LOCK:
-        # Clean in-flight deals older than 5 minutes
         expired = [f for f, ts in IN_FLIGHT_DEALS.items() if now - ts > 300]
         for f in expired:
             del IN_FLIGHT_DEALS[f]
@@ -122,11 +206,9 @@ def find_duplicate_deal(
                 logger.info(f"Concurrency lock hit: fingerprint '{f}' is already processing in another thread.")
                 return True, "in-flight"
                 
-        # Lock these signals for 5 minutes
         for f in fingerprints:
             IN_FLIGHT_DEALS[f] = now
             
-    # 2. Query Semantic Vector Database (ChromaDB)
     try:
         matched_id = find_semantic_duplicate(title=title, price=price, threshold=SIMILARITY_THRESHOLD / 100.0)
         if matched_id:
@@ -135,10 +217,8 @@ def find_duplicate_deal(
     except Exception as sem_err:
         logger.error(f"ChromaDB semantic duplicate check failed: {sem_err}")
 
-    # 3. Query SQLite Database
     db = SessionLocal()
     try:
-        # Check by Unique ID (ASIN / PID)
         if plat and pid:
             prod = db.query(Product).filter_by(id=pid).first()
             if not prod:
@@ -147,14 +227,12 @@ def find_duplicate_deal(
                 logger.info(f"DB duplicate match by ID: {prod.id} ('{title[:30]}')")
                 return True, prod.id
                 
-        # Check by Canonical URL
         if canon_url:
             prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
             if prod:
                 logger.info(f"DB duplicate match by canonical URL: {prod.id} ('{title[:30]}')")
                 return True, prod.id
                 
-        # Check by Fuzzy Title + Identical Price
         cutoff = time.time() - (time_window_hours * 3600)
         recent_products = db.query(Product).join(PriceHistory).filter(PriceHistory.timestamp >= cutoff).all()
         
@@ -176,7 +254,6 @@ def find_duplicate_deal(
                 score = difflib.SequenceMatcher(None, cleaned_title, clean_cand).ratio() * 100
                 
             if score >= SIMILARITY_THRESHOLD:
-                # Fetch latest price history to see if price is identical
                 latest = db.query(PriceHistory).filter_by(product_id=p.id).order_by(PriceHistory.timestamp.desc()).first()
                 if latest and latest.price == price:
                     logger.info(f"DB duplicate fuzzy match: '{p.title[:30]}' (Score: {score:.1f}%) at same price ₹{price}")
@@ -207,7 +284,6 @@ def release_in_flight_deal(title: str, platform: str, url: str):
         for f in fingerprints:
             if f in IN_FLIGHT_DEALS:
                 del IN_FLIGHT_DEALS[f]
-        # Clean title matches
         keys_to_del = [k for k in IN_FLIGHT_DEALS.keys() if cleaned_title and k.startswith(f"TITLE:{cleaned_title}")]
         for k in keys_to_del:
             del IN_FLIGHT_DEALS[k]
@@ -219,7 +295,6 @@ MOCKED_VECTOR_DB = {}
 
 def find_similar_product(title: str, distance_threshold: float = 0.15) -> Optional[str]:
     """Fallback compatibility method mapping directly to our fast fuzzy matcher."""
-    # Try querying persistent ChromaDB first
     try:
         matched_id = find_semantic_duplicate(title=title, price=0, threshold=1.0 - distance_threshold)
         if matched_id:
@@ -239,7 +314,6 @@ def find_similar_product(title: str, distance_threshold: float = 0.15) -> Option
         import difflib
         use_rapidfuzz = False
         
-    # 1. Search in-memory mocked vector DB first (for unit test compatibility)
     for pid, ptitle in list(MOCKED_VECTOR_DB.items()):
         clean_cand = clean_title_for_fuzzy(ptitle)
         if not clean_cand:
@@ -251,7 +325,6 @@ def find_similar_product(title: str, distance_threshold: float = 0.15) -> Option
         if score >= 90.0:
             return pid
             
-    # 2. Fall back to querying recent SQLite products
     db = SessionLocal()
     try:
         recent_products = db.query(Product).order_by(Product.created_at.desc()).limit(200).all()
@@ -286,17 +359,14 @@ def is_genuine_loot_deal(product_id: str, title: str, price: int, mrp: int, disc
     Evaluates whether a candidate deal discovered by the Loot Scraper is a genuine,
     value-adding loot deal, or if it is a spammy recurring listing that should be suppressed.
     """
-    # Clean/normalize product_id if it was fallback hashed or transient
     real_pid = product_id
     similar_id = find_similar_product(title)
     if similar_id:
         real_pid = similar_id
 
-    # Retrieve all price and posting history for this product (most recent first)
     history_entries = db.query(PriceHistory).filter_by(product_id=real_pid).order_by(PriceHistory.timestamp.desc()).all()
     
     if not history_entries:
-        # Check by title in case product_id was different
         recent_prods = db.query(Product).order_by(Product.created_at.desc()).limit(300).all()
         cleaned_title = clean_title_for_fuzzy(title)
         
@@ -325,41 +395,29 @@ def is_genuine_loot_deal(product_id: str, title: str, price: int, mrp: int, disc
             real_pid = matched_pid
 
     now = time.time()
-    # Filter out any entries created in the last 10 seconds to avoid matching the current run's DB save
     history_entries = [h for h in history_entries if (now - h.timestamp) > 10.0]
 
     if not history_entries:
-        # Brand new product with no history
         return True, "new_product"
 
-    # Analyze posting history
     latest_entry = history_entries[0]
     
-    # 1. Frequency suppression: If it was posted within the last 12 hours,
-    # suppress it unless there's a significant price drop (>= 15% drop from last post)
     time_since_last_post = now - latest_entry.timestamp
     if time_since_last_post < 43200: # 12 hours
         price_drop_pct = ((latest_entry.price - price) / latest_entry.price) * 100.0 if latest_entry.price > 0 else 0.0
         if price_drop_pct < 15.0:
             return False, f"suppressed: posted recently ({time_since_last_post/3600:.2f}h ago) and price change too small ({price_drop_pct:.1f}%)"
             
-    # 2. Daily frequency limits
-    # If the same product has been posted 3 or more times in the last 24 hours, suppress it!
     last_24h_posts = [h for h in history_entries if now - h.timestamp < 86400]
     if len(last_24h_posts) >= 3:
         return False, f"suppressed: daily post limit reached ({len(last_24h_posts)} posts in 24h)"
 
-    # 3. Suppress recurring listings
-    # If the product has been posted historically many times (e.g. >= 5 times in last 7 days)
-    # and the current price is not lower than the historical minimum price, it is a recurring listing!
     last_7d_posts = [h for h in history_entries if now - h.timestamp < 7 * 86400]
     if len(last_7d_posts) >= 5:
         min_historical_price = min(h.price for h in history_entries)
         if price >= min_historical_price:
             return False, f"suppressed: recurring listing (posted {len(last_7d_posts)} times in 7d at or above historical low ₹{min_historical_price})"
 
-    # 4. Check actual discount savings material change
-    # If the last post had the same or lower price, skip
     if price >= latest_entry.price:
         return False, f"suppressed: price is same or higher than last post (₹{price} >= ₹{latest_entry.price})"
 
