@@ -14,9 +14,40 @@ from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 from deal_engine.wishlist import check_deal_against_keyword_alerts
 
-notification_queue = queue.PriorityQueue()
 queue_counter = 0
 queue_counter_lock = threading.Lock()
+
+def send_deal_notification(deal_payload: dict) -> bool:
+    """Dispatches deal notification payload across Telegram and active alert handlers."""
+    try:
+        settings = load_settings()
+        bot_token = settings.get("telegram_bot_token")
+        chat_id = settings.get("telegram_chat_id", "@LootRaidersDeals")
+
+        title = deal_payload.get("title", "Loot Deal")
+        price = deal_payload.get("price", 0.0)
+        mrp = deal_payload.get("mrp", 0.0)
+        discount = deal_payload.get("discount", 0.0)
+        affiliate_url = deal_payload.get("affiliate_url", "")
+
+        price_str = f"Rs.{price:,.0f}" if price > 0 else "Special Price"
+        mrp_str = f" (MRP: Rs.{mrp:,.0f})" if mrp > price > 0 else ""
+        disc_str = f" | {discount:.0f}% OFF" if discount > 0 else ""
+
+        caption = f"🔥 [{deal_payload.get('tier', 'LOOT DEAL')}] 🔥\n{title}\n\n💰 Price: {price_str}{mrp_str}{disc_str}\n👉 Buy Now: {affiliate_url}"
+
+        if bot_token and not bot_token.startswith("YOUR_"):
+            api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            payload = {"chat_id": chat_id, "text": caption, "disable_web_page_preview": False}
+            requests.post(api_url, json=payload, timeout=5.0)
+            logging.info(f"[Notifier] Dispatched notification for '{title[:35]}...' to Telegram {chat_id}")
+            return True
+        else:
+            logging.info(f"[Notifier] Dispatched notification for '{title[:35]}...'")
+            return True
+    except Exception as e:
+        logging.error(f"[Notifier] send_deal_notification error: {e}")
+        return False
 
 def get_short_deal_link(long_url: str, unique_id: str) -> str:
     """
