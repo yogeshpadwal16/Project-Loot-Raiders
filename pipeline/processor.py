@@ -2,14 +2,14 @@
 pipeline/processor.py
 Unified Non-Blocking Asynchronous Pipeline Orchestrator.
 Coordinates end-to-end deal processing:
-  1. resolve_final_url (URL Unshortening)
+  1. resolve_final_url (Async URL Unshortening)
   2. get_canonical_product_id (Canonical ID Extraction)
-  3. is_duplicate_and_lock (Atomic Redis Deduplication)
+  3. is_duplicate_and_lock (Atomic Async Redis Deduplication)
   4. scrape_product_details (Playwright Stealth JSON-LD Scraping)
   5. Stock Availability Check (Drop out-of-stock items)
   6. Gemini AI Deal Scoring & ChromaDB Vector Memory Lookup
   7. convert_to_monetized_url (3-Tier Affiliate Link Monetization)
-  8. Multi-Channel Broadcast Dispatch (Telegram, Discord, Webhooks, n8n)
+  8. safe_send_message (Rate-limited Multi-Channel Broadcast Dispatch)
 """
 
 import time
@@ -21,11 +21,12 @@ from utils.normalizer import resolve_final_url, get_canonical_product_id
 from utils.deduplicator import is_duplicate_and_lock, release_deal_lock
 from scrapers.stealth_scraper import scrape_product_details
 from utils.monetizer import convert_to_monetized_url
+from utils.rate_limiter import safe_send_message
 
 logger = logging.getLogger("LootPipelineProcessor")
 
 
-async def process_incoming_deal(raw_url: str, raw_text: str = "") -> Optional[Dict[str, Any]]:
+async def process_incoming_deal(raw_url: str, raw_text: str = "", client: Optional[Any] = None) -> Optional[Dict[str, Any]]:
     """
     Unified Pipeline Process Entrypoint.
     Returns structured deal dictionary ready for broadcast, or None if skipped/deduplicated.
@@ -33,7 +34,7 @@ async def process_incoming_deal(raw_url: str, raw_text: str = "") -> Optional[Di
     if not raw_url or not isinstance(raw_url, str):
         return None
 
-    # Step 1: Resolve Final URL (Follow redirects for amzn.to, fkrt.it, bit.ly)
+    # Step 1: Resolve Final URL (Follow redirects for amzn.to, fkrt.it, bit.ly, cuelinks)
     final_url = await resolve_final_url(raw_url, timeout_seconds=5)
     if not final_url:
         final_url = raw_url
@@ -98,10 +99,16 @@ async def process_incoming_deal(raw_url: str, raw_text: str = "") -> Optional[Di
         "timestamp": time.time()
     }
 
-    # Step 8: Dispatch to Multi-Channel Broadcasters
+    # Step 8: Rate-Limited Multi-Channel Broadcast Dispatch
     try:
-        from deal_engine.notifier import send_deal_notification
-        send_deal_notification(deal_payload)
+        if client:
+            from config.settings import load_settings
+            chat_id = load_settings().get("telegram_chat_id", "@LootRaidersDeals")
+            msg_text = f"🔥 [LOOT DEAL] 🔥\n{title}\n\n💰 Price: ₹{price:,.0f} (MRP: ₹{mrp:,.0f} | {discount:.0f}% OFF)\n👉 Buy Now: {affiliate_url}"
+            await safe_send_message(client, chat_id, msg_text)
+        else:
+            from deal_engine.notifier import send_deal_notification
+            send_deal_notification(deal_payload)
         logger.info(f"[Pipeline Orchestrator] Multi-channel notification dispatched for '{title[:45]}...'")
     except Exception as e:
         logger.debug(f"[Pipeline Orchestrator] Broadcaster notification fallback ({e})")

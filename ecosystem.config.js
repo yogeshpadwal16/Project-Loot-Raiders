@@ -7,7 +7,7 @@ module.exports = {
       interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1200M',
+      max_memory_restart: '1000M',
       restart_delay: 5000,
       cron_restart: '0 4 * * *',
       env: {
@@ -22,12 +22,12 @@ module.exports = {
       interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
-      max_memory_restart: '600M',
+      max_memory_restart: '500M',
       restart_delay: 5000,
       env: {
         PYTHONUNBUFFERED: '1',
         PYTHONPATH: '/var/www/loot-raiders',
-        SOURCE_CHANNELS: 'Loot_shoppingdeals123,deals_loot,freekaamaal,desidime_official'
+        SOURCE_CHANNELS: 'Loot_shoppingdeals123,deals_loot,freekaamaal,desidime_official,loot_deals_box'
       }
     },
     {
@@ -49,7 +49,7 @@ module.exports = {
       interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
-      max_memory_restart: '300M',
+      max_memory_restart: '400M',
       restart_delay: 5000,
       env: {
         PYTHONUNBUFFERED: '1',
