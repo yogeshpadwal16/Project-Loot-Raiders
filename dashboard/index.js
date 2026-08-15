@@ -30,8 +30,11 @@ const API_BASE = window.location.protocol === 'file:'
     ? 'http://127.0.0.1:5555' 
     : window.location.origin;
 
-// Detect if running statically on GitHub Pages or locally without server
-const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || window.location.hostname.endsWith('githubusercontent.com');
+// Detect if running statically on GitHub Pages, Cloudflare Pages, or locally without server
+const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || 
+                       window.location.hostname.endsWith('githubusercontent.com') ||
+                       window.location.hostname.endsWith('pages.dev') ||
+                       window.location.hostname.endsWith('cloudflarepages.com');
 
 // Public configurations for channel links
 let publicConfig = {

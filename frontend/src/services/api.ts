@@ -36,8 +36,15 @@ export class ApiClient {
       return await res.json();
     } catch (err) {
       console.warn('Fallback fetching /api/deals:', err);
-      const res = await fetch(`${API_BASE}/api/deals`);
-      return await res.json();
+      try {
+        const res = await fetch(`${API_BASE}/api/deals`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (fallbackErr) {
+        console.warn('Fallback fetching static deals_history.json:', fallbackErr);
+        const res = await fetch('./deals_history.json');
+        return await res.json();
+      }
     }
   }
 
