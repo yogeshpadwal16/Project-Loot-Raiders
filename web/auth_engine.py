@@ -46,11 +46,21 @@ def mask_mobile_number(mobile: str) -> str:
 
 
 def dispatch_telegram_otp(otp_code: str, masked_mobile: str) -> None:
-    """Dispatches OTP verification code to configured Telegram bot/chat for instant receipt."""
+    """
+    Dispatches OTP verification code STRICTLY to a private Admin User ID or mobile number.
+    CRITICAL SECURITY GUARD: Never sends OTP to public channels (starting with @ or -100).
+    """
     try:
         settings = load_settings()
         bot_token = os.environ.get("TELEGRAM_BOT_TOKEN") or settings.get("telegram_bot_token")
-        chat_id = os.environ.get("TELEGRAM_CHAT_ID") or settings.get("telegram_chat_id")
+        
+        # Only use dedicated ADMIN_TELEGRAM_USER_ID (a private individual chat ID, NOT a public channel)
+        chat_id = os.environ.get("ADMIN_TELEGRAM_USER_ID") or settings.get("admin_telegram_user_id")
+
+        # STRICT CHANNEL BLOCKER: If chat_id is a channel handle or broadcast group, BLOCK IT
+        if chat_id and (str(chat_id).startswith("@") or str(chat_id).startswith("-100")):
+            logger.error(f"🚨 SECURITY CRITICAL GUARD: Blocked OTP dispatch to public channel/group '{chat_id}'.")
+            chat_id = None
 
         if bot_token and chat_id and "YOUR_TELEGRAM" not in bot_token:
             msg_text = (
@@ -62,12 +72,31 @@ def dispatch_telegram_otp(otp_code: str, masked_mobile: str) -> None:
             url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
             requests.post(
                 url,
-                json={"chat_id": chat_id, "text": msg_text, "parse_mode": "Markdown"},
+                json={"chat_id": str(chat_id), "text": msg_text, "parse_mode": "Markdown"},
                 timeout=5,
             )
-            logger.info(f"Dispatched OTP code to Telegram chat_id={chat_id}")
+            logger.info(f"Dispatched private OTP code to Admin user chat_id={chat_id}")
     except Exception as e:
         logger.warning(f"Could not dispatch OTP via Telegram: {e}")
+
+    # Dispatch via Mobile SMS if SMS Gateway API (Fast2SMS / Twilio) is configured
+    try:
+        sms_api_key = os.environ.get("SMS_API_KEY") or settings.get("sms_api_key")
+        owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+917302427167").strip()
+        clean_mobile = owner_mobile.replace("+91", "").replace("+", "").strip()
+        
+        if sms_api_key and "YOUR_" not in sms_api_key and clean_mobile:
+            sms_url = "https://www.fast2sms.com/dev/bulkV2"
+            sms_payload = {
+                "route": "otp",
+                "variables_values": otp_code,
+                "numbers": clean_mobile
+            }
+            sms_headers = {"authorization": sms_api_key}
+            requests.post(sms_url, data=sms_payload, headers=sms_headers, timeout=5)
+            logger.info(f"Dispatched OTP via SMS to registered mobile number: {masked_mobile}")
+    except Exception as sms_err:
+        logger.warning(f"SMS Gateway dispatch skipped/failed: {sms_err}")
 
 
 def initiate_owner_login(username: str, password: str) -> Tuple[bool, Optional[str], Optional[str], Optional[str], Optional[str]]:

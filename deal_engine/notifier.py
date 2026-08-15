@@ -710,9 +710,17 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     reply_markup = {"inline_keyboard": inline_keyboard}
     reply_markup_json = json.dumps(reply_markup)
 
-    # 4. Upload raw product image or dynamic image card to Telegram
+    # 4. Upload raw product image or dynamic high-res image card to Telegram
     photo_sent = False
     
+    # Auto-resolve permanent Amazon CDN product image if ASIN is detectable
+    import re
+    asin_match = re.search(r'(?:/dp/|/gp/product/|/d/|/ASIN/|/)([A-Z0-9]{10})(?:[/?&]|$)', (buy_url or "") + " " + (unique_id or ""))
+    if asin_match and (not img_url or "telesco.pe" in img_url or "telegram" in img_url or "base64" in img_url):
+        asin = asin_match.group(1)
+        img_url = f"https://images-eu.ssl-images-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
+        logging.info(f"[Notifier] [CorrID: {unique_id}] Resolved direct high-res Amazon CDN image: {img_url}")
+
     # Try downloading and uploading product image locally first to prevent Telegram CDN download blocks
     if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
         local_temp_img_path = None
@@ -723,7 +731,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             }
             logging.info(f"[Notifier] [CorrID: {unique_id}] Downloading raw image locally to upload as file: {img_url}")
             dl_res = requests.get(img_url, headers=dl_headers, timeout=15)
-            if dl_res.status_code == 200:
+            if dl_res.status_code == 200 and len(dl_res.content) > 500:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
                     tmp_file.write(dl_res.content)
                     local_temp_img_path = tmp_file.name
@@ -778,47 +786,49 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             except Exception as raw_send_err:
                 logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}")
 
-    # Fallback to local PIL card if raw image send was not successful
-    if not photo_sent and local_card_path and os.path.exists(local_card_path):
+    # GUARANTEED IMAGE POLICY: If raw image failed or was unavailable, generate high-res branded deal card
+    if not photo_sent:
         try:
-            endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-            with open(local_card_path, "rb") as f:
-                files = {"photo": f}
-                payload = {
-                    "chat_id": chat_id,
-                    "caption": caption,
-                    "parse_mode": "HTML",
-                    "reply_markup": reply_markup_json
-                }
-                res = requests.post(endpoint, data=payload, files=files, timeout=30)
-            if res.status_code == 200:
-                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
-                photo_sent = True
-                save_telegram_message_info(unique_id, res, caption)
-            else:
-                err_desc = ""
-                if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
-                elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
-                elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
-                elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
-                elif res.status_code == 429: err_desc = " (429 Rate Limited)"
-                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}{err_desc}). Response: {res.text}.")
-        except requests.exceptions.Timeout:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out. Falling back to text-only.")
-        except Exception as upload_err:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to upload photo card: {upload_err}")
-        finally:
-            try: os.remove(local_card_path)
-            except Exception: pass
-    elif local_card_path:
-        # Cleanup local card path if we already successfully sent raw image URL
-        try: os.remove(local_card_path)
-        except Exception: pass
+            from utils.image_generator import generate_deal_image
+            logging.info(f"[Notifier] [CorrID: {unique_id}] Generating high-res branded deal card to guarantee photo alert...")
+            card_path = generate_deal_image(
+                platform=platform,
+                title=title,
+                price=price,
+                mrp=mrp,
+                discount=discount,
+                img_url=img_url,
+                deal_score=deal_score,
+                is_verified_low=is_verified_low,
+                unique_id=unique_id
+            )
+            if card_path and os.path.exists(card_path):
+                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+                with open(card_path, "rb") as f:
+                    files = {"photo": f}
+                    payload = {
+                        "chat_id": chat_id,
+                        "caption": caption,
+                        "parse_mode": "HTML",
+                        "reply_markup": reply_markup_json
+                    }
+                    res = requests.post(endpoint, data=payload, files=files, timeout=30)
+                if res.status_code == 200:
+                    logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Dispatched generated high-res deal card photo to Telegram!")
+                    photo_sent = True
+                    save_telegram_message_info(unique_id, res, caption)
+                try:
+                    os.remove(card_path)
+                except Exception:
+                    pass
+        except Exception as card_gen_err:
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Card generation fallback failed: {card_gen_err}")
+
     if photo_sent:
         return True
         
-    # Fallback to text-only message if photo send failed so deals are never lost
-    logging.info(f"[POST FALLBACK] [CorrID: {unique_id}] Photo send failed/unavailable. Sending text-only deal alert...")
+    # Emergency fallback to text-only only if Telegram sendPhoto is blocked
+    logging.warning(f"[POST EMERGENCY FALLBACK] [CorrID: {unique_id}] Photo send completely unreachable. Sending text-only deal alert...")
     try:
         endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
