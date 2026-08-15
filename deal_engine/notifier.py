@@ -16,6 +16,7 @@ from deal_engine.wishlist import check_deal_against_keyword_alerts
 
 queue_counter = 0
 queue_counter_lock = threading.Lock()
+notification_queue = queue.PriorityQueue()
 
 def send_deal_notification(deal_payload: dict) -> bool:
     """Dispatches deal notification payload across Telegram and active alert handlers."""
