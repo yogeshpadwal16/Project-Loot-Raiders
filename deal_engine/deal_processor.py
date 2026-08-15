@@ -201,7 +201,12 @@ def process_deal_url(url: str, platform_hint: str = None) -> bool:
             logging.error(f"[Deal Processor] Scraping failed for {expanded_url}: {scrape_err}")
             return False
             
-        title = scraped.get("title", "Product Deal")
+        raw_title = scraped.get("title", "Product Deal")
+        try:
+            from loot_raiders.compliance_guard import clean_retailer_title_artifacts
+            title = clean_retailer_title_artifacts(raw_title) or raw_title
+        except Exception:
+            title = raw_title
         price = int(scraped.get("price") or 0)
         mrp = int(scraped.get("mrp") or 0)
         img_url = scraped.get("image_url", "")

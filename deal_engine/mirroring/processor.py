@@ -166,7 +166,10 @@ class DealMirrorProcessor:
         img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
         raw_text_clean = (message.raw_text or message.caption or "").strip()
         first_line = raw_text_clean.split("\n")[0] if raw_text_clean else ""
-        title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
+        raw_title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
+        
+        from loot_raiders.compliance_guard import clean_retailer_title_artifacts
+        title = clean_retailer_title_artifacts(raw_title) or raw_title
         
         price = scraped.get("price") or 0
         mrp = scraped.get("mrp") or price
