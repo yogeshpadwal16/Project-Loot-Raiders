@@ -172,6 +172,34 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": "Forbidden: Path traversal detected."}).encode('utf-8'))
             return
 
+        if clean_path in ['/deals', '/deals.html']:
+            from web.storefront import render_storefront_html
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            search_query = queries.get('q', [None])[0]
+            cat_query = queries.get('cat', [None])[0]
+            html_content = render_storefront_html(category=cat_query, search=search_query)
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Cache-Control', 'public, max-age=60')
+            self.end_headers()
+            self.wfile.write(html_content.encode('utf-8'))
+            return
+
+        if clean_path == '/api/v1/deals':
+            from web.storefront import get_live_deals_feed
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            search_query = queries.get('q', [None])[0]
+            cat_query = queries.get('cat', [None])[0]
+            deals = get_live_deals_feed(category=cat_query, search=search_query, limit=50)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "count": len(deals), "deals": deals}).encode('utf-8'))
+            return
+
         if os.path.exists(filepath) and os.path.isfile(filepath):
             ext = os.path.splitext(filepath)[1].lower()
             mime_types = {

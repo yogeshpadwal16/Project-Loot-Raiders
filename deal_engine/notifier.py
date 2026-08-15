@@ -1479,7 +1479,14 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                     recovery_status="Ignored",
                     recommended_action="Validate your n8n Webhook URL configuration."
                 )
-        
+
+        # Multi-Platform Syndication (WhatsApp Channels & Twitter/X)
+        try:
+            from deal_engine.syndication import syndicate_deal_to_all_channels
+            syndicate_deal_to_all_channels(job, settings)
+        except Exception as synd_err:
+            logging.warning(f"Syndication failure: {synd_err}")
+            
         if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):
             if retries < 3:
                 return False # Failed, needs retry
