@@ -713,13 +713,20 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     # 4. Upload raw product image or dynamic high-res image card to Telegram
     photo_sent = False
     
-    # Auto-resolve permanent Amazon CDN product image if ASIN is detectable
-    import re
-    asin_match = re.search(r'(?:/dp/|/gp/product/|/d/|/ASIN/|/)([A-Z0-9]{10})(?:[/?&]|$)', (buy_url or "") + " " + (unique_id or ""))
-    if asin_match and (not img_url or "telesco.pe" in img_url or "telegram" in img_url or "base64" in img_url):
-        asin = asin_match.group(1)
-        img_url = f"https://images-eu.ssl-images-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_.jpg"
-        logging.info(f"[Notifier] [CorrID: {unique_id}] Resolved direct high-res Amazon CDN image: {img_url}")
+    # Auto-resolve best permanent high-res image across Amazon, Flipkart, Myntra, etc.
+    try:
+        from utils.image_extractor import resolve_best_product_image
+        resolved_img = resolve_best_product_image(
+            raw_img_url=img_url,
+            product_url=final_url or buy_url,
+            platform=platform,
+            unique_id=unique_id
+        )
+        if resolved_img:
+            img_url = resolved_img
+            logging.info(f"[Notifier] [CorrID: {unique_id}] Multi-retailer extractor resolved image: {img_url[:75]}")
+    except Exception as ext_err:
+        logging.warning(f"[Notifier] Image extraction error: {ext_err}")
 
     # Try downloading and uploading product image locally first to prevent Telegram CDN download blocks
     if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
