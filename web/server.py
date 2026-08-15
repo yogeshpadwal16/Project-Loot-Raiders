@@ -201,6 +201,30 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "success", "count": len(deals), "deals": deals}).encode('utf-8'))
             return
 
+        if clean_path == '/api/v1/gamification/leaderboard':
+            from web.gamification import get_community_leaderboard
+            leaders = get_community_leaderboard(limit=10)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "leaderboard": leaders}).encode('utf-8'))
+            return
+
+        if clean_path.startswith('/api/v1/gamification/scratch'):
+            from web.gamification import process_daily_scratch
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            user_id = queries.get('user_id', ['web_shopper'])[0]
+            username = queries.get('username', ['Shopper'])[0]
+            result = process_daily_scratch(user_id=user_id, username=username)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode('utf-8'))
+            return
+
         if os.path.exists(filepath) and os.path.isfile(filepath):
             ext = os.path.splitext(filepath)[1].lower()
             mime_types = {

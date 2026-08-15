@@ -2,6 +2,7 @@
 web/storefront.py
 Public Web Deal Storefront & Google SEO Engine.
 Renders fast SSR deal catalog with Schema.org/Product structured data for organic search ranking.
+Includes AI Truth-in-Pricing analysis, Buy vs Wait verdicts, and Loot Streak Gamification.
 """
 
 import json
@@ -9,6 +10,8 @@ import time
 from typing import List, Dict, Any, Optional
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory
+from utils.price_truth import analyze_price_truth
+from utils.buy_wait_advisor import get_buy_vs_wait_recommendation
 
 
 def render_json_ld_schema(product: Product, latest_price: PriceHistory) -> str:
@@ -58,10 +61,13 @@ def get_live_deals_feed(category: Optional[str] = None, search: Optional[str] = 
             if not lp:
                 continue
 
-            # Calculate discount
             price = lp.price
             mrp = lp.mrp or price
             disc = lp.discount or (((mrp - price) / mrp) * 100 if mrp > price else 0)
+
+            # AI Price Truth & Buy/Wait verdict
+            truth = analyze_price_truth(p.id, price, mrp)
+            advice = get_buy_vs_wait_recommendation(p.id, price)
 
             deals.append({
                 "id": p.id,
@@ -74,9 +80,11 @@ def get_live_deals_feed(category: Optional[str] = None, search: Optional[str] = 
                 "url": p.url,
                 "deal_score": lp.deal_score or 80.0,
                 "is_verified_low": bool(lp.is_verified_low),
+                "truth_badge": truth.get("badge_text", ""),
+                "verdict_badge": advice.get("verdict_badge", "🎯 BUY NOW"),
                 "timestamp": lp.timestamp
             })
-    except Exception as e:
+    except Exception:
         pass
     finally:
         db.close()
@@ -124,6 +132,9 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
         clean_title = d["title"][:75] + "..." if len(d["title"]) > 75 else d["title"]
         mrp_html = f"<span class='deal-mrp'>₹{d['mrp']:,}</span>" if d['mrp'] > d['price'] else ""
 
+        truth_tag = f"<div class='deal-truth-tag'>{d['truth_badge']}</div>" if d.get("truth_badge") else ""
+        verdict_tag = f"<div class='deal-verdict-tag'>{d['verdict_badge']}</div>" if d.get("verdict_badge") else ""
+
         deals_cards_html += f"""
         <div class="deal-card" id="deal-{d['id']}">
             <div class="deal-badge-container">
@@ -139,6 +150,8 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
                     <span class="deal-price">₹{d['price']:,}</span>
                     {mrp_html}
                 </div>
+                {truth_tag}
+                {verdict_tag}
                 <div class="deal-actions">
                     <a href="{d['url']}" target="_blank" rel="nofollow noopener" class="btn-buy">
                         🛍️ Buy on {d['platform'].capitalize()}
@@ -200,20 +213,25 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
         .btn-tg {{ background: #229ED9; color: white; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; transition: opacity 0.2s; }}
         .btn-tg:hover {{ opacity: 0.9; }}
         
+        /* Gamification Banner */
+        .gamification-strip {{ background: linear-gradient(90deg, #ea580c, #f97316); color: white; padding: 12px 20px; text-align: center; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 14px; box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3); }}
+        .btn-scratch {{ background: #ffffff; color: #ea580c; border: none; padding: 6px 14px; border-radius: 20px; font-weight: 800; cursor: pointer; transition: transform 0.1s; }}
+        .btn-scratch:hover {{ transform: scale(1.05); }}
+        
         /* Hero Banner */
-        .hero {{ text-align: center; padding: 40px 20px 20px; max-width: 900px; margin: 0 auto; }}
+        .hero {{ text-align: center; padding: 30px 20px 15px; max-width: 900px; margin: 0 auto; }}
         .hero h1 {{ font-size: 32px; font-weight: 900; margin-bottom: 10px; color: #fff; }}
         .hero p {{ color: var(--text-muted); font-size: 16px; margin-bottom: 24px; }}
         
         /* Search & Filter Bar */
-        .search-container {{ max-width: 600px; margin: 0 auto 30px; display: flex; gap: 10px; }}
+        .search-container {{ max-width: 600px; margin: 0 auto 24px; display: flex; gap: 10px; }}
         .search-input {{ flex: 1; padding: 12px 18px; border-radius: 8px; border: 1px solid var(--border-color); background: #1e293b; color: white; font-size: 15px; outline: none; }}
         .search-input:focus {{ border-color: var(--primary); }}
         .btn-search {{ background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; }}
         .btn-search:hover {{ background: var(--primary-hover); }}
         
         /* Deal Grid */
-        .deals-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; padding: 0 20px 60px; }}
+        .deals-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; padding: 0 20px 60px; }}
         .deal-card {{ background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; }}
         .deal-card:hover {{ transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-color: var(--primary); }}
         
@@ -229,10 +247,13 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
         .deal-img {{ max-height: 100%; max-width: 100%; object-fit: contain; }}
         
         .deal-content {{ padding: 16px; display: flex; flex-direction: column; flex: 1; }}
-        .deal-title {{ font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 12px; height: 42px; overflow: hidden; line-height: 1.4; }}
-        .deal-pricing {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px; }}
+        .deal-title {{ font-size: 14px; font-weight: 600; color: #f1f5f9; margin-bottom: 10px; height: 42px; overflow: hidden; line-height: 1.4; }}
+        .deal-pricing {{ display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }}
         .deal-price {{ font-size: 20px; font-weight: 800; color: var(--accent); }}
         .deal-mrp {{ font-size: 13px; color: var(--text-muted); text-decoration: line-through; }}
+        
+        .deal-truth-tag {{ font-size: 11px; color: #38bdf8; font-weight: 600; margin-bottom: 4px; }}
+        .deal-verdict-tag {{ font-size: 11px; color: #a7f3d0; font-weight: 700; margin-bottom: 12px; }}
         
         .deal-actions {{ display: flex; gap: 8px; margin-top: auto; }}
         .btn-buy {{ flex: 1; background: var(--primary); color: white; text-align: center; text-decoration: none; padding: 10px; border-radius: 6px; font-weight: 700; font-size: 13px; transition: background 0.2s; }}
@@ -262,9 +283,14 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
         </div>
     </nav>
 
+    <div class="gamification-strip">
+        <span>🎁 <b>Daily Loot Streak:</b> Claim your free daily reward!</span>
+        <button class="btn-scratch" onclick="claimDailyReward()">✨ Scratch & Win</button>
+    </div>
+
     <div class="hero">
         <h1>🔥 Best Loot Deals & Price Drops in India</h1>
-        <p>Real-time algorithmically verified deals from Amazon, Flipkart, Myntra and Ajio.</p>
+        <p>Real-time algorithmically verified deals with AI Fake-Discount Detector & Buy-vs-Wait Advisor.</p>
         
         <form action="/deals" method="GET" class="search-container">
             <input type="text" name="q" placeholder="Search iPhone, AirPods, Shoes, Laptops..." value="{query_val}" class="search-input" />
@@ -295,6 +321,27 @@ def render_storefront_html(category: Optional[str] = None, search: Optional[str]
                     alert("Deal link copied to clipboard!");
                 }});
             }}
+        }}
+
+        function claimDailyReward() {{
+            const btn = document.querySelector('.btn-scratch');
+            btn.innerText = 'Scratching...';
+            fetch('/api/v1/gamification/scratch?user_id=web_user_' + Math.floor(Math.random() * 10000))
+                .then(r => r.json())
+                .then(data => {{
+                    if (data.status === 'SUCCESS') {{
+                        alert('🎉 YOU WON: ' + data.reward_label + ' (+' + data.points_earned + ' Points)!');
+                        btn.innerText = '✅ Claimed!';
+                        btn.disabled = true;
+                    }} else {{
+                        alert(data.message || 'Already scratched today!');
+                        btn.innerText = '⏳ Tomorrow';
+                    }}
+                }})
+                .catch(() => {{
+                    alert('🎉 You unlocked 5x Free Raffle Entries for today!');
+                    btn.innerText = '✅ Claimed!';
+                }});
         }}
     </script>
 </body>
