@@ -225,6 +225,44 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode('utf-8'))
             return
 
+        if clean_path == '/api/v1/revenue/daily':
+            from deal_engine.revenue_estimator import estimate_daily_affiliate_revenue
+            rev = estimate_daily_affiliate_revenue(lookback_hours=24)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(rev).encode('utf-8'))
+            return
+
+        if clean_path.startswith('/api/v1/push/subscribe'):
+            from utils.web_push import register_push_subscription
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            endpoint = queries.get('endpoint', ['default_endpoint'])[0]
+            register_push_subscription({"endpoint": endpoint})
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success", "message": "Push notification subscription registered."}).encode('utf-8'))
+            return
+
+        if clean_path.startswith('/api/v1/wishlist/add'):
+            from deal_engine.wishlist_matcher import add_user_wishlist_target
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            user_id = queries.get('user_id', ['guest'])[0]
+            kw = queries.get('kw', [''])[0]
+            target_price = float(queries.get('price', ['0'])[0] or 0)
+            success = add_user_wishlist_target(user_id=user_id, keyword=kw, max_target_price=target_price)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "success" if success else "error", "saved": success}).encode('utf-8'))
+            return
+
         if os.path.exists(filepath) and os.path.isfile(filepath):
             ext = os.path.splitext(filepath)[1].lower()
             mime_types = {
