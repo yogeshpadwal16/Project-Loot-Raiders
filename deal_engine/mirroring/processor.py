@@ -163,7 +163,15 @@ class DealMirrorProcessor:
             
         scraped = scrape_product_details(expanded_url) or {}
             
-        img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
+        raw_img = scraped.get("image_url") or scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
+        from utils.image_extractor import resolve_best_product_image
+        img_url = resolve_best_product_image(
+            raw_img_url=raw_img,
+            product_url=expanded_url,
+            platform=platform,
+            unique_id=unique_id
+        ) or raw_img
+
         raw_text_clean = (message.raw_text or message.caption or "").strip()
         first_line = raw_text_clean.split("\n")[0] if raw_text_clean else ""
         raw_title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
