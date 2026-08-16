@@ -73,90 +73,53 @@ def broadcast_sse_event(data: dict):
             _sse_subscribers.remove(q)
 
 
-# Thread-safe in-memory cache for public deals with stale-while-revalidate
+# Thread-safe in-memory cache for public deals sourced strictly from precomputed snapshot
 _PUBLIC_DEALS_CACHE = {
     "data": None,
-    "cached_at": 0.0,
-    "ttl": 60.0  # 60 seconds TTL
+    "file_mtime": 0.0,
+    "last_checked": 0.0
 }
 _PUBLIC_DEALS_LOCK = threading.Lock()
 
 def get_cached_public_deals():
     """
-    Retrieves the top public deals from memory cache, refreshing from SQLite
-    if expired. Implements stale-while-revalidate: if SQLite is busy or errors,
-    continues serving the previous valid snapshot safely.
+    Retrieves the top public deals strictly from the precomputed deals_history.json
+    snapshot. NEVER opens or queries SQLite on the request path, guaranteeing
+    sub-millisecond responses immune to database locks and Playwright CPU load.
     """
     global _PUBLIC_DEALS_CACHE
     now = time.time()
 
-    # 1. Fast path: Valid in-memory cache hit
-    if _PUBLIC_DEALS_CACHE["data"] is not None and (now - _PUBLIC_DEALS_CACHE["cached_at"] < _PUBLIC_DEALS_CACHE["ttl"]):
+    # 1. Ultra-fast path: In-memory cache hit without stat() if checked within 2 seconds
+    if _PUBLIC_DEALS_CACHE["data"] is not None and (now - _PUBLIC_DEALS_CACHE["last_checked"] < 2.0):
         return _PUBLIC_DEALS_CACHE["data"]
 
-    # 2. Cache miss or expired: attempt thread-safe refresh
+    # 2. Check snapshot file modification time under lock
     with _PUBLIC_DEALS_LOCK:
-        # Double-check after acquiring lock
-        if _PUBLIC_DEALS_CACHE["data"] is not None and (time.time() - _PUBLIC_DEALS_CACHE["cached_at"] < _PUBLIC_DEALS_CACHE["ttl"]):
-            return _PUBLIC_DEALS_CACHE["data"]
+        now = time.time()
+        json_path = os.path.join(DASHBOARD_DIR, "deals_history.json")
 
-        db = None
         try:
-            db = SessionLocal()
-            from sqlalchemy import func
-            from sqlalchemy.orm import joinedload
-
-            latest_ph_ids = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
-            price_histories = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(
-                PriceHistory.id.in_(latest_ph_ids)
-            ).order_by(PriceHistory.timestamp.desc()).limit(100).all()
-
-            fresh_deals = []
-            for ph in price_histories:
-                p = ph.product
-                if not p:
-                    continue
-                fresh_deals.append({
-                    "id": p.id,
-                    "platform": p.platform,
-                    "title": p.title,
-                    "image_url": p.image_url,
-                    "url": p.url,
-                    "price": ph.price,
-                    "mrp": ph.mrp,
-                    "discount": ph.discount,
-                    "deal_score": ph.deal_score,
-                    "is_verified_low": ph.is_verified_low,
-                    "timestamp": ph.timestamp
-                })
-
-            if fresh_deals:
-                _PUBLIC_DEALS_CACHE["data"] = fresh_deals
-                _PUBLIC_DEALS_CACHE["cached_at"] = time.time()
-                return fresh_deals
-        except Exception as query_err:
-            logging.warning(f"[Public Deals Cache] Refresh failed: {query_err}. Using stale/fallback.")
-        finally:
-            if db:
-                try: db.close()
-                except: pass
-
-        # 3. Stale-While-Revalidate: Return previous valid cache if available
-        if _PUBLIC_DEALS_CACHE["data"] is not None:
-            return _PUBLIC_DEALS_CACHE["data"]
-
-        # 4. Fallback Snapshot: Read dashboard/deals_history.json
-        try:
-            json_path = os.path.join(DASHBOARD_DIR, "deals_history.json")
             if os.path.exists(json_path):
+                mtime = os.path.getmtime(json_path)
+                if _PUBLIC_DEALS_CACHE["data"] is not None and mtime == _PUBLIC_DEALS_CACHE["file_mtime"]:
+                    _PUBLIC_DEALS_CACHE["last_checked"] = now
+                    return _PUBLIC_DEALS_CACHE["data"]
+
                 with open(json_path, "r", encoding="utf-8") as fp:
                     snapshot_data = json.load(fp)
-                    if snapshot_data and isinstance(snapshot_data, list):
-                        _PUBLIC_DEALS_CACHE["data"] = snapshot_data
-                        _PUBLIC_DEALS_CACHE["cached_at"] = time.time()
-                        return snapshot_data
-        except Exception as snap_err:
-            logging.warning(f"[Public Deals Cache] Snapshot read failed: {snap_err}")
+
+                if isinstance(snapshot_data, list):
+                    _PUBLIC_DEALS_CACHE["data"] = snapshot_data
+                    _PUBLIC_DEALS_CACHE["file_mtime"] = mtime
+                    _PUBLIC_DEALS_CACHE["last_checked"] = now
+                    return snapshot_data
+        except Exception as e:
+            logging.warning(f"[Public Deals Cache] Snapshot read error: {e}. Using existing cache if available.")
+
+        # 3. Graceful fallback: return previous valid in-memory data
+        if _PUBLIC_DEALS_CACHE["data"] is not None:
+            return _PUBLIC_DEALS_CACHE["data"]
 
         return []
 

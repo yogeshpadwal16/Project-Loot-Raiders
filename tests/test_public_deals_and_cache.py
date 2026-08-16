@@ -1,10 +1,11 @@
 import unittest
 import time
 import json
+import os
 from unittest.mock import patch, MagicMock
 from web.server import (
-    ScraperAPIHandler, 
-    _PUBLIC_DEALS_CACHE, 
+    ScraperAPIHandler,
+    _PUBLIC_DEALS_CACHE,
     _PUBLIC_DEALS_LOCK,
     get_cached_public_deals
 )
@@ -15,11 +16,12 @@ class TestPublicDealsAndCache(unittest.TestCase):
         # Reset cache before each test
         with _PUBLIC_DEALS_LOCK:
             _PUBLIC_DEALS_CACHE["data"] = None
-            _PUBLIC_DEALS_CACHE["cached_at"] = 0.0
+            _PUBLIC_DEALS_CACHE["file_mtime"] = 0.0
+            _PUBLIC_DEALS_CACHE["last_checked"] = 0.0
 
     def test_is_authorized_allows_public_deals(self):
         handler = MagicMock()
-        handler.path = "/api/deals/public?limit=50"
+        handler.path = "/api/deals/public?limit=10"
         handler.headers = {}
         is_auth = ScraperAPIHandler.is_authorized(handler)
         self.assertTrue(is_auth, "/api/deals/public must be authorized without credentials")
@@ -38,49 +40,48 @@ class TestPublicDealsAndCache(unittest.TestCase):
         is_auth = ScraperAPIHandler.is_authorized(handler)
         self.assertFalse(is_auth, "/api/settings must require authentication")
 
-    def test_cache_population_and_reuse(self):
+    def test_reads_precomputed_snapshot_without_sqlite(self):
         sample_deals = [
-            {"id": "TEST1", "platform": "amazon", "title": "Deal 1", "price": 100, "deal_score": 85},
-            {"id": "TEST2", "platform": "flipkart", "title": "Deal 2", "price": 200, "deal_score": 90}
+            {"id": "DEAL1", "platform": "amazon", "title": "Deal 1", "price": 100, "deal_score": 85},
+            {"id": "DEAL2", "platform": "flipkart", "title": "Deal 2", "price": 200, "deal_score": 90}
         ]
-        
-        # Populate cache directly or simulate DB retrieval
+
+        # Ensure SessionLocal (SQLite) is NOT called on get_cached_public_deals()
+        with patch("web.server.SessionLocal", side_effect=AssertionError("SQLite must NEVER be called")):
+            with patch("os.path.exists", return_value=True):
+                with patch("os.path.getmtime", return_value=12345.0):
+                    with patch("builtins.open", unittest.mock.mock_open(read_data=json.dumps(sample_deals))):
+                        res = get_cached_public_deals()
+                        self.assertEqual(len(res), 2)
+                        self.assertEqual(res[0]["id"], "DEAL1")
+                        self.assertEqual(res[1]["id"], "DEAL2")
+
+    def test_in_memory_cache_hit_performance(self):
+        sample_deals = [{"id": "D1", "platform": "amazon", "title": "D1", "price": 50}]
+
         with _PUBLIC_DEALS_LOCK:
             _PUBLIC_DEALS_CACHE["data"] = sample_deals
-            _PUBLIC_DEALS_CACHE["cached_at"] = time.time()
+            _PUBLIC_DEALS_CACHE["last_checked"] = time.time()
 
-        cached_data = get_cached_public_deals()
-        self.assertEqual(len(cached_data), 2)
-        self.assertEqual(cached_data[0]["id"], "TEST1")
+        t0 = time.time()
+        res = get_cached_public_deals()
+        dt_ms = (time.time() - t0) * 1000
 
-    def test_stale_while_revalidate_on_error(self):
-        initial_deals = [{"id": "STALE1", "platform": "amazon", "title": "Stale Deal", "price": 500, "deal_score": 80}]
-        
-        # Set cache with expired timestamp
-        with _PUBLIC_DEALS_LOCK:
-            _PUBLIC_DEALS_CACHE["data"] = initial_deals
-            _PUBLIC_DEALS_CACHE["cached_at"] = time.time() - 100.0  # Expired
+        self.assertEqual(len(res), 1)
+        self.assertLess(dt_ms, 2.0, "Cache hit must complete in < 2ms")
 
-        # Simulate database exception during refresh
-        with patch("web.server.SessionLocal", side_effect=Exception("Database locked")):
+    def test_missing_or_corrupted_snapshot_fails_safely(self):
+        # Scenario A: File does not exist
+        with patch("os.path.exists", return_value=False):
             res = get_cached_public_deals()
-            # Must return the stale cache safely rather than raising an error or returning []
-            self.assertEqual(len(res), 1)
-            self.assertEqual(res[0]["id"], "STALE1")
+            self.assertEqual(res, [], "Must return empty list if snapshot is missing")
 
-    def test_snapshot_fallback_when_cache_empty_and_db_fails(self):
-        with _PUBLIC_DEALS_LOCK:
-            _PUBLIC_DEALS_CACHE["data"] = None
-            _PUBLIC_DEALS_CACHE["cached_at"] = 0.0
-
-        snapshot_mock = [{"id": "SNAP1", "platform": "amazon", "title": "Snapshot Deal", "price": 99}]
-        
-        with patch("web.server.SessionLocal", side_effect=Exception("Database locked")):
-            with patch("os.path.exists", return_value=True):
-                with patch("builtins.open", unittest.mock.mock_open(read_data=json.dumps(snapshot_mock))):
+        # Scenario B: File contains invalid JSON
+        with patch("os.path.exists", return_value=True):
+            with patch("os.path.getmtime", return_value=99999.0):
+                with patch("builtins.open", unittest.mock.mock_open(read_data="INVALID_JSON")):
                     res = get_cached_public_deals()
-                    self.assertEqual(len(res), 1)
-                    self.assertEqual(res[0]["id"], "SNAP1")
+                    self.assertEqual(res, [], "Must return empty list gracefully on parse error")
 
 if __name__ == "__main__":
     unittest.main()
