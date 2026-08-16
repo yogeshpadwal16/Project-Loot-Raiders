@@ -40,6 +40,17 @@ export function AppContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMerchant, setSelectedMerchant] = useState<string>("all");
 
+  const [systemStatus, setSystemStatus] = useState<{
+    telegramStatus: string;
+    scraperFleetStatus: string;
+    scraperFleetCount: string;
+  }>({
+    telegramStatus: "Connected",
+    scraperFleetStatus: "Engine Active",
+    scraperFleetCount: "14/14"
+  });
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const cycleDensity = () => {
     if (density === "comfortable") setDensity("compact");
     else if (density === "compact") setDensity("expanded");
@@ -62,14 +73,48 @@ export function AppContent() {
 
   const loadDeals = () => {
     setLoading(true);
+    setFetchError(null);
     ApiClient.fetchPublicDeals(100)
-      .then((data) => setDeals(data))
-      .catch((err) => console.warn("Deal fetch error:", err))
+      .then((data) => {
+        setDeals(data || []);
+        setFetchError(null);
+      })
+      .catch((err) => {
+        console.warn("Deal fetch error:", err);
+        setFetchError(err?.message || "Failed to load live deals");
+      })
       .finally(() => setLoading(false));
 
     ApiClient.fetchBrainStatus()
       .then((res) => setBrainOnline(res.status === "ONLINE"))
       .catch(() => setBrainOnline(false));
+
+    ApiClient.fetchStatus()
+      .then((statusData: any) => {
+        const healthMap = statusData?.crawler_health || {};
+        const fleetKeys = Object.keys(healthMap);
+        if (fleetKeys.length > 0) {
+          const healthyCount = fleetKeys.filter((k: string) => healthMap[k]?.status === "Healthy").length;
+          setSystemStatus({
+            telegramStatus: statusData?.is_running ? "Connected" : "Standby",
+            scraperFleetStatus: `${healthyCount}/${fleetKeys.length} Online`,
+            scraperFleetCount: `${healthyCount}/${fleetKeys.length}`
+          });
+        } else {
+          setSystemStatus({
+            telegramStatus: statusData?.is_running ? "Connected" : "Standby",
+            scraperFleetStatus: statusData?.is_running ? "Scanners Operating" : "Scanners Paused",
+            scraperFleetCount: statusData?.is_running ? "Active" : "Paused"
+          });
+        }
+      })
+      .catch(() => {
+        setSystemStatus({
+          telegramStatus: "Not reported",
+          scraperFleetStatus: "Unavailable",
+          scraperFleetCount: "--/--"
+        });
+      });
   };
 
   useEffect(() => {
@@ -159,8 +204,8 @@ export function AppContent() {
                 priceCrashesCount,
                 avgLootScore,
                 verifiedSavingsTotal,
-                telegramStatus: "Connected",
-                scraperFleetStatus: "12/12 Healthy",
+                telegramStatus: systemStatus.telegramStatus,
+                scraperFleetStatus: systemStatus.scraperFleetStatus,
               }}
             />
 
@@ -170,7 +215,7 @@ export function AppContent() {
               lowsCount={historicalLowsCount}
               crashesCount={priceCrashesCount}
               aiOpportunitiesCount={hotDealsCount}
-              scraperFleetCount="12/12"
+              scraperFleetCount={systemStatus.scraperFleetCount}
             />
 
             {/* 3. Top Loot Hero Feature Card */}
@@ -238,6 +283,22 @@ export function AppContent() {
                 <p className="text-sm font-bold text-slate-600 dark:text-slate-300 font-mono">
                   Fetching Live AI Verified Deals...
                 </p>
+              </div>
+            ) : fetchError && deals.length === 0 ? (
+              <div className="py-24 text-center bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-8 space-y-3 shadow-md">
+                <Zap className="w-10 h-10 text-amber-500 mx-auto" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Reconnecting to Ingestion Engine
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                  The backend crawler is actively processing deals. Snapshot fallback will load automatically when available.
+                </p>
+                <button
+                  onClick={loadDeals}
+                  className="mt-2 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-mono font-bold hover:bg-orange-600 transition-all shadow-md shadow-orange-500/20"
+                >
+                  Retry Connection
+                </button>
               </div>
             ) : filteredDeals.length === 0 ? (
               <div className="py-24 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 space-y-3 shadow-md">

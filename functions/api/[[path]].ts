@@ -21,6 +21,7 @@ const ALLOWED_ROUTES: string[] = [
 
   // Public data & feed routes
   '/api/deals',
+  '/api/deals/public',
   '/api/status',
   '/api/config',
   '/api/scraper/health',
