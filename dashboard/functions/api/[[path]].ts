@@ -10,6 +10,9 @@
 interface Env {
   BACKEND_API_URL?: string;
   LOOT_BACKEND_URL?: string;
+  ASSETS?: {
+    fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  };
 }
 
 // Strict Allowlist of permitted API route prefixes
@@ -59,11 +62,21 @@ function isRouteAllowed(pathname: string): boolean {
   );
 }
 
-async function serveEdgeSnapshotFallback(url: URL): Promise<Response> {
+async function serveEdgeSnapshotFallback(context: EventContext<Env, any, any>): Promise<Response> {
+  const { request, env } = context;
+  const url = new URL(request.url);
+
   try {
-    const snapshotUrl = `${url.origin}/deals_history.json`;
-    const snapRes = await fetch(snapshotUrl);
-    if (snapRes.ok) {
+    const assetUrl = new URL("/deals_history.json", request.url);
+    let snapRes: Response | null = null;
+
+    if (env.ASSETS && typeof env.ASSETS.fetch === "function") {
+      snapRes = await env.ASSETS.fetch(new Request(assetUrl.toString(), { method: "GET" }));
+    } else {
+      snapRes = await fetch(assetUrl.toString());
+    }
+
+    if (snapRes && snapRes.ok) {
       const deals: any[] = await snapRes.json();
       const params = url.searchParams;
       const platform = (params.get("platform") || "all").toLowerCase();
@@ -97,7 +110,7 @@ async function serveEdgeSnapshotFallback(url: URL): Promise<Response> {
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
   const pathname = url.pathname;
 
@@ -128,12 +141,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
   // 3. Resolve backend API base URL from Cloudflare Environment Variables
-  const rawTarget = context.env.BACKEND_API_URL || context.env.LOOT_BACKEND_URL || "";
+  const rawTarget = env.BACKEND_API_URL || env.LOOT_BACKEND_URL || "";
   const backendBase = rawTarget.trim().replace(/\/+$/, "");
 
   if (!backendBase) {
     if (isPublicDeals) {
-      return await serveEdgeSnapshotFallback(url);
+      return await serveEdgeSnapshotFallback(context);
     }
     return new Response(JSON.stringify({
       error: "Backend Gateway Unconfigured",
@@ -158,30 +171,31 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   });
 
-  // 6. Build fetch options with fast timeout for public endpoints
-  const controller = new AbortController();
-  const timeoutMs = isPublicDeals ? 3500 : 30000;
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   const fetchOptions: RequestInit = {
     method: request.method,
     headers: forwardHeaders,
-    redirect: "follow",
-    signal: controller.signal
+    redirect: "follow"
   };
 
   if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
     fetchOptions.body = request.body;
   }
 
-  // 7. Execute forward fetch with safe error handling and edge fallback
+  // 6. Execute forward fetch with tight race timeout and safe edge fallback
+  const timeoutMs = isPublicDeals ? 2500 : 25000;
+  const timeoutPromise = new Promise<Response>((_, reject) =>
+    setTimeout(() => reject(new Error("Gateway Timeout")), timeoutMs)
+  );
+
   try {
-    const backendResponse = await fetch(targetUrl, fetchOptions);
-    clearTimeout(timeoutId);
+    const backendResponse = await Promise.race([
+      fetch(targetUrl, fetchOptions),
+      timeoutPromise
+    ]);
 
     // If backend returns a server error (502, 503, 504) for public deals, use snapshot fallback
     if (isPublicDeals && [502, 503, 504].includes(backendResponse.status)) {
-      return await serveEdgeSnapshotFallback(url);
+      return await serveEdgeSnapshotFallback(context);
     }
 
     // Build clean response headers
@@ -205,15 +219,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       headers: responseHeaders
     });
   } catch (err: any) {
-    clearTimeout(timeoutId);
     if (isPublicDeals) {
-      return await serveEdgeSnapshotFallback(url);
+      return await serveEdgeSnapshotFallback(context);
     }
+    const isUnauth = !request.headers.has("authorization");
+    const status = isUnauth ? 401 : 502;
+    const message = isUnauth ? "Authentication Required" : "Unable to reach backend service through the secure tunnel.";
     return new Response(JSON.stringify({
-      error: "Gateway Communication Error",
-      message: "Unable to reach backend service through the secure tunnel."
+      error: isUnauth ? "Unauthorized" : "Gateway Communication Error",
+      message: message
     }), {
-      status: 502,
+      status: status,
       headers: { "Content-Type": "application/json" }
     });
   }
