@@ -207,19 +207,21 @@ class PlaywrightSeleniumAdapter:
 
     def quit(self):
         try:
+            if hasattr(self, 'page') and self.page:
+                try: self.page.close()
+                except Exception: pass
             if hasattr(self, 'context') and self.context:
                 try: self.context.close()
-                except Exception as ce: logging.debug(f"Error closing context: {ce}")
-            if hasattr(self, 'browser') and self.browser:
-                try: self.browser.close()
-                except Exception as be: logging.debug(f"Error closing browser: {be}")
-            if hasattr(self, 'playwright') and self.playwright:
-                try: self.playwright.stop()
-                except Exception as pe: logging.debug(f"Error stopping playwright: {pe}")
+                except Exception: pass
+            if not getattr(self, '_is_shared', True):
+                if hasattr(self, 'browser') and self.browser:
+                    try: self.browser.close()
+                    except Exception: pass
+                if hasattr(self, 'playwright') and self.playwright:
+                    try: self.playwright.stop()
+                    except Exception: pass
         except Exception as e:
             logging.debug(f"Error closing Playwright elements: {e}")
-        finally:
-            pass
 
     def close(self):
         try:
@@ -235,27 +237,27 @@ class PlaywrightSeleniumAdapter:
             logging.debug(f"Error closing current tab: {e}")
 
 
-def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
+# Global Shared Playwright Browser Manager
+_SHARED_PLAYWRIGHT = None
+_SHARED_BROWSER = None
+_SHARED_LOCK = threading.Lock()
+
+def _get_shared_browser(settings=None):
     """
-    Spins up a Playwright browser instance and wraps it in a Selenium-compatible adapter.
+    Returns the singleton Playwright Chromium browser instance,
+    re-launching automatically if disconnected or uninitialized.
     """
-    import asyncio
-    import threading
-    
-    global playwright_lock
-    playwright_lock.acquire()
-    lock_held = True
-    
-    try:
-        try:
-            running_loop = asyncio.get_running_loop()
-            logging.info(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, Running Loop: {running_loop}")
-        except RuntimeError:
-            logging.debug(f"[Playwright Adapter Debug] Thread: {threading.current_thread().name}, No running loop.")
-            
-        playwright = sync_playwright().start()
-        
-        # Launch Chromium with stealth arguments including undetected new headless flag
+    global _SHARED_PLAYWRIGHT, _SHARED_BROWSER
+    with _SHARED_LOCK:
+        if _SHARED_BROWSER is not None:
+            try:
+                if _SHARED_BROWSER.is_connected():
+                    return _SHARED_PLAYWRIGHT, _SHARED_BROWSER
+            except Exception:
+                pass
+            _shutdown_shared_browser_internal()
+
+        _SHARED_PLAYWRIGHT = sync_playwright().start()
         browser_args = [
             "--headless=new",
             "--no-sandbox",
@@ -271,10 +273,10 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
             "--metrics-recording-only",
             "--mute-audio",
             "--no-first-run",
-            "--single-process",  # Reduces CPU on low-core VPS (1-2 cores)
+            "--single-process",
             "--memory-pressure-off",
         ]
-        
+
         proxy_config = None
         if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
             try:
@@ -286,66 +288,109 @@ def get_playwright_driver(settings=None) -> PlaywrightSeleniumAdapter:
             except Exception as pe:
                 logging.error(f"Failed to resolve validated proxy: {pe}")
 
-        # Launch in true headless mode to avoid requiring X11 display server on headless VPS
-        browser = playwright.chromium.launch(
+        _SHARED_BROWSER = _SHARED_PLAYWRIGHT.chromium.launch(
             headless=True,
             args=browser_args
         )
-        
-        # Configure context with custom User-Agent and viewport
-        # NOTE: Omit context-level extra_http_headers to avoid corrupting sub-resource fetches (like CSS/JS/APIs)
-        user_agents = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+        return _SHARED_PLAYWRIGHT, _SHARED_BROWSER
+
+def _shutdown_shared_browser_internal():
+    global _SHARED_PLAYWRIGHT, _SHARED_BROWSER
+    if _SHARED_BROWSER is not None:
+        try: _SHARED_BROWSER.close()
+        except Exception: pass
+        _SHARED_BROWSER = None
+    if _SHARED_PLAYWRIGHT is not None:
+        try: _SHARED_PLAYWRIGHT.stop()
+        except Exception: pass
+        _SHARED_PLAYWRIGHT = None
+
+def shutdown_shared_browser():
+    """Cleanly shuts down the shared Playwright Chromium instance."""
+    with _SHARED_LOCK:
+        _shutdown_shared_browser_internal()
+
+import atexit
+atexit.register(shutdown_shared_browser)
+
+
+def get_playwright_driver(settings=None, standalone=False) -> PlaywrightSeleniumAdapter:
+    """
+    Creates an isolated BrowserContext and Page on the shared Chromium instance
+    (or standalone if requested), wrapped in a Selenium-compatible adapter.
+    """
+    if standalone:
+        playwright = sync_playwright().start()
+        browser_args = [
+            "--headless=new",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-translate",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--single-process",
+            "--memory-pressure-off",
         ]
-        selected_ua = random.choice(user_agents)
-        
-        context = browser.new_context(
-            user_agent=selected_ua,
-            viewport={"width": 1280, "height": 720},  # Reduced from 1920x1080 to save render memory
-            proxy=proxy_config,
-            ignore_https_errors=True
-        )
-        
-        page = context.new_page()
-        page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        
-        # Block heavy/slow resources and tracking scripts to prevent timeouts on the headless VPS
-        def block_slow_resources(route):
-            try:
-                resource_type = route.request.resource_type
-                url = route.request.url.lower()
-                exclude_types = ["image", "media", "font", "stylesheet"]
-                exclude_domains = ["google-analytics", "doubleclick", "demdex", "newrelic", "facebook", "youtube", "scorecardresearch", "hotjar"]
-                if resource_type in exclude_types or any(dom in url for dom in exclude_domains):
-                    route.abort()
-                else:
-                    route.continue_()
-            except Exception:
-                try: route.continue_()
-                except Exception: pass
-                
-        page.route("**/*", block_slow_resources)
-        
-        # Release the lock immediately now that the browser launch is complete.
-        # This serializes launches (preventing high CPU load spikes) but allows concurrent scraping.
-        if lock_held:
-            try:
-                playwright_lock.release()
-                lock_held = False
-            except RuntimeError:
-                pass
-            
-        return PlaywrightSeleniumAdapter(playwright, browser, context, page)
-    except Exception as e:
-        if lock_held:
-            try:
-                playwright_lock.release()
-                lock_held = False
-            except RuntimeError:
-                pass
-        raise e
+        browser = playwright.chromium.launch(headless=True, args=browser_args)
+        is_shared = False
+    else:
+        playwright, browser = _get_shared_browser(settings)
+        is_shared = True
+
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0"
+    ]
+    selected_ua = random.choice(user_agents)
+
+    proxy_config = None
+    if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
+        try:
+            from utils.proxy_validator import get_next_working_proxy
+            proxy_url = get_next_working_proxy(settings)
+            if proxy_url:
+                proxy_config = {"server": proxy_url}
+        except Exception:
+            pass
+
+    context = browser.new_context(
+        user_agent=selected_ua,
+        viewport={"width": 1280, "height": 720},
+        proxy=proxy_config,
+        ignore_https_errors=True
+    )
+
+    page = context.new_page()
+    page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    def block_slow_resources(route):
+        try:
+            resource_type = route.request.resource_type
+            url = route.request.url.lower()
+            exclude_types = ["image", "media", "font", "stylesheet"]
+            exclude_domains = ["google-analytics", "doubleclick", "demdex", "newrelic", "facebook", "youtube", "scorecardresearch", "hotjar"]
+            if resource_type in exclude_types or any(dom in url for dom in exclude_domains):
+                route.abort()
+            else:
+                route.continue_()
+        except Exception:
+            try: route.continue_()
+            except Exception: pass
+
+    page.route("**/*", block_slow_resources)
+
+    adapter = PlaywrightSeleniumAdapter(playwright, browser, context, page)
+    adapter._is_shared = is_shared
+    return adapter
