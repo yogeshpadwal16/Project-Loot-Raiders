@@ -30,8 +30,9 @@ const API_BASE = window.location.protocol === 'file:'
     ? 'http://127.0.0.1:5555' 
     : window.location.origin;
 
-// Detect if running statically on GitHub Pages or locally without server
-const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || window.location.hostname.endsWith('githubusercontent.com');
+// Detect if running strictly statically on GitHub Pages or locally without server
+const IS_STATIC_MODE = window.location.hostname.endsWith('github.io') || 
+                       window.location.hostname.endsWith('githubusercontent.com');
 
 // Public configurations for channel links
 let publicConfig = {
@@ -159,7 +160,18 @@ async function fetchStatus() {
 
 async function fetchDeals() {
     try {
-        const response = await fetch(IS_STATIC_MODE ? './deals_history.json' : `${API_BASE}/api/deals`);
+        let response;
+        if (IS_STATIC_MODE) {
+            response = await fetch('./deals_history.json');
+        } else {
+            try {
+                response = await fetch(`${API_BASE}/api/deals`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            } catch (apiErr) {
+                console.warn('Live API unavailable, loading static snapshot deals_history.json:', apiErr);
+                response = await fetch('./deals_history.json');
+            }
+        }
         if (!response.ok) throw new Error('Deals sync failure');
         const data = await response.json();
         currentDeals = data;

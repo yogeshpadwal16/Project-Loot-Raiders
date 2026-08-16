@@ -35,9 +35,16 @@ export class ApiClient {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
-      console.warn('Fallback fetching /api/deals:', err);
-      const res = await fetch(`${API_BASE}/api/deals`);
-      return await res.json();
+      console.warn('Live API fetch failed, trying static snapshot deals_history.json:', err);
+      try {
+        const snapRes = await fetch('./deals_history.json');
+        if (snapRes.ok) {
+          return await snapRes.json();
+        }
+      } catch (snapErr) {
+        console.warn('Static snapshot fallback failed:', snapErr);
+      }
+      throw err;
     }
   }
 

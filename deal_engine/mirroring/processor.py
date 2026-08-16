@@ -155,10 +155,27 @@ class DealMirrorProcessor:
     def _process_single_raw_url(self, raw_url: str, correlation_id: str, message: NormalizedMessage, extracted_data: dict, db):
         """Processes a single URL extraction, scraping, and deal logic workflow."""
         expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
+        
+        # Multi-ASIN Store & Search URL Decomposition (Pre-browser fast path)
+        if "amazon" in expanded_url.lower():
+            from utils.parser import extract_amazon_asins_from_url
+            asins = extract_amazon_asins_from_url(expanded_url)
+            if len(asins) > 1:
+                logging.info(f"[PARSE] [CorrID: {correlation_id}] Multi-ASIN URL detected. Decomposing into {len(asins)} individual product tasks: {asins}")
+                for asin in asins:
+                    direct_dp_url = f"https://www.amazon.in/dp/{asin}"
+                    try:
+                        self._process_single_raw_url(direct_dp_url, correlation_id, message, extracted_data, db)
+                    except Exception as asin_err:
+                        logging.error(f"[PARSE] [CorrID: {correlation_id}] Error processing decomposed ASIN {asin}: {asin_err}")
+                return
+            elif len(asins) == 1 and not ("/dp/" in expanded_url.lower() or "/gp/product/" in expanded_url.lower()):
+                expanded_url = f"https://www.amazon.in/dp/{asins[0]}"
+
         platform, unique_id = self._parse_url_metadata(expanded_url)
         
         if not platform or not unique_id:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Unrecognized domain or ID for URL: {expanded_url}")
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipped generic non-product URL (no valid identifier): {expanded_url}")
             return
             
         scraped = scrape_product_details(expanded_url) or {}
