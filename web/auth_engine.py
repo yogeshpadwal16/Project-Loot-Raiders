@@ -27,10 +27,11 @@ def get_owner_credentials() -> Tuple[str, str, str, str]:
     Retrieves authorized owner username, password, token, and owner mobile number.
     Returns (username, password, session_token, owner_mobile).
     """
-    env_user = os.environ.get("DASHBOARD_USERNAME", "yogeshpadwal16").strip().lower()
-    env_pass = os.environ.get("DASHBOARD_PASSWORD", "YOUR_DASHBOARD_PASSWORD").strip()
-    env_token = os.environ.get("DASHBOARD_SESSION_TOKEN", "admin_session_key_default").strip()
-    owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+917302427167").strip()
+    settings = load_settings()
+    env_user = (os.environ.get("DASHBOARD_USERNAME") or settings.get("dashboard_username") or "yogeshpadwal16").strip().lower()
+    env_pass = (os.environ.get("DASHBOARD_PASSWORD") or settings.get("dashboard_password") or "Vihan@143").strip()
+    env_token = (os.environ.get("DASHBOARD_SESSION_TOKEN") or settings.get("dashboard_session_token") or "admin_session_key_default").strip()
+    owner_mobile = (os.environ.get("OWNER_MOBILE_NUMBER") or settings.get("owner_mobile_number") or "+917302427167").strip()
     return env_user, env_pass, env_token, owner_mobile
 
 
