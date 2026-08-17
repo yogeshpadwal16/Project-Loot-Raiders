@@ -80,7 +80,38 @@ def dispatch_telegram_otp(otp_code: str, masked_mobile: str) -> None:
     except Exception as e:
         logger.warning(f"Could not dispatch OTP via Telegram: {e}")
 
-    # Dispatch via Mobile SMS if SMS Gateway API (Fast2SMS / Twilio) is configured
+    # Dispatch via Twilio WhatsApp if configured
+    try:
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID") or settings.get("twilio_account_sid")
+        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN") or settings.get("twilio_auth_token")
+        twilio_whatsapp_from = os.environ.get("TWILIO_WHATSAPP_FROM") or settings.get("twilio_whatsapp_from", "+14155238886")
+        owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+917302427167").strip()
+
+        if twilio_sid and twilio_token and "YOUR_" not in twilio_sid and owner_mobile:
+            msg_text = (
+                f"🔐 *Loot Raiders Owner Verification Code*\n\n"
+                f"Your 6-digit OTP code is: *{otp_code}*\n"
+                f"Target Number: {masked_mobile}\n"
+                f"Expires in 5 minutes. Do not share this code."
+            )
+            from_wa = twilio_whatsapp_from if twilio_whatsapp_from.startswith("whatsapp:") else f"whatsapp:{twilio_whatsapp_from}"
+            to_wa = owner_mobile if owner_mobile.startswith("whatsapp:") else f"whatsapp:{owner_mobile}"
+            
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{twilio_sid}/Messages.json"
+            payload = {
+                "From": from_wa,
+                "To": to_wa,
+                "Body": msg_text
+            }
+            res = requests.post(url, data=payload, auth=(twilio_sid, twilio_token), timeout=8)
+            if res.status_code in [200, 201]:
+                logger.info(f"Dispatched OTP via Twilio WhatsApp to {masked_mobile}")
+            else:
+                logger.warning(f"Twilio WhatsApp dispatch failed ({res.status_code}): {res.text}")
+    except Exception as tw_err:
+        logger.warning(f"Twilio WhatsApp dispatch error: {tw_err}")
+
+    # Dispatch via Mobile SMS if SMS Gateway API (Fast2SMS) is configured
     try:
         sms_api_key = os.environ.get("SMS_API_KEY") or settings.get("sms_api_key")
         owner_mobile = os.environ.get("OWNER_MOBILE_NUMBER", "+917302427167").strip()
