@@ -222,12 +222,15 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (isPublicDeals) {
       return await serveEdgeSnapshotFallback(context);
     }
-    const isUnauth = !request.headers.has("authorization");
-    const status = isUnauth ? 401 : 502;
-    const message = isUnauth ? "Authentication Required" : "Unable to reach backend service through the secure tunnel.";
+    const isTimeout = err?.message === "Gateway Timeout";
+    const status = isTimeout ? 504 : 502;
+    const message = isTimeout
+      ? "Gateway timeout: backend service did not respond in time. Please retry."
+      : "Unable to reach backend service through the secure tunnel.";
     return new Response(JSON.stringify({
-      error: isUnauth ? "Unauthorized" : "Gateway Communication Error",
-      message: message
+      error: isTimeout ? "Gateway Timeout" : "Gateway Communication Error",
+      message: message,
+      status: "gateway_error"
     }), {
       status: status,
       headers: { "Content-Type": "application/json" }
