@@ -124,6 +124,37 @@ def get_cached_public_deals():
         return []
 
 
+def is_public_endpoint(path: str) -> bool:
+    """Returns True if the requested path is a public/unauthenticated endpoint."""
+    clean_path = path.split('?')[0]
+    public_endpoints = [
+        '/',
+        '/api/login',
+        '/api/verify-otp',
+        '/api/resend-otp',
+        '/api/status',
+        '/api/deals/public',
+        '/api/config',
+        '/api/brain/status',
+        '/api/brain/memories',
+        '/api/brain/learning/policies',
+        '/api/brain/pipeline/process',
+        '/api/analytics',
+        '/api/scraper/health',
+        '/api/lootmap/events',
+        '/api/rewards/scratch',
+        '/api/channel/growth',
+        '/api/whatsapp/share',
+        '/api/push/subscribe',
+        '/api/deals/stream',
+        '/api/tma/deals',
+        '/api/v1/deals'
+    ]
+    if clean_path in public_endpoints or clean_path.startswith('/api/deals/public') or clean_path.startswith('/api/v1/') or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
+        return True
+    return False
+
+
 class ScraperAPIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         # Log REST requests to execution.log
@@ -144,33 +175,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def is_authorized(self):
-        # Exclude static files, redirects, status, public deals, and login from auth checks
-        clean_path = self.path.split('?')[0]
-        public_endpoints = [
-            '/',
-            '/api/login',
-            '/api/verify-otp',
-            '/api/resend-otp',
-            '/api/status',
-            '/api/deals/public',
-            '/api/config',
-            '/api/brain/status',
-            '/api/brain/memories',
-            '/api/brain/learning/policies',
-            '/api/brain/pipeline/process',
-            '/api/analytics',
-
-            '/api/scraper/health',
-            '/api/lootmap/events',
-            '/api/rewards/scratch',
-            '/api/channel/growth',
-            '/api/whatsapp/share',
-            '/api/push/subscribe',
-            '/api/deals/stream',
-            '/api/tma/deals',
-            '/api/v1/deals'
-        ]
-        if clean_path in public_endpoints or clean_path.startswith('/api/deals/public') or clean_path.startswith('/api/v1/') or clean_path.startswith('/api/deals/history') or clean_path.startswith('/api/redirect') or not clean_path.startswith('/api/'):
+        if is_public_endpoint(self.path):
             return True
 
         # Get token from header or fallback to query parameter
@@ -1227,6 +1232,97 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         parsed_path = urllib.parse.urlparse(self.path).path
         logging.getLogger().info(f"POST Request: path='{self.path}' parsed='{parsed_path}'")
 
+        # Fast-Path Authentication Endpoints (Zero DB/Scraper dependencies)
+        if parsed_path == '/api/login':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                username = str(data.get('username', '')).strip()
+                password = str(data.get('password', '')).strip()
+
+                from web.auth_engine import initiate_owner_login
+                success, session_id, masked_mobile, otp_code, error_msg = initiate_owner_login(username, password)
+
+                self.send_response(200 if success else 401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+
+                if success:
+                    res = {
+                        "status": "otp_required",
+                        "session_id": session_id,
+                        "masked_mobile": masked_mobile,
+                        "otp_code": otp_code,
+                        "message": f"Verification code sent to registered owner number ({masked_mobile})"
+                    }
+                else:
+                    res = {"status": "failed", "message": error_msg or "Invalid username or password"}
+                self.wfile.write(json.dumps(res).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+            return
+
+        elif parsed_path == '/api/verify-otp':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                session_id = str(data.get('session_id', '')).strip()
+                otp_code = str(data.get('otp', '')).strip()
+
+                from web.auth_engine import verify_owner_otp
+                success, token, error_msg = verify_owner_otp(session_id, otp_code)
+
+                self.send_response(200 if success else 400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+
+                if success:
+                    res = {
+                        "status": "success",
+                        "token": token,
+                        "name": "Yogesh Padwal",
+                        "message": "Authentication successful"
+                    }
+                else:
+                    res = {"status": "failed", "message": error_msg or "Verification failed"}
+                self.wfile.write(json.dumps(res).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+            return
+
+        elif parsed_path == '/api/resend-otp':
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                session_id = str(data.get('session_id', '')).strip()
+
+                from web.auth_engine import resend_owner_otp
+                success, masked_mobile, new_otp, error_msg = resend_owner_otp(session_id)
+
+                self.send_response(200 if success else 400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+
+                if success:
+                    res = {
+                        "status": "sent",
+                        "masked_mobile": masked_mobile,
+                        "otp_code": new_otp,
+                        "message": f"Fresh verification code sent to {masked_mobile}"
+                    }
+                else:
+                    res = {"status": "failed", "message": error_msg or "Resend failed"}
+                self.wfile.write(json.dumps(res).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+            return
+
         state = get_scraper_state()
 
         if parsed_path.startswith('/api/v1/brain') or parsed_path.startswith('/api/brain'):
@@ -1261,6 +1357,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
 
@@ -1288,6 +1385,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
 
@@ -1297,6 +1395,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 deal_id = data.get('id')
                 if not deal_id:
                     self.send_response(400)
+                    self.send_header('Content-Type', 'application/json')
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Missing deal ID"}).encode('utf-8'))
                     return
@@ -1331,95 +1430,9 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"status": "success"}).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
-
-        elif parsed_path == '/api/login':
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                username = str(data.get('username', '')).strip()
-                password = str(data.get('password', '')).strip()
-
-                from web.auth_engine import initiate_owner_login
-                success, session_id, masked_mobile, otp_code, error_msg = initiate_owner_login(username, password)
-
-                self.send_response(200 if success else 401)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
-                if success:
-                    res = {
-                        "status": "otp_required",
-                        "session_id": session_id,
-                        "masked_mobile": masked_mobile,
-                        "otp_code": otp_code,
-                        "message": f"Verification code sent to registered owner number ({masked_mobile})"
-                    }
-                else:
-                    res = {"status": "failed", "message": error_msg or "Invalid username or password"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
-
-        elif parsed_path == '/api/verify-otp':
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                session_id = str(data.get('session_id', '')).strip()
-                otp_code = str(data.get('otp', '')).strip()
-
-                from web.auth_engine import verify_owner_otp
-                success, token, error_msg = verify_owner_otp(session_id, otp_code)
-
-                self.send_response(200 if success else 400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
-                if success:
-                    res = {
-                        "status": "success",
-                        "token": token,
-                        "name": "Yogesh Padwal",
-                        "message": "Authentication successful"
-                    }
-                else:
-                    res = {"status": "failed", "message": error_msg or "Verification failed"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
-
-        elif parsed_path == '/api/resend-otp':
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                session_id = str(data.get('session_id', '')).strip()
-
-                from web.auth_engine import resend_owner_otp
-                success, masked_mobile, new_otp, error_msg = resend_owner_otp(session_id)
-
-                self.send_response(200 if success else 400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
-                if success:
-                    res = {
-                        "status": "sent",
-                        "masked_mobile": masked_mobile,
-                        "otp_code": new_otp,
-                        "message": f"Fresh verification code sent to {masked_mobile}"
-                    }
-                else:
-                    res = {"status": "failed", "message": error_msg or "Resend failed"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
-            except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
 
         elif parsed_path == '/api/deals/delete':
             try:

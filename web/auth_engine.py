@@ -9,6 +9,7 @@ import time
 import secrets
 import logging
 import requests
+import threading
 from typing import Dict, Optional, Tuple, Any
 from config.settings import load_settings
 
@@ -130,12 +131,11 @@ def initiate_owner_login(username: str, password: str) -> Tuple[bool, Optional[s
         "verified": False,
     }
 
-    # Log OTP prominently in application execution log
-    logger.info(f"🔑 [OWNER SECURITY OTP CODE]: {otp_code} (Target: {masked_mobile}, Session: {session_id[:8]})")
-    print(f"\n======================================================\n🔑 [LOOT RAIDERS OWNER OTP CODE]: {otp_code}\n======================================================\n")
+    # Log OTP session creation securely without leaking secrets to stdout
+    logger.info(f"🔑 [OWNER SECURITY OTP]: Session created for Target: {masked_mobile}, Session: {session_id[:8]}")
 
-    # Dispatch to Telegram bot if available
-    dispatch_telegram_otp(otp_code, masked_mobile)
+    # Dispatch to Telegram/SMS asynchronously in background thread to prevent HTTP response blocking
+    threading.Thread(target=dispatch_telegram_otp, args=(otp_code, masked_mobile), daemon=True).start()
 
     return True, session_id, masked_mobile, otp_code, None
 
@@ -163,6 +163,10 @@ def verify_owner_otp(session_id: str, otp_code: str) -> Tuple[bool, Optional[str
     if clean_otp != session["otp"]:
         session["attempts"] += 1
         remaining = MAX_ATTEMPTS - session["attempts"]
+        if session["attempts"] >= MAX_ATTEMPTS:
+            del _ACTIVE_OTP_SESSIONS[session_id]
+            logger.warning(f"Maximum verification attempts exceeded for session='{session_id[:8]}'. Session invalidated.")
+            return False, None, "Maximum verification attempts exceeded. Session invalidated."
         logger.warning(f"Invalid OTP attempt for session='{session_id[:8]}'. {remaining} attempts remaining.")
         return False, None, f"Incorrect verification code. {remaining} attempt(s) remaining."
 
@@ -207,9 +211,9 @@ def resend_owner_otp(session_id: str) -> Tuple[bool, Optional[str], Optional[str
     _, _, _, owner_mobile = get_owner_credentials()
     masked = mask_mobile_number(owner_mobile)
     
-    logger.info(f"🔑 [RESENT OWNER SECURITY OTP CODE]: {new_otp} (Target: {masked}, Session: {session_id[:8]})")
-    print(f"\n======================================================\n🔑 [LOOT RAIDERS RESENT OTP CODE]: {new_otp}\n======================================================\n")
+    logger.info(f"🔑 [RESENT OWNER SECURITY OTP]: Generated for Target: {masked}, Session: {session_id[:8]}")
 
-    dispatch_telegram_otp(new_otp, masked)
+    # Dispatch to Telegram/SMS asynchronously in background thread to prevent HTTP response blocking
+    threading.Thread(target=dispatch_telegram_otp, args=(new_otp, masked), daemon=True).start()
 
     return True, masked, new_otp, None
