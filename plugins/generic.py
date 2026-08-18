@@ -30,9 +30,17 @@ def clean_and_upgrade_image_url(url: str) -> str:
         url = "https:" + url
     
     url_lower = url.lower()
-    banned_keywords = ["brand-logo", "store-logo", "header-logo", "footer-logo", "logo-brand", "logo-store", "amazon-logo", "store_logo", "logo_brand", "logo_store", "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar", "sprite"]
+    banned_keywords = [
+        "brand-logo", "store-logo", "header-logo", "footer-logo", "logo-brand",
+        "logo-store", "amazon-logo", "store_logo", "logo_brand", "logo_store",
+        "amazon.jpg", "placeholder", "default", "banner", "fallback", "avatar",
+        "sprite", "static-assets-web.flixcart.com", "fk-p-linchpin-web", "fk-cp-zion",
+        "blank.gif", "spacer.gif"
+    ]
     is_logo = False
     if any(x in url_lower for x in banned_keywords):
+        is_logo = True
+    elif url_lower.endswith(".svg"):
         is_logo = True
     else:
         url_path = url_lower.split('?')[0]

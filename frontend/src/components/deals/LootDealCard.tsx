@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { ExternalLink, LineChart, Bookmark, Sparkles, Tag, CreditCard, ShieldCheck } from "lucide-react";
+import { ExternalLink, LineChart, Bookmark, Sparkles, Tag, CreditCard, ShieldCheck, Package } from "lucide-react";
 import { DealItem } from "../../types/api";
 import { resolveProductImage, getProductFallbackImage } from "../../utils/productImages";
+import { sanitizeTitle } from "../../utils/titleSanitizer";
 
 interface LootDealCardProps {
   deal: DealItem;
@@ -11,22 +12,26 @@ interface LootDealCardProps {
 
 export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, density = "comfortable" }) => {
   const [bookmarked, setBookmarked] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const cleanTitle = sanitizeTitle(deal.title);
 
   const [imgSrc, setImgSrc] = useState<string>(() =>
-    resolveProductImage(deal.image_url, deal.title, deal.platform)
+    resolveProductImage(deal.image_url, deal.title, deal.platform, deal.id)
   );
 
   const getMerchantBadge = (platform: string) => {
-    const plat = platform.toLowerCase();
+    const plat = (platform || "").toLowerCase();
     if (plat.includes("amazon")) return { name: "Amazon", bg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" };
     if (plat.includes("flipkart")) return { name: "Flipkart", bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" };
     if (plat.includes("myntra")) return { name: "Myntra", bg: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/30" };
     if (plat.includes("ajio")) return { name: "Ajio", bg: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30" };
-    return { name: platform.toUpperCase(), bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30" };
+    return { name: (platform || "DEAL").toUpperCase(), bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30" };
   };
 
   const merchant = getMerchantBadge(deal.platform);
   const savings = deal.mrp > deal.price ? deal.mrp - deal.price : 0;
+  const roundedDiscount = Math.round(Number(deal.discount) || 0);
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30";
@@ -38,23 +43,33 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
     return (
       <div className="group bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 hover:border-orange-500/40 rounded-xl p-2.5 transition-all shadow-sm flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <img
-            src={imgSrc}
-            alt={deal.title}
-            className="w-10 h-10 object-contain rounded-lg bg-slate-50 dark:bg-slate-950 p-1 shrink-0 border border-slate-200 dark:border-slate-800"
-            onError={() => {
-              const fallback = getProductFallbackImage(deal.title, deal.platform);
-              if (imgSrc !== fallback) setImgSrc(fallback);
-            }}
-          />
+          {!imgFailed ? (
+            <img
+              src={imgSrc}
+              alt={cleanTitle}
+              className="w-10 h-10 object-contain rounded-lg bg-slate-50 dark:bg-slate-950 p-1 shrink-0 border border-slate-200 dark:border-slate-800"
+              onError={() => {
+                const fallback = getProductFallbackImage(deal.title, deal.platform, deal.id);
+                if (imgSrc !== fallback) {
+                  setImgSrc(fallback);
+                } else {
+                  setImgFailed(true);
+                }
+              }}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700">
+              <Package className="w-5 h-5 text-orange-500" />
+            </div>
+          )}
           <div className="min-w-0">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-orange-500 transition-colors">
-              {deal.title}
+              {cleanTitle}
             </h4>
             <div className="flex items-center gap-2 text-[11px] font-mono">
               <span className="font-bold text-emerald-600 dark:text-emerald-400">₹{deal.price.toLocaleString("en-IN")}</span>
               {deal.mrp > deal.price && <span className="text-slate-400 line-through">₹{deal.mrp.toLocaleString("en-IN")}</span>}
-              <span className="text-orange-600 dark:text-orange-400 font-sans text-[10px] font-bold">({deal.discount.toFixed(0)}% OFF)</span>
+              <span className="text-orange-600 dark:text-orange-400 font-sans text-[10px] font-bold">({roundedDiscount}% OFF)</span>
             </div>
           </div>
         </div>
@@ -93,7 +108,7 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
             {deal.deal_score > 0 && (
               <span className={`flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${getScoreColor(deal.deal_score)}`}>
                 <Sparkles className="w-3 h-3" />
-                SCORE {deal.deal_score.toFixed(0)}
+                SCORE {Math.round(deal.deal_score)}
               </span>
             )}
           </div>
@@ -114,20 +129,33 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
         {/* Product Image & Title Layout */}
         <div className="flex gap-3 mb-3">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-50 dark:bg-slate-950 p-2 flex items-center justify-center border border-slate-200 dark:border-slate-800 shrink-0 group-hover:scale-105 transition-transform overflow-hidden">
-            <img
-              src={imgSrc}
-              alt={deal.title}
-              className="max-h-full max-w-full object-contain rounded-lg"
-              onError={() => {
-                const fallback = getProductFallbackImage(deal.title, deal.platform);
-                if (imgSrc !== fallback) setImgSrc(fallback);
-              }}
-            />
+            {!imgFailed ? (
+              <img
+                src={imgSrc}
+                alt={cleanTitle}
+                className="max-h-full max-w-full object-contain rounded-lg"
+                onError={() => {
+                  const fallback = getProductFallbackImage(deal.title, deal.platform, deal.id);
+                  if (imgSrc !== fallback) {
+                    setImgSrc(fallback);
+                  } else {
+                    setImgFailed(true);
+                  }
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                <Package className="w-6 h-6 text-orange-500" />
+                <span className="text-[9px] font-mono font-bold text-slate-500 mt-1 uppercase">
+                  {deal.platform}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 group-hover:text-orange-500 transition-colors line-clamp-2 leading-snug mb-1.5">
-              {deal.title}
+              {cleanTitle}
             </h3>
 
             {/* Price Row */}
@@ -140,9 +168,9 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
                   ₹{deal.mrp.toLocaleString("en-IN")}
                 </span>
               )}
-              {deal.discount > 0 && (
+              {roundedDiscount > 0 && (
                 <span className="text-[11px] font-sans font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">
-                  {deal.discount.toFixed(0)}% OFF
+                  {roundedDiscount}% OFF
                 </span>
               )}
             </div>

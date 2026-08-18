@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Award, Zap, ExternalLink, ShieldCheck, TrendingDown } from "lucide-react";
+import { Award, Zap, ExternalLink, ShieldCheck, TrendingDown, Package } from "lucide-react";
 import { resolveProductImage, getProductFallbackImage } from "../../utils/productImages";
+import { sanitizeTitle } from "../../utils/titleSanitizer";
 
 interface TopLootDeal {
   id: string;
@@ -25,9 +26,12 @@ export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory })
   if (!deal) return null;
 
   const [imgSrc, setImgSrc] = useState<string>(() =>
-    resolveProductImage(deal.image_url, deal.title, deal.platform)
+    resolveProductImage(deal.image_url, deal.title, deal.platform, deal.id)
   );
+  const [imgFailed, setImgFailed] = useState<boolean>(false);
 
+  const cleanTitle = sanitizeTitle(deal.title);
+  const roundedDiscount = Math.round(Number(deal.discount) || 0);
   const savings = Math.max(0, deal.mrp - deal.price);
 
   return (
@@ -41,17 +45,28 @@ export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory })
       <div className="flex flex-col md:flex-row items-center gap-6 pt-4 md:pt-0">
         {/* Product Image Container */}
         <div className="relative w-40 h-40 sm:w-48 sm:h-48 shrink-0 rounded-2xl bg-white p-3 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-md overflow-hidden">
-          <img
-            src={imgSrc}
-            alt={deal.title}
-            className="max-w-full max-h-full object-contain hover:scale-105 transition-transform"
-            onError={() => {
-              const fallback = getProductFallbackImage(deal.title, deal.platform);
-              if (imgSrc !== fallback) {
-                setImgSrc(fallback);
-              }
-            }}
-          />
+          {!imgFailed ? (
+            <img
+              src={imgSrc}
+              alt={cleanTitle}
+              className="max-w-full max-h-full object-contain hover:scale-105 transition-transform"
+              onError={() => {
+                const fallback = getProductFallbackImage(deal.title, deal.platform, deal.id);
+                if (imgSrc !== fallback) {
+                  setImgSrc(fallback);
+                } else {
+                  setImgFailed(true);
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+              <Package className="w-10 h-10 text-orange-500 mb-1" />
+              <span className="text-[10px] font-mono uppercase font-bold text-slate-500">
+                {deal.platform} Deal
+              </span>
+            </div>
+          )}
           {deal.is_verified_low && (
             <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-emerald-500 text-white text-[10px] font-bold shadow">
               HISTORICAL LOW
@@ -67,12 +82,12 @@ export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory })
             </span>
             <div className="flex items-center gap-1 text-orange-600 dark:text-orange-500 font-mono font-extrabold text-xs">
               <Zap className="w-4 h-4" />
-              <span>LOOT SCORE: {deal.deal_score}/100</span>
+              <span>LOOT SCORE: {Math.round(deal.deal_score)}/100</span>
             </div>
           </div>
 
           <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white line-clamp-2 leading-snug mb-3">
-            {deal.title}
+            {cleanTitle}
           </h3>
 
           {/* Pricing & Savings */}
@@ -87,7 +102,7 @@ export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory })
             )}
             <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-extrabold text-xs border border-emerald-500/20 flex items-center gap-1">
               <TrendingDown className="w-3.5 h-3.5" />
-              {deal.discount}% OFF (Save ₹{savings.toLocaleString("en-IN")})
+              {roundedDiscount}% OFF (Save ₹{savings.toLocaleString("en-IN")})
             </span>
           </div>
 
