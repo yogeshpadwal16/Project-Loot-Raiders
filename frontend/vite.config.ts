@@ -11,16 +11,7 @@ export default defineConfig({
   },
   build: {
     outDir: '../dashboard',
-    emptyOutDir: false,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'tanstack-vendor': ['@tanstack/react-query', '@tanstack/react-table'],
-          'ui-vendor': ['lucide-react', 'recharts']
-        }
-      }
-    }
+    emptyOutDir: false
   },
   server: {
     port: 3000,
