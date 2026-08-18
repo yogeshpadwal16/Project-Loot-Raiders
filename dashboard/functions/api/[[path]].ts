@@ -141,7 +141,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
   // 3. Resolve candidate backend targets
-  const ACTIVE_HTTP2_TUNNEL = "https://partly-gained-connections-shows.trycloudflare.com";
+  const ACTIVE_HTTP2_TUNNEL = "https://les-tribe-margin-side.trycloudflare.com";
   const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
