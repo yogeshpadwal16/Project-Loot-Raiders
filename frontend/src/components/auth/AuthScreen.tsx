@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { BrandLogo } from "../common/BrandLogo";
+import { ThemeToggle } from "../common/ThemeToggle";
 import { OTPVerification } from "./OTPVerification";
 import { useTheme } from "../../theme/ThemeContext";
-import { Sun, Moon, Lock, User, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { resilientFetch } from "../../services/api";
+import { Lock, User, Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 interface AuthScreenProps {
   onLoginSuccess: (token: string, name: string) => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [step, setStep] = useState<"login" | "otp">("login");
   
   // Login form state
@@ -30,7 +32,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await resilientFetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -60,13 +62,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
       {/* Top Header Controls */}
       <div className="absolute top-6 right-6 flex items-center gap-3">
-        <button
-          onClick={toggleTheme}
-          className="p-2.5 rounded-xl border border-slate-800 dark:border-slate-800 bg-slate-900/60 dark:bg-slate-900/60 light:bg-white light:border-slate-200 text-slate-400 hover:text-white dark:hover:text-white light:text-slate-600 light:hover:text-slate-900 transition-all shadow-sm"
-          title="Toggle Light / Dark Theme"
-        >
-          {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        </button>
+        <ThemeToggle size="sm" />
       </div>
 
       {/* Brand Header */}

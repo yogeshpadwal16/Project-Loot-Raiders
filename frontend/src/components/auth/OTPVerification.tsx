@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Shield, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle, Lock, KeyRound } from "lucide-react";
+import { resilientFetch } from "../../services/api";
 
 interface OTPVerificationProps {
   sessionId: string;
@@ -105,7 +106,7 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/verify-otp", {
+      const res = await resilientFetch("/api/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId, otp: code }),
@@ -131,7 +132,7 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
     setResending(true);
     setErrorMsg(null);
     try {
-      const res = await fetch("/api/resend-otp", {
+      const res = await resilientFetch("/api/resend-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ session_id: sessionId }),
