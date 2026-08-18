@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Award, Zap, ExternalLink, ShieldCheck, TrendingDown } from "lucide-react";
-import { getProductFallbackImage } from "../../utils/productImages";
+import { resolveProductImage, getProductFallbackImage } from "../../utils/productImages";
 
 interface TopLootDeal {
   id: string;
@@ -24,8 +24,9 @@ interface TopLootCardProps {
 export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory }) => {
   if (!deal) return null;
 
-  const fallbackSrc = getProductFallbackImage(deal.title, deal.platform);
-  const [imgSrc, setImgSrc] = useState<string>(deal.image_url || fallbackSrc);
+  const [imgSrc, setImgSrc] = useState<string>(() =>
+    resolveProductImage(deal.image_url, deal.title, deal.platform)
+  );
 
   const savings = Math.max(0, deal.mrp - deal.price);
 
@@ -45,8 +46,9 @@ export const TopLootCard: React.FC<TopLootCardProps> = ({ deal, onOpenHistory })
             alt={deal.title}
             className="max-w-full max-h-full object-contain hover:scale-105 transition-transform"
             onError={() => {
-              if (imgSrc !== fallbackSrc) {
-                setImgSrc(fallbackSrc);
+              const fallback = getProductFallbackImage(deal.title, deal.platform);
+              if (imgSrc !== fallback) {
+                setImgSrc(fallback);
               }
             }}
           />

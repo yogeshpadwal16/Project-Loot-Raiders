@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { DealItem } from "../../types/api";
-import { getProductFallbackImage } from "../../utils/productImages";
+import { resolveProductImage, getProductFallbackImage } from "../../utils/productImages";
 import { DealBadge } from "./DealBadge";
 import { DealTrustBadges } from "./DealTrustBadges";
 import { ExternalLink } from "lucide-react";
@@ -10,8 +10,8 @@ interface DealCardProps {
 }
 
 export const DealCard: React.FC<DealCardProps> = ({ deal }) => {
-  const [imgSrc, setImgSrc] = useState<string>(
-    deal.image_url || getProductFallbackImage(deal.title, deal.platform)
+  const [imgSrc, setImgSrc] = useState<string>(() =>
+    resolveProductImage(deal.image_url, deal.title, deal.platform)
   );
 
   const discountVal =

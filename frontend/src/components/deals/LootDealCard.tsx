@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ExternalLink, LineChart, Bookmark, Sparkles, Tag, CreditCard, ShieldCheck } from "lucide-react";
 import { DealItem } from "../../types/api";
-import { getProductFallbackImage } from "../../utils/productImages";
+import { resolveProductImage, getProductFallbackImage } from "../../utils/productImages";
 
 interface LootDealCardProps {
   deal: DealItem;
@@ -12,8 +12,9 @@ interface LootDealCardProps {
 export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, density = "comfortable" }) => {
   const [bookmarked, setBookmarked] = useState(false);
 
-  const fallbackSrc = getProductFallbackImage(deal.title, deal.platform);
-  const [imgSrc, setImgSrc] = useState<string>(deal.image_url || fallbackSrc);
+  const [imgSrc, setImgSrc] = useState<string>(() =>
+    resolveProductImage(deal.image_url, deal.title, deal.platform)
+  );
 
   const getMerchantBadge = (platform: string) => {
     const plat = platform.toLowerCase();
@@ -42,7 +43,8 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
             alt={deal.title}
             className="w-10 h-10 object-contain rounded-lg bg-slate-50 dark:bg-slate-950 p-1 shrink-0 border border-slate-200 dark:border-slate-800"
             onError={() => {
-              if (imgSrc !== fallbackSrc) setImgSrc(fallbackSrc);
+              const fallback = getProductFallbackImage(deal.title, deal.platform);
+              if (imgSrc !== fallback) setImgSrc(fallback);
             }}
           />
           <div className="min-w-0">
@@ -117,7 +119,8 @@ export const LootDealCard: React.FC<LootDealCardProps> = ({ deal, onOpenChart, d
               alt={deal.title}
               className="max-h-full max-w-full object-contain rounded-lg"
               onError={() => {
-                if (imgSrc !== fallbackSrc) setImgSrc(fallbackSrc);
+                const fallback = getProductFallbackImage(deal.title, deal.platform);
+                if (imgSrc !== fallback) setImgSrc(fallback);
               }}
             />
           </div>
