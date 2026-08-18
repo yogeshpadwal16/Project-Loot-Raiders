@@ -140,100 +140,117 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
-  // 3. Resolve backend API base URL from Cloudflare Environment Variables
-  const rawTarget = env.BACKEND_API_URL || env.LOOT_BACKEND_URL || "https://partly-gained-connections-shows.trycloudflare.com";
-  const backendBase = rawTarget.trim().replace(/\/+$/, "");
+  // 3. Resolve candidate backend targets
+  const ACTIVE_HTTP2_TUNNEL = "https://partly-gained-connections-shows.trycloudflare.com";
+  const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
-  if (!backendBase) {
-    if (isPublicDeals) {
-      return await serveEdgeSnapshotFallback(context);
+  if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
+    const custom = env.BACKEND_API_URL.trim().replace(/\/+$/, "");
+    if (!candidateTargets.includes(custom)) {
+      candidateTargets.push(custom);
     }
-    return new Response(JSON.stringify({
-      error: "Backend Gateway Unconfigured",
-      message: "Please configure BACKEND_API_URL in your Cloudflare Pages environment variables.",
-      status: "unconfigured"
-    }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" }
-    });
+  }
+  if (env.LOOT_BACKEND_URL && env.LOOT_BACKEND_URL.trim()) {
+    const custom = env.LOOT_BACKEND_URL.trim().replace(/\/+$/, "");
+    if (!candidateTargets.includes(custom)) {
+      candidateTargets.push(custom);
+    }
   }
 
-  // 4. Construct target URL with preserved path and query parameters
-  const targetUrl = `${backendBase}${pathname}${url.search}`;
+  // 4. Cache incoming request body once for safe retries
+  let reqBodyBytes: ArrayBuffer | null = null;
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
+    try {
+      reqBodyBytes = await request.arrayBuffer();
+    } catch {
+      reqBodyBytes = null;
+    }
+  }
 
   // 5. Construct clean forward headers (preserve Content-Type, Authorization, Accept)
   const forwardHeaders = new Headers();
   const allowedHeaders = ["content-type", "authorization", "accept", "user-agent", "x-requested-with"];
-  
   request.headers.forEach((value, key) => {
     if (allowedHeaders.includes(key.toLowerCase())) {
       forwardHeaders.set(key, value);
     }
   });
 
-  const fetchOptions: RequestInit = {
-    method: request.method,
-    headers: forwardHeaders,
-    redirect: "follow"
-  };
+  const timeoutMs = isPublicDeals ? 2500 : 15000;
+  let lastError: any = null;
 
-  if (!["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
-    fetchOptions.body = request.body;
-  }
+  // 6. Iterate through candidate targets with failover
+  for (const backendBase of candidateTargets) {
+    const targetUrl = `${backendBase}${pathname}${url.search}`;
+    const fetchOptions: RequestInit = {
+      method: request.method,
+      headers: forwardHeaders,
+      redirect: "follow",
+      body: reqBodyBytes ? reqBodyBytes.slice(0) : undefined
+    };
 
-  // 6. Execute forward fetch with tight race timeout and safe edge fallback
-  const timeoutMs = isPublicDeals ? 2500 : 25000;
-  const timeoutPromise = new Promise<Response>((_, reject) =>
-    setTimeout(() => reject(new Error("Gateway Timeout")), timeoutMs)
-  );
+    const timeoutPromise = new Promise<Response>((_, reject) =>
+      setTimeout(() => reject(new Error("Gateway Timeout")), timeoutMs)
+    );
 
-  try {
-    const backendResponse = await Promise.race([
-      fetch(targetUrl, fetchOptions),
-      timeoutPromise
-    ]);
+    try {
+      const backendResponse = await Promise.race([
+        fetch(targetUrl, fetchOptions),
+        timeoutPromise
+      ]);
 
-    // If backend returns a server error (502, 503, 504) for public deals, use snapshot fallback
-    if (isPublicDeals && [502, 503, 504].includes(backendResponse.status)) {
-      return await serveEdgeSnapshotFallback(context);
-    }
-
-    // Build clean response headers
-    const responseHeaders = new Headers();
-    const allowedResponseHeaders = ["content-type", "cache-control", "authorization", "set-cookie"];
-    
-    backendResponse.headers.forEach((value, key) => {
-      if (allowedResponseHeaders.includes(key.toLowerCase())) {
-        responseHeaders.set(key, value);
+      // If Cloudflare returns tunnel failure (530 / 1016 / 521 / 522), try next candidate target
+      if ([530, 521, 522, 523, 524].includes(backendResponse.status)) {
+        continue;
       }
-    });
 
-    // Ensure Content-Type header exists
-    if (!responseHeaders.has("content-type")) {
-      responseHeaders.set("content-type", "application/json");
-    }
+      // If backend returns a server error (502, 503, 504) for public deals, use snapshot fallback
+      if (isPublicDeals && [502, 503, 504].includes(backendResponse.status)) {
+        return await serveEdgeSnapshotFallback(context);
+      }
 
-    return new Response(backendResponse.body, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-      headers: responseHeaders
-    });
-  } catch (err: any) {
-    if (isPublicDeals) {
-      return await serveEdgeSnapshotFallback(context);
+      // Build clean response headers
+      const responseHeaders = new Headers();
+      const allowedResponseHeaders = ["content-type", "cache-control", "authorization", "set-cookie"];
+      backendResponse.headers.forEach((value, key) => {
+        if (allowedResponseHeaders.includes(key.toLowerCase())) {
+          responseHeaders.set(key, value);
+        }
+      });
+
+      if (!responseHeaders.has("content-type")) {
+        responseHeaders.set("content-type", "application/json");
+      }
+
+      return new Response(backendResponse.body, {
+        status: backendResponse.status,
+        statusText: backendResponse.statusText,
+        headers: responseHeaders
+      });
+    } catch (err: any) {
+      lastError = err;
+      continue;
     }
-    const isTimeout = err?.message === "Gateway Timeout";
-    const status = isTimeout ? 504 : 502;
-    const message = isTimeout
-      ? "Gateway timeout: backend service did not respond in time. Please retry."
-      : "Unable to reach backend service through the secure tunnel.";
-    return new Response(JSON.stringify({
-      error: isTimeout ? "Gateway Timeout" : "Gateway Communication Error",
-      message: message,
-      status: "gateway_error"
-    }), {
-      status: status,
-      headers: { "Content-Type": "application/json" }
-    });
   }
+
+  // If all candidate targets failed
+  if (isPublicDeals) {
+    return await serveEdgeSnapshotFallback(context);
+  }
+
+  const err = lastError;
+  const isTimeout = err?.message === "Gateway Timeout";
+  const status = isTimeout ? 504 : 502;
+  const message = isTimeout
+    ? "Gateway timeout: backend service did not respond in time. Please retry."
+    : "Unable to reach backend service through the secure tunnel.";
+
+  return new Response(JSON.stringify({
+    error: isTimeout ? "Gateway Timeout" : "Gateway Communication Error",
+    message: message,
+    status: "gateway_error"
+  }), {
+    status: status,
+    headers: { "Content-Type": "application/json" }
+  });
 };
