@@ -598,7 +598,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
             if platform == "amazon":
                 selectors = ["#productTitle", "span#productTitle", ".qa-title-text"]
             elif platform == "flipkart":
-                selectors = [".VU-ZEg", "span.B_NuCI", "h1.yrwE28", "h1 span"]
+                selectors = ["h1.B_NuCI", "span.VU-ZEz", "span.VU-ZEg", "h1.yrwE28", "span._35KyD6", "span._2W9tVh", ".VU-ZEg"]
             elif platform == "myntra":
                 selectors = [".pdp-title", ".pdp-name"]
             elif platform == "ajio":
@@ -612,13 +612,18 @@ def scrape_product_details(url: str, driver=None) -> dict:
                 
             for selector in selectors:
                 try:
-                    title = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
-                    if title: break
+                    t_text = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                    if t_text and len(t_text) > 5 and not any(b in t_text.lower() for b in ["clearance sale", "showing 1 -", "results for", "explore plus"]):
+                        title = t_text
+                        break
                 except: pass
                 
         # Generic Title Fallback
         if not title:
-            try: title = driver.find_element(By.TAG_NAME, "h1").text.strip()
+            try:
+                h1_text = driver.find_element(By.TAG_NAME, "h1").text.strip()
+                if h1_text and not any(b in h1_text.lower() for b in ["clearance sale", "showing 1 -", "results for", "explore plus"]):
+                    title = h1_text
             except: pass
             
         # Prices
@@ -627,7 +632,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
             if platform == "amazon":
                 selectors = [".a-price-whole", "span.a-price .a-offscreen", "#priceblock_ourprice", "#priceblock_dealprice", ".apexPriceToPay span.a-offscreen", ".a-color-price"]
             elif platform == "flipkart":
-                selectors = [".Nx9w7A", "._30jeq3", "div._30jeq3._16JkK1", "div.hlbKVd"]
+                selectors = ["div.Nx9bqj.CxhGGd", "div.Nx9bqj", "div._30jeq3._16Jk6d", "div._30jeq3", "div.hlbKVd"]
             elif platform == "myntra":
                 selectors = ["span.pdp-price strong", ".pdp-price"]
             elif platform == "ajio":
@@ -657,7 +662,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
             if platform == "amazon":
                 selectors = ["span.a-price.a-text-price span.a-offscreen", "#listPrice", "#priceblock_listprice", "span.a-list-price"]
             elif platform == "flipkart":
-                selectors = [".y3NYbL", "._3I9_ww", "div._3I9_ww"]
+                selectors = ["div.yRaY8j._18RivS", "div.yRaY8j", "div._2p6JhP._30e3Er", "div._3I9_ww", "div._3AuQ35"]
             elif platform == "myntra":
                 selectors = ["span.pdp-mrp", ".pdp-mrp"]
             elif platform == "ajio":
@@ -726,7 +731,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
             else:
                 selectors = []
                 if platform == "flipkart":
-                    selectors = ["img.DByoR4", "img._396cs4", "img.jfZQxf", "div.CXW8mj img"]
+                    selectors = ["img._396cs4", "img.DByuf4", "div._2r_T1I img", "img._53G4pf", "img.UCad5S", "img.vU5WPQ", "img.x1646t", "div.CXW8mj img"]
                 elif platform == "myntra":
                     selectors = ["img.pdp-image", ".image-grid-image"]
                 elif platform == "ajio":

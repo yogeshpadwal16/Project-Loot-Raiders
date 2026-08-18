@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import logging
 import urllib.parse
@@ -6,11 +7,15 @@ import time
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+# Paths & Python Path Setup
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 # Database & Scorer imports
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings, save_settings
-# Settings loaded lazily - removed module-level call to avoid side effects at import time
 from deal_engine.scorer import calculate_deal_score
 from database.operations import verify_historical_low
 
@@ -1615,17 +1620,23 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
 
     def _serve_static(self, filepath, mime):
         if os.path.exists(filepath) and os.path.isfile(filepath):
-            self.send_response(200)
-            self.send_header('Content-Type', mime)
-            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Expires', '0')
-            self.end_headers()
-            with open(filepath, 'rb') as f:
-                self.wfile.write(f.read())
+            try:
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+                self.end_headers()
+                with open(filepath, 'rb') as f:
+                    self.wfile.write(f.read())
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                pass
         else:
-            self.send_response(404)
-            self.end_headers()
+            try:
+                self.send_response(404)
+                self.end_headers()
+            except Exception:
+                pass
 
 def start_api_server(port=5555, state=None):
     global _state_ref
@@ -1634,11 +1645,18 @@ def start_api_server(port=5555, state=None):
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
-    # Prevent socket exhaustion by setting default socket timeout
-    import socket
-    socket.setdefaulttimeout(15.0)
-
     server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
     server_thread = threading.Thread(target=server.serve_forever, daemon=True)
     server_thread.start()
     logging.info(f"Dashboard REST API engine running at http://0.0.0.0:{port}/")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    port = int(os.environ.get("PORT", 5555))
+    os.makedirs(DASHBOARD_DIR, exist_ok=True)
+    server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
+    logging.info(f"Dashboard REST API standalone server listening at http://0.0.0.0:{port}/")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
