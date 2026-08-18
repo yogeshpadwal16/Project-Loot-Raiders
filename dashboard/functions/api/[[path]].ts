@@ -141,7 +141,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
   // 3. Resolve backend API base URL from Cloudflare Environment Variables
-  const rawTarget = env.BACKEND_API_URL || env.LOOT_BACKEND_URL || "";
+  const rawTarget = env.BACKEND_API_URL || env.LOOT_BACKEND_URL || "https://partly-gained-connections-shows.trycloudflare.com";
   const backendBase = rawTarget.trim().replace(/\/+$/, "");
 
   if (!backendBase) {
