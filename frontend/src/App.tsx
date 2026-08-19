@@ -136,12 +136,25 @@ export function AppContent() {
     }
   }, [token]);
 
-  if (!token) {
-    return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
+  // Detect Telegram Mini App (TMA) mode
+  const isTmaMode = () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash || "";
+      const isTg = !!((window as any).Telegram?.WebApp?.initData || urlParams.get("tgWebAppData") || urlParams.get("tgWebAppPlatform"));
+      const isExplicitTma = urlParams.get("tma") === "1" || urlParams.get("tab") === "tma" || hash.includes("tma");
+      return isTg || isExplicitTma;
+    } catch {
+      return false;
+    }
+  };
+
+  if (isTmaMode() || activeTab === "tma") {
+    return <TelegramMiniApp />;
   }
 
-  if (activeTab === "tma") {
-    return <TelegramMiniApp />;
+  if (!token) {
+    return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
   const filteredDeals = deals.filter((d) => {
