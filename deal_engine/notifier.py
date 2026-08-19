@@ -713,7 +713,9 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 if res.status_code == 200:
                     logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Uploaded local product image to Telegram: {truncated_title[:20]}...")
                     photo_sent = True
-                    save_telegram_message_info(unique_id, res, caption)
+                    db_ok = save_telegram_message_info(unique_id, res, caption)
+                    if not db_ok:
+                        return 'db_fail'
                 else:
                     logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Failed local product image upload ({res.status_code}). Response: {res.text}.")
             except Exception as upload_err:
@@ -740,7 +742,9 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 if res.status_code == 200:
                     logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal via URL to Telegram: {truncated_title[:20]}...")
                     photo_sent = True
-                    save_telegram_message_info(unique_id, res, caption)
+                    db_ok = save_telegram_message_info(unique_id, res, caption)
+                    if not db_ok:
+                        return 'db_fail'
                 else:
                     logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image URL send failed ({res.status_code}). Response: {res.text}.")
             except Exception as raw_send_err:
@@ -762,7 +766,9 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             if res.status_code == 200:
                 logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
                 photo_sent = True
-                save_telegram_message_info(unique_id, res, caption)
+                db_ok = save_telegram_message_info(unique_id, res, caption)
+                if not db_ok:
+                    return 'db_fail'
             else:
                 err_desc = ""
                 if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
@@ -785,15 +791,44 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     if photo_sent:
         return True
         
-    # 5. Do not send static logos as fallbacks - drop the deal instead
-    logging.warning(f"[REJECTED: NO REAL PRODUCT IMAGE] [CorrID: {unique_id}] Native photo send failed, dropping deal.")
-    return False
+    # 5. Do not send static logos as fallbacks - attempt text-only fallback instead of dropping the deal
+    logging.warning(f"[REJECTED: NO REAL PRODUCT IMAGE] [CorrID: {unique_id}] Native photo send failed. Attempting text-only fallback...")
+    try:
+        logging.info(f"[FALLBACK] [CorrID: {unique_id}] Photo delivery failed. Attempting text-only Telegram fallback...")
+        endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": caption,
+            "parse_mode": "HTML",
+            "reply_markup": reply_markup_json,
+            "disable_web_page_preview": False
+        }
+        res = requests.post(endpoint, json=payload, timeout=20)
+        if res.status_code == 200:
+            try:
+                res_data = res.json()
+                message_id = res_data.get("result", {}).get("message_id")
+            except Exception:
+                message_id = None
+            if message_id:
+                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Posted text-only fallback to Telegram: {truncated_title[:20]}...")
+                db_ok = save_telegram_message_info(unique_id, res, caption)
+                if not db_ok:
+                    return 'db_fail'
+                return True
+            else:
+                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Text-only fallback succeeded with HTTP 200 but response missing valid message_id. Response: {res.text}.")
+        else:
+            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Text-only fallback failed ({res.status_code}). Response: {res.text}.")
+    except Exception as text_err:
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Exception during text-only fallback: {text_err}")
         
     return False
 
-def save_telegram_message_info(unique_id: str, res, caption: str):
+def save_telegram_message_info(unique_id: str, res, caption: str) -> bool:
     """
     Saves the Telegram channel message ID and original caption to the database.
+    Returns True if successfully committed, False otherwise.
     """
     try:
         data = res.json()
@@ -807,14 +842,37 @@ def save_telegram_message_info(unique_id: str, res, caption: str):
                 if prod:
                     prod.telegram_message_id = message_id
                     prod.telegram_caption = caption
+                    # Update publication tracking on successful confirmation
+                    from knowledge_base.models import PriceHistory
+                    import datetime as _dt
+                    latest_price_rec = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.desc()).first()
+                    price = latest_price_rec.price if latest_price_rec else 0
+
+                    today_str = _dt.datetime.now().strftime('%Y-%m-%d')
+                    prod.last_published_at = time.time()
+                    if price:
+                        prod.last_published_price = price
+                    if getattr(prod, 'daily_post_date', '') == today_str:
+                        prod.daily_post_count = (getattr(prod, 'daily_post_count', 0) or 0) + 1
+                    else:
+                        prod.daily_post_count = 1
+                        prod.daily_post_date = today_str
+
                     db.commit()
+                    return True
+                else:
+                    logging.warning(f"Product ID {unique_id} not found in DB to update message info.")
+                    return False
             except Exception as db_err:
                 db.rollback()
                 logging.error(f"Error saving telegram message info to DB: {db_err}")
+                return False
             finally:
                 db.close()
+        return False
     except Exception as e:
         logging.error(f"Failed to parse telegram response: {e}")
+        return False
 
 def update_telegram_message(product_id: str):
     """
@@ -1444,6 +1502,10 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                     recovery_status="Discarded",
                     recommended_action="Examine underlying service outages for Telegram, Discord, or SMTP server."
                 )
+                return 'failed'
+        if has_telegram and telegram_ok == 'db_fail':
+            logging.error(f"[Broadcaster Helper] [CorrID: {unique_id}] Telegram published but publication state persistence failed")
+            return 'db_fail'
         return True # Success or no-retry
     except Exception as job_err:
         logging.error(f'[Broadcaster Helper] Error executing alert job: {job_err}', exc_info=True)
@@ -1506,13 +1568,22 @@ def notifier_worker():
             priority_level, timestamp, cnt, job = queue_item
         else:
             job = queue_item
-            
+
+        if job is None:
+            break
+
         try:
             success = _process_and_broadcast_alert_job(job)
             db_id = job.get("db_id")
-            if success:
+            if success is True:
                 if db_id:
                     db_update_notification_status(db_id, 'completed')
+            elif success == 'failed':
+                if db_id:
+                    db_update_notification_status(db_id, 'failed')
+            elif success == 'db_fail':
+                if db_id:
+                    db_update_notification_status(db_id, 'failed')
             else:
                 retries = job.get("retries", 0)
                 job["retries"] = retries + 1
@@ -1558,9 +1629,15 @@ def mirror_notifier_worker():
         try:
             success = _process_and_broadcast_alert_job(job)
             db_id = job.get("db_id")
-            if success:
+            if success is True:
                 if db_id:
                     db_update_notification_status(db_id, 'completed')
+            elif success == 'failed':
+                if db_id:
+                    db_update_notification_status(db_id, 'failed')
+            elif success == 'db_fail':
+                if db_id:
+                    db_update_notification_status(db_id, 'failed')
             else:
                 retries = job.get("retries", 0)
                 job["retries"] = retries + 1

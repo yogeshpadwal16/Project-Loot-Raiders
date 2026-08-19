@@ -50,6 +50,9 @@ def scan_secrets():
     secret_patterns = {
         "Telegram Bot Token": re.compile(r"\b\d{8,12}:[A-Za-z0-9_-]{35}\b"),
         "General Secret Key": re.compile(r"(?i)(secret_key|api_key|private_key|api_secret)\s*=\s*['\"][A-Za-z0-9_+\-/]{16,}['\"]"),
+        "Gemini API Key": re.compile(r"\bAQ\.[A-Za-z0-9_-]{40,}\b|\bAIzaSy[A-Za-z0-9_-]{33}\b"),
+        "OmniRoute / High Entropy Key": re.compile(r"\bsk-[a-f0-9]{16}-[0-9]{6}-[a-f0-9]{8}\b"),
+        "Hardcoded Password": re.compile(r"(?i)(password|passwd)\s*=\s*['\"](?!YOUR_)[^'\"]{6,}['\"]"),
         "YOUR_ Placeholders": re.compile(r"\bYOUR_(TELEGRAM|BOT|API|DB)_[A-Z0-9_]+\b")
     }
 

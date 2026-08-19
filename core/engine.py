@@ -261,23 +261,6 @@ def _process_single_scraped_deal(deal, platform: str, settings: dict, history: s
                 auto_cart_url=auto_cart_url
             )
             time.sleep(0.5)
-            
-            # Update publication tracking so this product won't be spammed again
-            try:
-                today_str = _dt.datetime.now().strftime('%Y-%m-%d')
-                prod_record = db_sess.query(Product).filter_by(id=unique_id).first()
-                if prod_record:
-                    prod_record.last_published_at = time.time()
-                    prod_record.last_published_price = price
-                    if getattr(prod_record, 'daily_post_date', '') == today_str:
-                        prod_record.daily_post_count = (getattr(prod_record, 'daily_post_count', 0) or 0) + 1
-                    else:
-                        prod_record.daily_post_count = 1
-                        prod_record.daily_post_date = today_str
-                    db_sess.commit()
-            except Exception as pub_upd_err:
-                db_sess.rollback()
-                logging.error(f"[Publication Guard] Failed to update tracking: {pub_upd_err}")
         else:
             if not should_publish_deal(platform, deal_score):
                 logging.info(f"Skipping deal broadcast: {title[:35]}... (Score: {deal_score:.1f} below threshold)")
