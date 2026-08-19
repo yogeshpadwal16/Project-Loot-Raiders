@@ -35,7 +35,16 @@ export const OTPVerification: React.FC<OTPVerificationProps> = ({
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Auto-focus first digit input box or last digit on mount
+  // Synchronize devOtpCode if provided or refreshed
+  useEffect(() => {
+    if (devOtpCode && devOtpCode.length === 6) {
+      setDigits(devOtpCode.split(""));
+      setActiveOtp(devOtpCode);
+      setSuccessMsg(`Verification code generated: ${devOtpCode}`);
+    }
+  }, [devOtpCode]);
+
+  // Auto-focus first digit input box on mount
   useEffect(() => {
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();

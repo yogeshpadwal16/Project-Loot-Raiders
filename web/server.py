@@ -1254,6 +1254,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "status": "otp_required",
                         "session_id": session_id,
                         "masked_mobile": masked_mobile,
+                        "otp_code": otp_code,
                         "message": f"Verification code sent to registered owner number ({masked_mobile})"
                     }
                     self.send_json_response(res, 200)
