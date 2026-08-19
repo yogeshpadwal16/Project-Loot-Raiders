@@ -161,6 +161,8 @@ def is_public_endpoint(path: str) -> bool:
 
 
 class ScraperAPIHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def log_message(self, format, *args):
         # Log REST requests to execution.log
         logging.getLogger().info(f"REST API: {format % args}")
@@ -175,8 +177,20 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         super().end_headers()
 
+    def send_json_response(self, data, status_code: int = 200):
+        """Sends standard JSON response with explicit Content-Length and immediate flush."""
+        body = json.dumps(data).encode('utf-8')
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Connection', 'keep-alive')
+        self.end_headers()
+        self.wfile.write(body)
+        self.wfile.flush()
+
     def do_OPTIONS(self):
         self.send_response(200)
+        self.send_header('Content-Length', '0')
         self.end_headers()
 
     def is_authorized(self):
@@ -370,10 +384,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     _sse_subscribers.remove(q)
             return
 
-        elif self.path == '/api/status':
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
+        elif clean_path == '/api/status':
             state = get_scraper_state()
             status = {
                 "is_running": state["is_running"],
@@ -382,7 +393,8 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 "uptime": time.time() - state["uptime_start"],
                 "crawler_health": state.get("crawler_health", {})
             }
-            self.wfile.write(json.dumps(status).encode('utf-8'))
+            self.send_json_response(status, 200)
+            return
 
         elif self.path == '/api/selectors':
             self.send_response(200)
@@ -865,22 +877,15 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 db.close()
             return
 
-        elif self.path.startswith('/api/deals/history'):
+        elif clean_path.startswith('/api/deals/history'):
             from urllib.parse import urlparse, parse_qs
             parsed_url = urlparse(self.path)
             params = parse_qs(parsed_url.query)
             deal_id = params.get('id', [None])[0]
 
             if not deal_id:
-                self.send_response(400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": "Missing product ID"}).encode('utf-8'))
+                self.send_json_response({"error": "Missing product ID"}, 400)
                 return
-
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
 
             db = SessionLocal()
             try:
@@ -893,13 +898,14 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     "is_verified_low": h.is_verified_low,
                     "deal_score": h.deal_score
                 } for h in history]
-                self.wfile.write(json.dumps(data).encode('utf-8'))
+                self.send_json_response(data, 200)
             except Exception as e:
-                self.wfile.write(b"[]")
+                self.send_json_response([], 200)
             finally:
                 db.close()
+            return
 
-        elif self.path.startswith('/api/deals/public'):
+        elif clean_path.startswith('/api/deals/public'):
             # Public API for fast deal distribution with in-memory caching
             from urllib.parse import urlparse, parse_qs
             parsed_url = urlparse(self.path)
@@ -907,10 +913,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             platform = params.get('platform', ['all'])[0].lower()
             min_score = int(params.get('min_score', [0])[0])
             limit = min(100, int(params.get('limit', [50])[0]))
-
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
 
             try:
                 all_deals = get_cached_public_deals()
@@ -921,10 +923,10 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                     if d.get('deal_score', 0) < min_score:
                         continue
                     result_deals.append(d)
-                self.wfile.write(json.dumps(result_deals[:limit]).encode('utf-8'))
+                self.send_json_response(result_deals[:limit], 200)
             except Exception as e:
                 logging.error(f"Public deals API error: {e}")
-                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                self.send_json_response({"error": str(e)}, 500)
             return
 
         elif self.path.startswith('/go/'):
@@ -1247,10 +1249,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 from web.auth_engine import initiate_owner_login
                 success, session_id, masked_mobile, otp_code, error_msg = initiate_owner_login(username, password)
 
-                self.send_response(200 if success else 401)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
                 if success:
                     res = {
                         "status": "otp_required",
@@ -1258,14 +1256,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "masked_mobile": masked_mobile,
                         "message": f"Verification code sent to registered owner number ({masked_mobile})"
                     }
+                    self.send_json_response(res, 200)
                 else:
                     res = {"status": "failed", "message": error_msg or "Invalid username or password"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
+                    self.send_json_response(res, 401)
             except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+                self.send_json_response({"status": "error", "message": str(e)}, 500)
             return
 
         elif parsed_path == '/api/verify-otp':
@@ -1277,10 +1273,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 from web.auth_engine import verify_owner_otp
                 success, token, error_msg = verify_owner_otp(session_id, otp_code)
 
-                self.send_response(200 if success else 400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
                 if success:
                     res = {
                         "status": "success",
@@ -1288,14 +1280,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "name": "Yogesh Padwal",
                         "message": "Authentication successful"
                     }
+                    self.send_json_response(res, 200)
                 else:
                     res = {"status": "failed", "message": error_msg or "Verification failed"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
+                    self.send_json_response(res, 400)
             except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+                self.send_json_response({"status": "error", "message": str(e)}, 500)
             return
 
         elif parsed_path == '/api/resend-otp':
@@ -1306,10 +1296,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                 from web.auth_engine import resend_owner_otp
                 success, masked_mobile, new_otp, error_msg = resend_owner_otp(session_id)
 
-                self.send_response(200 if success else 400)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-
                 if success:
                     res = {
                         "status": "sent",
@@ -1317,14 +1303,12 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                         "otp_code": new_otp,
                         "message": f"Fresh verification code sent to {masked_mobile}"
                     }
+                    self.send_json_response(res, 200)
                 else:
                     res = {"status": "failed", "message": error_msg or "Resend failed"}
-                self.wfile.write(json.dumps(res).encode('utf-8'))
+                    self.send_json_response(res, 400)
             except Exception as e:
-                self.send_response(500)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "error", "message": str(e)}).encode('utf-8'))
+                self.send_json_response({"status": "error", "message": str(e)}, 500)
             return
 
         state = get_scraper_state()
@@ -1621,19 +1605,23 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
     def _serve_static(self, filepath, mime):
         if os.path.exists(filepath) and os.path.isfile(filepath):
             try:
+                with open(filepath, 'rb') as f:
+                    content = f.read()
                 self.send_response(200)
                 self.send_header('Content-Type', mime)
+                self.send_header('Content-Length', str(len(content)))
                 self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
                 self.send_header('Pragma', 'no-cache')
                 self.send_header('Expires', '0')
                 self.end_headers()
-                with open(filepath, 'rb') as f:
-                    self.wfile.write(f.read())
+                self.wfile.write(content)
+                self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 pass
         else:
             try:
                 self.send_response(404)
+                self.send_header('Content-Length', '0')
                 self.end_headers()
             except Exception:
                 pass
@@ -1645,10 +1633,16 @@ def start_api_server(port=5555, state=None):
     # Ensure dashboard folder exists
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
-    server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-    logging.info(f"Dashboard REST API engine running at http://0.0.0.0:{port}/")
+    try:
+        server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
+        server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+        server_thread.start()
+        logging.info(f"Dashboard REST API engine running at http://0.0.0.0:{port}/")
+    except OSError as e:
+        if e.errno == 98: # Address already in use
+            logging.info(f"Dashboard REST API port {port} is already active and serving requests.")
+        else:
+            logging.warning(f"Dashboard REST API could not bind to port {port}: {e}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

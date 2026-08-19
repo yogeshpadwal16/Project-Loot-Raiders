@@ -18,7 +18,7 @@ import {
   ProcessDealPayload
 } from '../types/api';
 
-const ACTIVE_TUNNEL_FALLBACK = 'https://harley-discounted-magic-base.trycloudflare.com';
+const ACTIVE_TUNNEL_FALLBACK = 'https://gadgets-techniques-males-remaining.trycloudflare.com';
 
 /**
  * Resilient multi-target fetch utility.
