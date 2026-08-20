@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  loot-brain-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: loot_brain_api
+    restart: always
+    environment:
+      - PORT=8000
+      - DASHBOARD_SESSION_TOKEN=${DASHBOARD_SESSION_TOKEN:-lootraiders_secret}
+      - USE_LOOT_BRAIN_ENGINE=true
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8000:8000"
+    volumes:
+      - loot_brain_data:/app/loot_brain/memory/markdown_store
+      - loot_db_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/status')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  redis-queue:
+    image: redis:7-alpine
+    container_name: loot_brain_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  loot_brain_data:
+  loot_db_data:
