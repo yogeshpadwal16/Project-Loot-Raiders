@@ -450,12 +450,19 @@ def bot_listener_loop():
 
 
 
+                # Handle /deals or /topdeals
+                if text.startswith("/deals") or text.startswith("/topdeals"):
+                    handle_deals_command(bot_token, chat_id_user, is_glitch=False)
+                    continue
+
+                # Handle /glitch or /glitches
+                if text.startswith("/glitch") or text.startswith("/glitches"):
+                    handle_deals_command(bot_token, chat_id_user, is_glitch=True)
+                    continue
+
                 # Handle /raffle (Feature 22)
-
                 if text.startswith("/raffle"):
-
                     handle_raffle_command(bot_token, chat_id_user, user_id, text, chat_id)
-
                     continue
 
                     
@@ -1624,9 +1631,44 @@ def handle_raffle_command(bot_token: str, chat_id: str, user_id: str, text: str,
 
 
 
+def handle_deals_command(bot_token: str, chat_id: str, is_glitch: bool = False):
+    db = SessionLocal()
+    try:
+        from knowledge_base.models import Product, PriceHistory
+        if is_glitch:
+            query = db.query(Product, PriceHistory).join(PriceHistory, Product.id == PriceHistory.product_id).filter(PriceHistory.discount >= 70).order_by(PriceHistory.timestamp.desc()).limit(5).all()
+            header = "🚨🚨 *TOP LIVE LOOT GLITCHES (70%+ OFF)* 🚨🚨\n━━━━━━━━━━━━━━━━━━━━━\n\n"
+        else:
+            query = db.query(Product, PriceHistory).join(PriceHistory, Product.id == PriceHistory.product_id).order_by(PriceHistory.deal_score.desc(), PriceHistory.timestamp.desc()).limit(5).all()
+            header = "🔥🛍️ *TOP 5 HIGHEST RATED LOOT DEALS* 🛍️🔥\n━━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        if not query:
+            send_bot_message(bot_token, chat_id, "🔍 No matching deals found right now. Check back in a few moments!")
+            return
+            
+        cards_text = header
+        for idx, (prod, ph) in enumerate(query, 1):
+            disc_pct = ph.discount or 0
+            title_clean = prod.title.split('\n')[0][:55]
+            disc_str = f" ({disc_pct:.0f}% OFF)" if disc_pct > 0 else ""
+            mrp_str = f" ~₹{ph.mrp:,}~" if ph.mrp and ph.mrp > ph.price else ""
+            
+            cards_text += (
+                f"*{idx}. {title_clean}...*\n"
+                f"💰 *Price:* ₹{ph.price:,}{mrp_str}{disc_str}\n"
+                f"👉 [Buy Link / Details]({prod.url})\n\n"
+            )
+            
+        cards_text += "⚡ _Verified automatically by Loot Raiders Engine!_"
+        send_bot_message(bot_token, chat_id, cards_text)
+    except Exception as e:
+        logging.error(f"Error handling deals command: {e}")
+        send_bot_message(bot_token, chat_id, "❌ Error retrieving live deals. Please try again.")
+    finally:
+        db.close()
+
+
 def start_telegram_bot_listener():
-
     t = threading.Thread(target=bot_listener_loop, daemon=True)
-
     t.start()
 

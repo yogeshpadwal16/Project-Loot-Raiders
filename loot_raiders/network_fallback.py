@@ -2,7 +2,7 @@ import urllib.parse
 import os
 
 CUELINKS_SUBID = "loot_raiders"
-EARNKARO_API_KEY = "test_earnkaro_key"
+EARNKARO_API_KEY = ""
 
 
 def get_cuelinks_url(long_url: str) -> str:

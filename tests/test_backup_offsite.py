@@ -58,7 +58,7 @@ class TestOffsiteBackupEngine(unittest.TestCase):
         self.assertGreater(os.path.getsize(gz_path), 0)
 
     @patch("requests.post")
-    @patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "mock_token", "TELEGRAM_CHAT_ID": "@mock_channel"})
+    @patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "mock_token", "TELEGRAM_BACKUP_CHAT_ID": "@mock_backup_channel"})
     def test_push_to_telegram_success(self, mock_post):
         mock_response = MagicMock()
         mock_response.status_code = 200

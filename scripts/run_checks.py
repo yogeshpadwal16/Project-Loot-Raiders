@@ -87,7 +87,7 @@ def scan_secrets():
             continue
         try:
             with open(abs_path, "r", encoding="utf-8", errors="ignore") as f:
-                content = f.read()
+                lines = f.readlines()
                 
             for rule_name, pattern in secret_patterns.items():
                 # Avoid flagging developer default keys and settings
@@ -96,10 +96,18 @@ def scan_secrets():
                 if rule_name == "General Secret Key" and any(x in norm_path for x in ["network_fallback.py", "settings.py"]):
                     continue
                     
-                matches = pattern.findall(content)
-                if matches and ".env.example" not in norm_path and "settings.json" not in norm_path:
-                    for m in matches:
-                        print_red(f"[FAIL] Potential {rule_name} detected in {filepath}: {m}")
+                for line_num, line_text in enumerate(lines, 1):
+                    if ".env.example" in norm_path or "settings.json" in norm_path:
+                        continue
+                    for match in pattern.finditer(line_text):
+                        # SECURITY: Never print the matched secret value.
+                        # Report only the file, line number, and rule category.
+                        matched_value = match.group(0)
+                        if len(matched_value) > 8:
+                            safe_hint = "****" + matched_value[-4:]
+                        else:
+                            safe_hint = "****"
+                        print_red(f"[FAIL] Potential {rule_name} detected in {filepath}:{line_num} ({safe_hint})")
                         secrets_detected = True
         except Exception as read_err:
             print_red(f"Error scanning {filepath}: {read_err}")

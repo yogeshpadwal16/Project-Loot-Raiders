@@ -595,6 +595,7 @@ class TestImageFallback(unittest.TestCase):
             status_updates.append((db_id, status, retries))
             
         with patch('deal_engine.notifier.send_telegram_alert', return_value='db_fail'), \
+             patch('deal_engine.notifier.load_settings', return_value={"telegram_bot_token": "FAKE_BOT_TOKEN", "telegram_chat_id": "@LootRaidersDeals"}), \
              patch('deal_engine.notifier.db_update_notification_status', side_effect=mock_update_status), \
              patch('threading.Timer') as mock_timer:
              

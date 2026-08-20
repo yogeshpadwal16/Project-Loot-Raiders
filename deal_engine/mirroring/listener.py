@@ -533,8 +533,8 @@ class MultiClientMirrorListener:
                                 except ValueError:
                                     pass
                         if max_id > 0:
-                            # Start baseline 5 messages back so we pull the most recent 5 deals on startup
-                            baseline_val = max(0, max_id - 5)
+                            # Start baseline 50 messages back so we pull all recent deals on startup
+                            baseline_val = max(0, max_id - 50)
                             last_seen_msg_ids[ch] = baseline_val
                             logging.info(f"[Web Scraper] Initialized baseline for {ch} at message ID {baseline_val} (Current max: {max_id})")
                 except Exception as init_err:

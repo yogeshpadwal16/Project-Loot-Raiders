@@ -6,11 +6,18 @@ from deal_engine.mirroring.schemas import NormalizedMessage, ButtonSchema
 # URL and coupon regex patterns
 URL_REGEX = r'(https?://[^\s>]+)'
 COUPON_REGEX = r'\b([A-Z0-9]{4,15})\b'
+MARKDOWN_LINK_REGEX = r'\[.*?\]\((https?://[^\s\)]+)\)'
 
 def extract_urls_from_text(text: str) -> List[str]:
     if not text:
         return []
     urls = []
+    # 1. Extract markdown hyperlinked URLs [text](url)
+    for url in re.findall(MARKDOWN_LINK_REGEX, text):
+        clean_url = url.rstrip('.,;()[]{}*#"\'')
+        if clean_url not in urls:
+            urls.append(clean_url)
+    # 2. Extract standard plaintext URLs
     for url in re.findall(URL_REGEX, text):
         clean_url = url.rstrip('.,;()[]{}*#"\'')
         if clean_url not in urls:

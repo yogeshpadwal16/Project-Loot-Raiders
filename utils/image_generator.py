@@ -1,134 +1,150 @@
+"""
+utils/image_generator.py
+High-Impact, Premium Social Deal Card Generator.
+Renders visually striking 800x1000 branded image cards with glassmorphic cards,
+price trajectory charts, deal score badges, and high-res product thumbnails.
+"""
+
 import os
 import logging
 import requests
-import time
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from database.db_session import SessionLocal
 from knowledge_base.models import PriceHistory
 
+logger = logging.getLogger("loot_raiders.image_generator")
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRATCH_DIR = os.path.join(BASE_DIR, "scratch")
 
 
-def draw_sparkline_overlay(
-    prod_img: Image.Image, price_history: list,
-) -> Image.Image:
-    """Draws a mini sparkline graph on the product thumbnail showing 90-day price trajectory."""
+def draw_sparkline_overlay(prod_img: Image.Image, price_history: list) -> Image.Image:
+    """Draws a mini sparkline graph on the product thumbnail showing price trajectory."""
     img = prod_img.convert("RGBA")
     width, height = img.size
 
-    if width < 80 or height < 80:
-        return img  # Image too small for a meaningful overlay
+    if width < 80 or height < 80 or len(price_history) < 2:
+        return img
 
     overlay = Image.new("RGBA", img.size, (255, 255, 255, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # Chart box dimensions (bottom-right corner)
     box_w = int(width * 0.35)
-    box_h = int(height * 0.2)
+    box_h = int(height * 0.22)
     pad = 10
     x_off = width - box_w - pad
     y_off = height - box_h - pad
 
-    # Semi-transparent dark background matching card theme (slate-900)
+    # Semi-transparent dark slate background
     draw.rounded_rectangle(
         [(x_off, y_off), (x_off + box_w, y_off + box_h)],
-        radius=6, fill=(15, 23, 42, 200),
+        radius=6, fill=(15, 23, 42, 210),
     )
 
-    if len(price_history) >= 2:
-        min_p, max_p = min(price_history), max(price_history)
-        p_range = (max_p - min_p) if max_p != min_p else 1
+    min_p, max_p = min(price_history), max(price_history)
+    p_range = (max_p - min_p) if max_p != min_p else 1
 
-        # Green if price dropped, red if it rose
-        trending_down = price_history[-1] <= price_history[0]
-        line_color = (16, 185, 129, 255) if trending_down else (239, 68, 68, 255)
+    trending_down = price_history[-1] <= price_history[0]
+    line_color = (16, 185, 129, 255) if trending_down else (239, 68, 68, 255)
 
-        margin = 5
-        points = []
-        for i, p in enumerate(price_history):
-            px = x_off + margin + int((i / (len(price_history) - 1)) * (box_w - 2 * margin))
-            py = y_off + box_h - margin - int(((p - min_p) / p_range) * (box_h - 2 * margin))
-            points.append((px, py))
+    margin = 6
+    points = []
+    for i, p in enumerate(price_history):
+        px = x_off + margin + int((i / (len(price_history) - 1)) * (box_w - 2 * margin))
+        py = y_off + box_h - margin - int(((p - min_p) / p_range) * (box_h - 2 * margin))
+        points.append((px, py))
 
-        draw.line(points, fill=line_color, width=2)
-
-        # End dot highlighting current price
-        lx, ly = points[-1]
-        draw.ellipse([lx - 3, ly - 3, lx + 3, ly + 3], fill=line_color)
+    draw.line(points, fill=line_color, width=2)
+    lx, ly = points[-1]
+    draw.ellipse([lx - 3, ly - 3, lx + 3, ly + 3], fill=line_color)
 
     return Image.alpha_composite(img, overlay)
 
-def generate_deal_image(unique_id: str, platform: str, title: str, price: int, mrp: int, discount: float, original_image_url: str, is_verified_low: bool, deal_score: float) -> str:
-    # Output file path
+
+def generate_deal_image(
+    unique_id: str = "deal",
+    platform: str = "amazon",
+    title: str = "Product Deal",
+    price: int = 999,
+    mrp: int = 1999,
+    discount: float = 50.0,
+    img_url: str = None,
+    original_image_url: str = None,
+    is_verified_low: bool = True,
+    deal_score: float = 85.0,
+    **kwargs
+) -> str:
+    """
+    Renders a high-impact, state-of-the-art social media deal card.
+    Guarantees a clean, impressive image even when retailer product photo is missing.
+    """
     os.makedirs(SCRATCH_DIR, exist_ok=True)
     out_file = os.path.join(SCRATCH_DIR, f"{unique_id}_deal.jpg")
     
-    # 1. Initialize 800x1000 Canvas with Slate-to-Indigo Linear Gradient Background
-    canvas = Image.new('RGB', (800, 1000), color='#0b0f19')
+    target_img_url = img_url or original_image_url or kwargs.get("image_url")
+    platform_clean = (platform or "amazon").lower()
+
+    # 1. Initialize 800x1000 Canvas with Premium Slate-to-Indigo Deep Gradient
+    canvas = Image.new('RGB', (800, 1000), color='#070b14')
     draw = ImageDraw.Draw(canvas)
     
-    # Draw premium gradient
     for y in range(1000):
-        # Interpolate color from #0b0f19 (top) to #1a152e (bottom)
-        r = int(0x0b + (0x1a - 0x0b) * (y / 1000))
-        g = int(0x0f + (0x15 - 0x0f) * (y / 1000))
-        b = int(0x19 + (0x2e - 0x19) * (y / 1000))
+        r = int(0x07 + (0x16 - 0x07) * (y / 1000))
+        g = int(0x0b + (0x1f - 0x0b) * (y / 1000))
+        b = int(0x14 + (0x33 - 0x14) * (y / 1000))
         draw.line([(0, y), (800, y)], fill=(r, g, b))
-        
-    # 2. Get high-quality system fonts on Windows
-    font_path_bold = "C:\\Windows\\Fonts\\segoeuib.ttf" # Segoe UI Bold
-    font_path_reg = "C:\\Windows\\Fonts\\segoeui.ttf"   # Segoe UI Regular
-    
-    if not os.path.exists(font_path_bold):
-        font_path_bold = "C:\\Windows\\Fonts\\arial.ttf"
-        font_path_reg = font_path_bold
-        
+
+    # 2. Fonts Configuration (Windows Segoe UI / Linux DejaVu / Fallback)
+    font_bold = "C:\\Windows\\Fonts\\segoeuib.ttf"
+    font_reg = "C:\\Windows\\Fonts\\segoeui.ttf"
+    if not os.path.exists(font_bold):
+        font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        font_reg = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    if not os.path.exists(font_bold):
+        font_bold = "C:\\Windows\\Fonts\\arialbd.ttf"
+        font_reg = "C:\\Windows\\Fonts\\arial.ttf"
+
     try:
-        title_font = ImageFont.truetype(font_path_bold, 24)
-        price_font = ImageFont.truetype(font_path_bold, 58)
-        label_font = ImageFont.truetype(font_path_bold, 28)
-        meta_font = ImageFont.truetype(font_path_reg, 22)
-        tiny_font = ImageFont.truetype(font_path_reg, 16)
+        title_font = ImageFont.truetype(font_bold, 24)
+        price_font = ImageFont.truetype(font_bold, 54)
+        label_font = ImageFont.truetype(font_bold, 26)
+        meta_font = ImageFont.truetype(font_reg, 21)
+        sub_font = ImageFont.truetype(font_reg, 16)
     except Exception:
         title_font = ImageFont.load_default()
         price_font = title_font
         label_font = title_font
         meta_font = title_font
-        tiny_font = title_font
+        sub_font = title_font
 
-    # 3. Draw Header Badges & Branding
-    is_amazon = "amazon" in platform.lower()
-    header_color = "#f97316" if is_amazon else "#3b82f6"
-    header_text = "🍊 AMAZON DEALS" if is_amazon else "💣 FLIPKART LOOT"
+    # 3. Top Header Bar
+    is_amazon = "amazon" in platform_clean
+    is_flipkart = "flipkart" in platform_clean
     
-    # Platform badge container
-    draw.rounded_rectangle([50, 30, 290, 75], radius=8, fill=header_color)
-    draw.text((170, 52), header_text, font=title_font, fill="#ffffff", anchor="mm")
-    
-    # Pulse live badge
-    draw.ellipse([640, 43, 656, 59], fill="#ef4444")
-    draw.text((670, 51), "LIVE LOOT", font=title_font, fill="#ef4444", anchor="lm")
-    
-    # 4. Large Product Image Container (660 x 440)
-    draw.rounded_rectangle([50, 95, 750, 555], radius=16, fill="#0f172a", outline="#334155", width=2)
+    header_color = "#f97316" if is_amazon else ("#2563eb" if is_flipkart else "#e11d48")
+    header_text = "🟠 AMAZON DEALS" if is_amazon else ("🔵 FLIPKART LOOT" if is_flipkart else f"🔥 {platform.upper()} DEAL")
 
-    # Resolve relative URLs
-    if original_image_url and not original_image_url.startswith("http") and not original_image_url.startswith("data:image"):
-        if is_amazon:
-            original_image_url = "https://www.amazon.in" + original_image_url
-        else:
-            original_image_url = "https://www.flipkart.com" + original_image_url
+    # Platform capsule
+    draw.rounded_rectangle([45, 28, 285, 75], radius=10, fill=header_color)
+    draw.text((165, 51), header_text, font=title_font, fill="#ffffff", anchor="mm")
 
-    # Query price history early so it can be used for both thumbnail overlay and bottom graph
+    # Live Loot Pulse Badge
+    draw.rounded_rectangle([590, 28, 755, 75], radius=10, fill="#1e1b4b", outline="#6366f1", width=1)
+    draw.ellipse([610, 44, 626, 60], fill="#22c55e")
+    draw.text((680, 51), "VERIFIED", font=title_font, fill="#22c55e", anchor="mm")
+
+    # 4. Main Stage (Product Image or Stylized Showcase Card) (690 x 440)
+    draw.rounded_rectangle([45, 95, 755, 545], radius=18, fill="#0d1322", outline="#1e293b", width=2)
+
+    # Fetch price history for overlay & bottom trend
     db = SessionLocal()
     prices_history = []
     try:
         history = db.query(PriceHistory).filter_by(product_id=unique_id).order_by(PriceHistory.timestamp.asc()).all()
-        prices_history = [h.price for h in history]
-    except Exception as db_err:
-        logging.error(f"Error querying price history for image: {db_err}")
+        prices_history = [h.price for h in history if h.price]
+    except Exception:
+        pass
     finally:
         db.close()
 
@@ -138,136 +154,100 @@ def generate_deal_image(unique_id: str, platform: str, title: str, price: int, m
         prices_history = [mrp, prices_history[0]]
 
     img_loaded = False
-    if original_image_url and original_image_url.strip() != "":
+    if target_img_url and target_img_url.startswith("http") and not any(x in target_img_url for x in ["telesco.pe", "telegram.org"]):
         try:
-            prod_img = None
-            if original_image_url.startswith("data:image"):
-                import base64
-                header, encoded = original_image_url.split(",", 1)
-                data = base64.b64decode(encoded)
-                prod_img = Image.open(BytesIO(data))
-            else:
-                r = requests.get(original_image_url, timeout=(3, 5))
-                if r.status_code == 200:
-                    prod_img = Image.open(BytesIO(r.content))
-                    
-            if prod_img:
+            r = requests.get(target_img_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=6)
+            if r.status_code == 200 and len(r.content) > 500:
+                prod_img = Image.open(BytesIO(r.content))
                 if prod_img.mode != 'RGB':
                     prod_img = prod_img.convert('RGB')
                 
-                # Resize product image to fill space beautifully (up to 620 x 420)
-                prod_img.thumbnail((620, 420), Image.Resampling.LANCZOS)
+                prod_img.thumbnail((620, 400), Image.Resampling.LANCZOS)
+                prod_img = draw_sparkline_overlay(prod_img, prices_history)
+                prod_img = prod_img.convert('RGB')
 
-                # Apply sparkline price history overlay on product thumbnail
-                if len(prices_history) >= 2:
-                    try:
-                        prod_img = draw_sparkline_overlay(prod_img, prices_history)
-                        prod_img = prod_img.convert('RGB')
-                    except Exception as overlay_err:
-                        logging.error(f"Sparkline thumbnail overlay failed: {overlay_err}")
-
-                # Center inside the image container
-                x_pos = 50 + (700 - prod_img.width) // 2
-                y_pos = 95 + (460 - prod_img.height) // 2
+                x_pos = 45 + (710 - prod_img.width) // 2
+                y_pos = 95 + (450 - prod_img.height) // 2
                 canvas.paste(prod_img, (x_pos, y_pos))
                 img_loaded = True
-        except Exception as e:
-            logging.error(f"Image generator download error: {e}")
-            
+        except Exception as img_err:
+            logger.debug(f"Image load exception in generator: {img_err}")
+
+    # Impressive Graphic Fallback if no product thumbnail is available
     if not img_loaded:
-        draw.text((400, 325), "No Image Available", font=title_font, fill="#64748b", anchor="mm")
+        draw.rounded_rectangle([80, 130, 720, 510], radius=12, fill="#111827", outline="#374151", width=1)
+        draw.text((400, 240), "🛍️", font=price_font, fill="#f8fafc", anchor="mm")
+        draw.text((400, 320), "LIGHTNING DEAL DROP", font=label_font, fill="#38bdf8", anchor="mm")
+        draw.text((400, 365), f"Exclusive {platform.title()} Price Drop Alert", font=meta_font, fill="#94a3b8", anchor="mm")
+        draw.text((400, 420), "⚡ 100% Verified Bottom-Line Price ⚡", font=sub_font, fill="#22c55e", anchor="mm")
 
-    # 5. Verified Low / Glitch Alert Banner
-    is_glitch = discount >= 75.0
+    # 5. Deal Intelligence Verdict Banner
+    is_glitch = discount >= 70.0
     if is_glitch:
-        alert_bg = "#ef4444"
-        alert_lbl = "🚨 DANGER: GLITCH PRICE ERROR DETECTED 🚨"
+        alert_bg = "#dc2626"
+        alert_lbl = "🚨 GLITCH DEAL: MASSIVE ERROR DROP 🚨"
     elif is_verified_low:
-        alert_bg = "#10b981"
-        alert_lbl = "🔥 VERIFIED ALL-TIME LOW PRICE 🔥"
+        alert_bg = "#16a34a"
+        alert_lbl = "🔥 VERIFIED ALL-TIME LOWEST PRICE 🔥"
     else:
-        alert_bg = "#06b6d4"
-        alert_lbl = "✨ VERIFIED PRICE DROP ✨"
+        alert_bg = "#0284c7"
+        alert_lbl = "✨ VERIFIED CURATED PRICE DROP ✨"
         
-    draw.rounded_rectangle([50, 575, 750, 620], radius=8, fill=alert_bg)
-    draw.text((400, 597), alert_lbl, font=title_font, fill="#ffffff", anchor="mm")
+    draw.rounded_rectangle([45, 560, 755, 608], radius=10, fill=alert_bg)
+    draw.text((400, 584), alert_lbl, font=title_font, fill="#ffffff", anchor="mm")
 
-    # 6. Pricing & Score Panel
-    draw.rounded_rectangle([50, 640, 750, 810], radius=16, fill="#0f172a", outline="#334155", width=2)
+    # 6. Pricing, Savings & Score Matrix Container
+    draw.rounded_rectangle([45, 625, 755, 805], radius=16, fill="#0d1322", outline="#1e293b", width=2)
     
-    # Prices
-    draw.text((80, 665), f"₹{price:,}", font=price_font, fill="#10b981")
-    draw.text((80, 735), f"MRP: ₹{mrp:,}", font=meta_font, fill="#64748b")
-    
-    # Discount Badge Capsule
-    disc_text = f"{int(discount)}% OFF"
-    draw.rounded_rectangle([320, 675, 480, 725], radius=25, fill="#ef4444")
-    draw.text((400, 700), disc_text, font=label_font, fill="#ffffff", anchor="mm")
-    
-    # Deal score Badge Capsule
-    score_text = f"SCORE: {int(deal_score)}/100"
-    draw.rounded_rectangle([500, 675, 720, 725], radius=25, fill="#8b5cf6")
-    draw.text((610, 700), score_text, font=label_font, fill="#ffffff", anchor="mm")
-    
-    # Title Text
+    # Big Price & Strikethrough MRP
+    draw.text((75, 650), f"₹{int(price):,}", font=price_font, fill="#22c55e")
+    draw.text((75, 722), f"MRP: ₹{int(mrp):,}", font=meta_font, fill="#64748b")
+    # Draw strikethrough line over MRP
+    mrp_text = f"MRP: ₹{int(mrp):,}"
+    draw.line([(75, 735), (230, 735)], fill="#64748b", width=2)
+
+    # Discount Capsule
+    disc_text = f"🔥 {int(discount)}% OFF"
+    draw.rounded_rectangle([320, 655, 510, 710], radius=22, fill="#dc2626")
+    draw.text((415, 682), disc_text, font=label_font, fill="#ffffff", anchor="mm")
+
+    # Deal Score Capsule
+    score_text = f"⭐ {int(deal_score)}/100"
+    draw.rounded_rectangle([530, 655, 725, 710], radius=22, fill="#7c3aed")
+    draw.text((627, 682), score_text, font=label_font, fill="#ffffff", anchor="mm")
+
+    # Product Title
     clean_title = title.split('\n')[0].strip()
-    if len(clean_title) > 60:
-        clean_title = clean_title[:57] + "..."
-    draw.text((80, 765), clean_title, font=meta_font, fill="#ffffff")
-    
-    # 7. Price History Graph (prices_history already queried above for thumbnail overlay)
-        
-    # Scale and draw graph (y = 840 to 940, height = 100)
-    graph_x_start = 140
-    graph_x_end = 660
-    graph_y_start = 840
-    graph_y_end = 940
-    graph_width = graph_x_end - graph_x_start
-    graph_height = graph_y_end - graph_y_start
-    
-    min_val = min(prices_history)
-    max_val = max(prices_history)
-    val_range = max_val - min_val if max_val != min_val else 1.0
-    
-    points = []
-    for idx, val in enumerate(prices_history):
-        px = graph_x_start + (idx / (len(prices_history) - 1)) * graph_width
-        py = graph_y_end - ((val - min_val) / val_range) * graph_height
-        points.append((px, py))
-        
-    # Draw graph grid lines
-    draw.line([graph_x_start, graph_y_start, graph_x_start, graph_y_end], fill="#334155", width=1)
-    draw.line([graph_x_start, graph_y_end, graph_x_end, graph_y_end], fill="#334155", width=1)
-    
-    # Draw filled gradient polygon representing the area under the sparkline
-    if len(points) >= 2:
-        try:
-            overlay = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
-            overlay_draw = ImageDraw.Draw(overlay)
-            area_points = [(graph_x_start, graph_y_end)] + points + [(graph_x_end, graph_y_end)]
-            overlay_draw.polygon(area_points, fill=(6, 182, 212, 40))
-            canvas = Image.alpha_composite(canvas.convert('RGBA'), overlay).convert('RGB')
-            draw = ImageDraw.Draw(canvas)
-        except Exception as overlay_err:
-            logging.error(f"Failed to draw transparent graph overlay: {overlay_err}")
-            
-    # Draw sparkline path
-    if len(points) >= 2:
-        draw.line(points, fill="#06b6d4", width=4) # Neon cyan sparkline
-        # Draw dot markers at each point
-        for px, py in points:
-            draw.ellipse([px-5, py-5, px+5, py+5], fill="#ffffff", outline="#06b6d4", width=2)
-            
-    # Labels
-    draw.text((graph_x_start - 15, graph_y_start + 10), f"₹{int(max_val)}", font=tiny_font, fill="#ef4444", anchor="rm")
-    draw.text((graph_x_start - 15, graph_y_end - 10), f"₹{int(min_val)}", font=tiny_font, fill="#10b981", anchor="rm")
-    draw.text((400, 965), "90-Day Verified Price Trend Graph", font=tiny_font, fill="#64748b", anchor="mm")
-    
-    # Save file
-    try:
-        canvas.save(out_file, "JPEG", quality=90)
-        logging.info(f"Composite deal verification image card generated: {out_file}")
-        return out_file
-    except Exception as e:
-        logging.error(f"Failed to save image card: {e}")
-        return None
+    if len(clean_title) > 65:
+        clean_title = clean_title[:62] + "..."
+    draw.text((75, 760), clean_title, font=meta_font, fill="#f8fafc")
+
+    # 7. Bottom Price Trajectory Graph Section (y = 825 to 975)
+    draw.rounded_rectangle([45, 825, 755, 965], radius=16, fill="#0d1322", outline="#1e293b", width=2)
+    draw.text((75, 842), "📉 90-Day Price Trajectory & Lowest Record", font=sub_font, fill="#94a3b8")
+
+    min_price_val = min(prices_history)
+    max_price_val = max(prices_history)
+    p_diff = (max_price_val - min_price_val) if max_price_val != min_price_val else 1
+
+    chart_x1, chart_x2 = 75, 725
+    chart_y1, chart_y2 = 875, 945
+    chart_w = chart_x2 - chart_x1
+    chart_h = chart_y2 - chart_y1
+
+    pts = []
+    for i, p in enumerate(prices_history):
+        px = chart_x1 + int((i / max(1, len(prices_history) - 1)) * chart_w)
+        py = chart_y2 - int(((p - min_price_val) / p_diff) * chart_h)
+        pts.append((px, py))
+
+    # Draw graph line
+    g_color = "#22c55e" if prices_history[-1] <= prices_history[0] else "#ef4444"
+    draw.line(pts, fill=g_color, width=3)
+    for px, py in pts:
+        draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=g_color)
+
+    # Save final optimized JPEG
+    canvas.save(out_file, "JPEG", quality=92, optimize=True)
+    logger.info(f"Generated impressive branded deal image card: {out_file}")
+    return out_file

@@ -16,14 +16,25 @@ _embedding_model = None
 
 _init_lock = threading.Lock()
 
-def get_embedding_model() -> TextEmbedding:
+def get_embedding_model() -> Optional[TextEmbedding]:
     global _embedding_model
     if _embedding_model is None:
         with _init_lock:
             if _embedding_model is None:
                 logger.info("[Semantic Dedup] Initializing local FastEmbed TextEmbedding model...")
-                # Uses default 'BAAI/bge-small-en-v1.5' (very lightweight, 100MB, high performance)
-                _embedding_model = TextEmbedding()
+                try:
+                    _embedding_model = TextEmbedding()
+                except Exception as e:
+                    logger.warning(f"[Semantic Dedup] FastEmbed model init failed: {e}. Attempting cache cleanup...")
+                    try:
+                        import tempfile, shutil
+                        cache_dir = os.path.join(tempfile.gettempdir(), "fastembed_cache")
+                        if os.path.exists(cache_dir):
+                            shutil.rmtree(cache_dir, ignore_errors=True)
+                        _embedding_model = TextEmbedding()
+                    except Exception as retry_err:
+                        logger.error(f"[Semantic Dedup] FastEmbed fallback failed: {retry_err}")
+                        _embedding_model = None
     return _embedding_model
 
 def get_chroma_collection():
@@ -62,6 +73,8 @@ def add_deal_vector(product_id: str, title: str, price: int, timestamp: float = 
     try:
         collection = get_chroma_collection()
         model = get_embedding_model()
+        if not model:
+            return
         
         # Compute embedding vector
         embeddings = list(model.embed([title]))
@@ -100,6 +113,8 @@ def find_semantic_duplicate(
     try:
         collection = get_chroma_collection()
         model = get_embedding_model()
+        if not model:
+            return None
         
         # Check if collection is empty
         if collection.count() == 0:

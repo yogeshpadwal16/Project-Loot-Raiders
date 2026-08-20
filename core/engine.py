@@ -327,6 +327,14 @@ def scrape_platform(platform: str, config: dict, history: set):
             health["last_error"] = "0 deals extracted (possible selector drift or no deals available)"
             if health["consecutive_failures"] >= 3:
                 health["status"] = "Degraded"
+
+            # Trigger Autonomous Self-Healing Selector Healer
+            try:
+                from loot_brain.agents.scraper_healer import ScraperHealerAgent
+                healer = ScraperHealerAgent()
+                healer.auto_repair_selectors(driver, platform, config)
+            except Exception as heal_err:
+                logging.warning(f"Autonomous selector self-healing attempt failed on stream {platform}: {heal_err}")
                 
         # 3. Process extracted deal candidates
         for deal in extracted_deals:
@@ -453,7 +461,7 @@ def scrape_product_details(url: str, driver=None) -> dict:
         from deal_engine.deal_processor import scrape_product_lightweight
         fast_res = scrape_product_lightweight(url)
         if fast_res and fast_res.get("price", 0) > 0 and fast_res.get("image_url"):
-            logging.info(f"[Fast-Path Scraper] Fast-path PASS for {url[:50]} (Price: ₹{fast_res['price']})")
+            logging.info(f"[Fast-Path Scraper] Fast-path PASS for {url[:50]} (Price: Rs.{fast_res['price']})")
             return fast_res
     except Exception as fast_err:
         logging.warning(f"[Fast-Path Scraper] Fast-path skipped/failed, falling back to Playwright: {fast_err}")
@@ -995,12 +1003,13 @@ def main():
         else:
             logging.info("Supermarket monitor disabled (conserving CPU resources).")
             
-        # 5.8 Start Background Expiration Daemon
+        # 5.9 Start Autonomous Native Lightning Deal Harvester
         try:
-            from deal_engine.expiration_daemon import start_expiration_daemon
-            start_expiration_daemon()
-        except Exception as expiration_err:
-            logging.error(f"Failed to start Expiration Daemon: {expiration_err}")
+            from core.autonomous_harvester import start_autonomous_harvester
+            start_autonomous_harvester(interval_seconds=180)
+            logging.info("⚡ Autonomous Native Deal Harvester daemon started.")
+        except Exception as harvest_err:
+            logging.error(f"Failed to start Autonomous Harvester: {harvest_err}")
             
         logging.info("Master Engine Activated. Scanners operating.")
     else:

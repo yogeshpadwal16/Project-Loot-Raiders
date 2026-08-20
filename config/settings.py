@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time as _time
 
@@ -228,11 +228,61 @@ def load_settings() -> dict:
     _settings_cache_time = _time.time()
     return saved
 
+
+# Keys that are sourced from environment variables and must NEVER be
+# persisted to settings.json.  When save_settings() is called, any
+# value that was injected at runtime via .env / os.environ is replaced
+# with a safe placeholder so the tracked file stays credential-free.
+_ENV_SECRET_KEYS = {
+    "telegram_bot_token":  "YOUR_TELEGRAM_BOT_TOKEN",
+    "gemini_api_key":      "YOUR_GEMINI_API_KEY",
+    "omniroute_api_key":   "YOUR_OMNIROUTE_API_KEY",
+    "amazon_tag":          "YOUR_AMAZON_TAG",
+    "flipkart_affid":      "YOUR_FLIPKART_AFFID",
+    "sendgrid_api_key":    "",
+    "shlink_api_key":      "YOUR_SHLINK_API_KEY",
+    "smtp_password":       "",
+}
+
+def _is_env_sourced(key: str) -> bool:
+    """Return True if the given settings key currently has a value
+    injected from an environment variable (meaning the on-disk
+    settings.json should NOT contain the runtime value)."""
+    env_map = {
+        "telegram_bot_token":  "TELEGRAM_BOT_TOKEN",
+        "gemini_api_key":      "GEMINI_API_KEY",
+        "omniroute_api_key":   "OMNIROUTE_API_KEY",
+        "amazon_tag":          "AMAZON_TAG",
+        "flipkart_affid":      "FLIPKART_AFFID",
+        "sendgrid_api_key":    "SENDGRID_API_KEY",
+        "shlink_api_key":      "SHLINK_API_KEY",
+        "smtp_password":       "SMTP_PASSWORD",
+    }
+    env_var = env_map.get(key)
+    if env_var and os.environ.get(env_var):
+        return True
+    return False
+
 def save_settings(settings: dict):
     try:
-        # Preserve actual settings without replacing them with dummy YOUR_ placeholders
         to_save = settings.copy()
-            
+
+        # Strip environment-sourced secrets so they are never written
+        # to the tracked settings.json file.
+        for key, safe_placeholder in _ENV_SECRET_KEYS.items():
+            if key in to_save and _is_env_sourced(key):
+                to_save[key] = safe_placeholder
+
+        # Also scrub notification_uris entries that embed a real token
+        if "notification_uris" in to_save:
+            sanitized_uris = []
+            for uri in to_save["notification_uris"]:
+                if isinstance(uri, str) and "tgram://" in uri and "YOUR_TELEGRAM" not in uri:
+                    sanitized_uris.append("tgram://YOUR_TELEGRAM_BOT_TOKEN/@LootRaidersDeals")
+                else:
+                    sanitized_uris.append(uri)
+            to_save["notification_uris"] = sanitized_uris
+
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(to_save, f, indent=2)
         global _settings_cache
@@ -240,5 +290,3 @@ def save_settings(settings: dict):
     except Exception as e:
         import logging
         logging.error(f"Failed to save settings.json: {e}")
-
-

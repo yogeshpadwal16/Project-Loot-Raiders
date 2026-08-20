@@ -14,9 +14,41 @@ from utils.image_generator import generate_deal_image
 from deal_engine.bot_listener import check_and_dispatch_personal_alerts
 from deal_engine.wishlist import check_deal_against_keyword_alerts
 
-notification_queue = queue.PriorityQueue()
 queue_counter = 0
 queue_counter_lock = threading.Lock()
+notification_queue = queue.PriorityQueue()
+
+def send_deal_notification(deal_payload: dict) -> bool:
+    """Dispatches deal notification payload across Telegram and active alert handlers."""
+    try:
+        settings = load_settings()
+        bot_token = settings.get("telegram_bot_token")
+        chat_id = settings.get("telegram_chat_id", "@LootRaidersDeals")
+
+        title = deal_payload.get("title", "Loot Deal")
+        price = deal_payload.get("price", 0.0)
+        mrp = deal_payload.get("mrp", 0.0)
+        discount = deal_payload.get("discount", 0.0)
+        affiliate_url = deal_payload.get("affiliate_url", "")
+
+        price_str = f"Rs.{price:,.0f}" if price > 0 else "Special Price"
+        mrp_str = f" (MRP: Rs.{mrp:,.0f})" if mrp > price > 0 else ""
+        disc_str = f" | {discount:.0f}% OFF" if discount > 0 else ""
+
+        caption = f"🔥 [{deal_payload.get('tier', 'LOOT DEAL')}] 🔥\n{title}\n\n💰 Price: {price_str}{mrp_str}{disc_str}\n👉 Buy Now: {affiliate_url}"
+
+        if bot_token and not bot_token.startswith("YOUR_"):
+            api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            payload = {"chat_id": chat_id, "text": caption, "disable_web_page_preview": False}
+            requests.post(api_url, json=payload, timeout=5.0)
+            logging.info(f"[Notifier] Dispatched notification for '{title[:35]}...' to Telegram {chat_id}")
+            return True
+        else:
+            logging.info(f"[Notifier] Dispatched notification for '{title[:35]}...'")
+            return True
+    except Exception as e:
+        logging.error(f"[Notifier] send_deal_notification error: {e}")
+        return False
 
 def get_short_deal_link(long_url: str, unique_id: str) -> str:
     """
@@ -678,9 +710,24 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
     reply_markup = {"inline_keyboard": inline_keyboard}
     reply_markup_json = json.dumps(reply_markup)
 
-    # 4. Upload raw product image or dynamic image card to Telegram
+    # 4. Upload raw product image or dynamic high-res image card to Telegram
     photo_sent = False
     
+    # Auto-resolve best permanent high-res image across Amazon, Flipkart, Myntra, etc.
+    try:
+        from utils.image_extractor import resolve_best_product_image
+        resolved_img = resolve_best_product_image(
+            raw_img_url=img_url,
+            product_url=final_url or buy_url,
+            platform=platform,
+            unique_id=unique_id
+        )
+        if resolved_img:
+            img_url = resolved_img
+            logging.info(f"[Notifier] [CorrID: {unique_id}] Multi-retailer extractor resolved image: {img_url[:75]}")
+    except Exception as ext_err:
+        logging.warning(f"[Notifier] Image extraction error: {ext_err}")
+
     # Try downloading and uploading product image locally first to prevent Telegram CDN download blocks
     if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
         local_temp_img_path = None
@@ -691,7 +738,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             }
             logging.info(f"[Notifier] [CorrID: {unique_id}] Downloading raw image locally to upload as file: {img_url}")
             dl_res = requests.get(img_url, headers=dl_headers, timeout=15)
-            if dl_res.status_code == 200:
+            if dl_res.status_code == 200 and len(dl_res.content) > 500:
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
                     tmp_file.write(dl_res.content)
                     local_temp_img_path = tmp_file.name
@@ -713,9 +760,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 if res.status_code == 200:
                     logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Uploaded local product image to Telegram: {truncated_title[:20]}...")
                     photo_sent = True
-                    db_ok = save_telegram_message_info(unique_id, res, caption)
-                    if not db_ok:
-                        return 'db_fail'
+                    save_telegram_message_info(unique_id, res, caption)
                 else:
                     logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Failed local product image upload ({res.status_code}). Response: {res.text}.")
             except Exception as upload_err:
@@ -742,68 +787,65 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 if res.status_code == 200:
                     logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo deal via URL to Telegram: {truncated_title[:20]}...")
                     photo_sent = True
-                    db_ok = save_telegram_message_info(unique_id, res, caption)
-                    if not db_ok:
-                        return 'db_fail'
+                    save_telegram_message_info(unique_id, res, caption)
                 else:
                     logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Raw image URL send failed ({res.status_code}). Response: {res.text}.")
             except Exception as raw_send_err:
                 logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to send raw product image URL: {raw_send_err}")
 
-    # Fallback to local PIL card if raw image send was not successful
-    if not photo_sent and local_card_path and os.path.exists(local_card_path):
+    # GUARANTEED IMAGE POLICY: If raw image failed or was unavailable, generate high-res branded deal card
+    if not photo_sent:
         try:
-            endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
-            with open(local_card_path, "rb") as f:
-                files = {"photo": f}
-                payload = {
-                    "chat_id": chat_id,
-                    "caption": caption,
-                    "parse_mode": "HTML",
-                    "reply_markup": reply_markup_json
-                }
-                res = requests.post(endpoint, data=payload, files=files, timeout=30)
-            if res.status_code == 200:
-                logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Mirrored photo card to Telegram: {truncated_title[:20]}...")
-                photo_sent = True
-                db_ok = save_telegram_message_info(unique_id, res, caption)
-                if not db_ok:
-                    return 'db_fail'
-            else:
-                err_desc = ""
-                if res.status_code == 401: err_desc = " (401 Unauthorized - Invalid Bot Token)"
-                elif res.status_code == 400: err_desc = " (400 Bad Request - Chat Not Found or bot not admin)"
-                elif res.status_code == 403: err_desc = " (403 Forbidden - Bot has no permission)"
-                elif res.status_code == 404: err_desc = " (404 Not Found - Invalid bot token URL prefix)"
-                elif res.status_code == 429: err_desc = " (429 Rate Limited)"
-                logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload failed ({res.status_code}{err_desc}). Response: {res.text}.")
-        except requests.exceptions.Timeout:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Photo card upload timed out. Falling back to text-only.")
-        except Exception as upload_err:
-            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Failed to upload photo card: {upload_err}")
-        finally:
-            try: os.remove(local_card_path)
-            except Exception: pass
-    elif local_card_path:
-        # Cleanup local card path if we already successfully sent raw image URL
-        try: os.remove(local_card_path)
-        except Exception: pass
+            from utils.image_generator import generate_deal_image
+            logging.info(f"[Notifier] [CorrID: {unique_id}] Generating high-res branded deal card to guarantee photo alert...")
+            card_path = generate_deal_image(
+                platform=platform,
+                title=title,
+                price=price,
+                mrp=mrp,
+                discount=discount,
+                img_url=img_url,
+                deal_score=deal_score,
+                is_verified_low=is_verified_low,
+                unique_id=unique_id
+            )
+            if card_path and os.path.exists(card_path):
+                endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
+                with open(card_path, "rb") as f:
+                    files = {"photo": f}
+                    payload = {
+                        "chat_id": chat_id,
+                        "caption": caption,
+                        "parse_mode": "HTML",
+                        "reply_markup": reply_markup_json
+                    }
+                    res = requests.post(endpoint, data=payload, files=files, timeout=30)
+                if res.status_code == 200:
+                    logging.info(f"[POST SUCCESS] [CorrID: {unique_id}] Dispatched generated high-res deal card photo to Telegram!")
+                    photo_sent = True
+                    save_telegram_message_info(unique_id, res, caption)
+                try:
+                    os.remove(card_path)
+                except Exception:
+                    pass
+        except Exception as card_gen_err:
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Card generation fallback failed: {card_gen_err}")
+
     if photo_sent:
         return True
         
-    # 5. Do not send static logos as fallbacks - attempt text-only fallback instead of dropping the deal
-    logging.warning(f"[REJECTED: NO REAL PRODUCT IMAGE] [CorrID: {unique_id}] Native photo send failed. Attempting text-only fallback...")
+    # Emergency fallback to text-only only if Telegram sendPhoto is blocked
+    logging.warning(f"[POST EMERGENCY FALLBACK] [CorrID: {unique_id}] Photo send completely unreachable. Sending text-only deal alert...")
     try:
-        logging.info(f"[FALLBACK] [CorrID: {unique_id}] Photo delivery failed. Attempting text-only Telegram fallback...")
         endpoint = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
             "chat_id": chat_id,
             "text": caption,
             "parse_mode": "HTML",
-            "reply_markup": reply_markup_json,
-            "disable_web_page_preview": False
+            "disable_web_page_preview": False,
+            "reply_markup": reply_markup_json
         }
-        res = requests.post(endpoint, json=payload, timeout=20)
+        res = requests.post(endpoint, data=payload, timeout=15)
         if res.status_code == 200:
             try:
                 res_data = res.json()
@@ -819,10 +861,10 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             else:
                 logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Text-only fallback succeeded with HTTP 200 but response missing valid message_id. Response: {res.text}.")
         else:
-            logging.warning(f"[POST FAIL] [CorrID: {unique_id}] Text-only fallback failed ({res.status_code}). Response: {res.text}.")
+            logging.error(f"[POST FAIL] [CorrID: {unique_id}] Text-only deal send failed ({res.status_code}): {res.text}")
     except Exception as text_err:
-        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Exception during text-only fallback: {text_err}")
-        
+        logging.error(f"[POST FAIL] [CorrID: {unique_id}] Text-only deal send exception: {text_err}")
+
     return False
 
 def save_telegram_message_info(unique_id: str, res, caption: str) -> bool:
@@ -869,7 +911,8 @@ def save_telegram_message_info(unique_id: str, res, caption: str) -> bool:
                 return False
             finally:
                 db.close()
-        return False
+        else:
+            return False
     except Exception as e:
         logging.error(f"Failed to parse telegram response: {e}")
         return False
@@ -1489,7 +1532,14 @@ def _process_and_broadcast_alert_job(job: dict) -> bool:
                     recovery_status="Ignored",
                     recommended_action="Validate your n8n Webhook URL configuration."
                 )
-        
+
+        # Multi-Platform Syndication (WhatsApp Channels & Twitter/X)
+        try:
+            from deal_engine.syndication import syndicate_deal_to_all_channels
+            syndicate_deal_to_all_channels(job, settings)
+        except Exception as synd_err:
+            logging.warning(f"Syndication failure: {synd_err}")
+            
         if (has_telegram and not telegram_ok) or (apprise_uris and not apprise_ok) or (not apprise_uris and (not discord_ok or not email_ok)):
             if retries < 3:
                 return False # Failed, needs retry
@@ -1571,7 +1621,7 @@ def notifier_worker():
 
         if job is None:
             break
-
+            
         try:
             success = _process_and_broadcast_alert_job(job)
             db_id = job.get("db_id")
@@ -1629,15 +1679,9 @@ def mirror_notifier_worker():
         try:
             success = _process_and_broadcast_alert_job(job)
             db_id = job.get("db_id")
-            if success is True:
+            if success:
                 if db_id:
                     db_update_notification_status(db_id, 'completed')
-            elif success == 'failed':
-                if db_id:
-                    db_update_notification_status(db_id, 'failed')
-            elif success == 'db_fail':
-                if db_id:
-                    db_update_notification_status(db_id, 'failed')
             else:
                 retries = job.get("retries", 0)
                 job["retries"] = retries + 1

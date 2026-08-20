@@ -155,29 +155,62 @@ class DealMirrorProcessor:
     def _process_single_raw_url(self, raw_url: str, correlation_id: str, message: NormalizedMessage, extracted_data: dict, db):
         """Processes a single URL extraction, scraping, and deal logic workflow."""
         expanded_url = self._expand_url_with_retry(raw_url, correlation_id)
+        
+        # Multi-ASIN Store & Search URL Decomposition (Pre-browser fast path)
+        if "amazon" in expanded_url.lower():
+            from utils.parser import extract_amazon_asins_from_url
+            asins = extract_amazon_asins_from_url(expanded_url)
+            if len(asins) > 1:
+                logging.info(f"[PARSE] [CorrID: {correlation_id}] Multi-ASIN URL detected. Decomposing into {len(asins)} individual product tasks: {asins}")
+                for asin in asins:
+                    direct_dp_url = f"https://www.amazon.in/dp/{asin}"
+                    try:
+                        self._process_single_raw_url(direct_dp_url, correlation_id, message, extracted_data, db)
+                    except Exception as asin_err:
+                        logging.error(f"[PARSE] [CorrID: {correlation_id}] Error processing decomposed ASIN {asin}: {asin_err}")
+                return
+            elif len(asins) == 1 and not ("/dp/" in expanded_url.lower() or "/gp/product/" in expanded_url.lower()):
+                expanded_url = f"https://www.amazon.in/dp/{asins[0]}"
+
         platform, unique_id = self._parse_url_metadata(expanded_url)
         
         if not platform or not unique_id:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Unrecognized domain or ID for URL: {expanded_url}")
+            logging.info(f"[PARSE] [CorrID: {correlation_id}] Skipped generic non-product URL (no valid identifier): {expanded_url}")
             return
             
-        scraped = scrape_product_details(expanded_url)
-        if not scraped:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] Scraper failed for {expanded_url}")
-            return
+        scraped = scrape_product_details(expanded_url) or {}
             
-        img_url = scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
-        if not img_url:
-            logging.warning(f"[PARSE] [CorrID: {correlation_id}] No product image found. Skipping.")
-            return
+        raw_img = scraped.get("image_url") or scraped.get("img_url") or extracted_data.get("image_url") or message.media_file_id
+        from utils.image_extractor import resolve_best_product_image
+        img_url = resolve_best_product_image(
+            raw_img_url=raw_img,
+            product_url=expanded_url,
+            platform=platform,
+            unique_id=unique_id
+        ) or raw_img
 
-        title = scraped.get("title", "Unknown Product")
-        price = scraped.get("price", 0)
-        mrp = scraped.get("mrp", price)
-        discount = scraped.get("discount", 0)
+        raw_text_clean = (message.raw_text or message.caption or "").strip()
+        first_line = raw_text_clean.split("\n")[0] if raw_text_clean else ""
+        raw_title = scraped.get("title") or extracted_data.get("title") or first_line[:100]
+        
+        from loot_raiders.compliance_guard import clean_retailer_title_artifacts
+        title = clean_retailer_title_artifacts(raw_title) or raw_title
+        
+        price = scraped.get("price") or 0
+        mrp = scraped.get("mrp") or price
+        discount = scraped.get("discount") or (round(((mrp - price) / mrp) * 100, 1) if mrp > price else 0)
         rating = scraped.get("rating", 0)
         reviews = scraped.get("reviews", 0)
         has_bank_offer = scraped.get("has_bank_offer", False)
+
+        # PRE-FLIGHT GUARDRAIL VERIFICATION AUDIT
+        try:
+            from loot_raiders.compliance_guard import check_quality_firewall
+            if not check_quality_firewall(price, title, img_url, is_mirror=True):
+                logging.warning(f"[PRE-FLIGHT GUARDRAIL HALT] Deal '{title}' failed guardrail validation. Skipping post.")
+                return
+        except Exception as guard_err:
+            logging.error(f"[GUARDRAIL ERROR] Validation error for deal '{title}': {guard_err}")
         
         # 5. Intelligent Deduplication & Price-Drop Validation
         # Check if product exists in database to compare against latest price
@@ -260,21 +293,46 @@ class DealMirrorProcessor:
         logging.info(f"[QUEUE] [CorrID: {correlation_id}] Deal alerts enqueued for publishing: {title[:30]}")
 
     def _expand_url_with_retry(self, url: str, correlation_id: str = "") -> str:
+        import urllib.parse
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
+        store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
         expanded = url
+
+        # Fast-path: Check for nested target URLs in query parameters (dl=, url=, dest=, target=, redirect=)
+        try:
+            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+            for param_key in ["dl", "url", "dest", "target", "redirect", "link"]:
+                param_vals = parsed.get(param_key)
+                if param_vals:
+                    val = urllib.parse.unquote(param_vals[0])
+                    if any(d in val.lower() for d in store_domains):
+                        logging.info(f"[PARSE] [CorrID: {correlation_id}] Fast-path extracted target URL from query param '{param_key}': {val}")
+                        return val
+        except Exception:
+            pass
+
         try:
             import httpx
-            with httpx.Client(headers=headers, follow_redirects=True, timeout=5.0) as client:
+            with httpx.Client(headers=headers, follow_redirects=True, timeout=12.0) as client:
                 res = client.head(url)
-                if res.status_code >= 400 or str(res.url) == url:
+                res_url_str = str(res.url) if res.url is not None else ""
+                if res.status_code >= 400 or res_url_str == url or not any(d in res_url_str.lower() for d in store_domains):
                     res = client.get(url)
-                expanded = str(res.url)
+                expanded = str(res.url) if res.url is not None else ""
+                
+                # Check expanded URL query parameters for nested store link
+                parsed = urllib.parse.parse_qs(urllib.parse.urlparse(expanded).query)
+                for param_key in ["dl", "url", "dest", "target", "redirect", "link"]:
+                    param_vals = parsed.get(param_key)
+                    if param_vals:
+                        val = urllib.parse.unquote(param_vals[0])
+                        if any(d in val.lower() for d in store_domains):
+                            logging.info(f"[PARSE] [CorrID: {correlation_id}] Extracted target store URL from redirected query param '{param_key}': {val}")
+                            return val
         except Exception as e:
             logging.warning(f"[PARSE] [CorrID: {correlation_id}] Short link expansion failed for {url}: {e}")
 
-            
         # If it's still a non-store URL, use Playwright to resolve JS redirects
-        store_domains = ["amazon.in", "flipkart.com", "myntra.com", "ajio.com", "meesho.com", "tatacliq.com", "jiomart.com"]
         if not any(d in expanded.lower() for d in store_domains):
             try:
                 from utils.playwright_adapter import get_playwright_driver
@@ -282,7 +340,7 @@ class DealMirrorProcessor:
                 temp_driver = get_playwright_driver(settings)
                 try:
                     temp_driver.get(expanded)
-                    time.sleep(5)  # Wait for JS redirects to settle
+                    time.sleep(3)  # Wait for JS redirects to settle
                     final_url = temp_driver.page.url
                     if any(d in final_url.lower() for d in store_domains):
                         logging.info(f"[PARSE] [CorrID: {correlation_id}] Playwright resolved JS redirect: {url} -> {final_url}")

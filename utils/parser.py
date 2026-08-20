@@ -1,10 +1,80 @@
 import re
 import urllib.parse
 
+ASIN_REGEX = re.compile(r'^[B0-9][A-Z0-9]{9}$')
+
+def is_valid_asin(asin: str) -> bool:
+    """Validates whether a string is a valid 10-character Amazon ASIN."""
+    if not asin or not isinstance(asin, str):
+        return False
+    return bool(ASIN_REGEX.match(asin.strip().upper()))
+
 def extract_amazon_asin(url: str) -> str:
+    """Extracts a single primary Amazon ASIN from standard product URL paths."""
+    if not url:
+        return None
     decoded_url = urllib.parse.unquote(url)
-    match = re.search(r'/(?:dp|gp/product)/([A-Z0-9]{10})', decoded_url)
-    return match.group(1) if match else None
+    match = re.search(r'/(?:dp|gp/product|d|ASIN|product)/([A-Z0-9]{10})(?:[/?&#]|$)', decoded_url, re.IGNORECASE)
+    if match and is_valid_asin(match.group(1)):
+        return match.group(1).upper()
+    
+    # Fallback to query parameter 'asin'
+    try:
+        parsed = urllib.parse.urlparse(decoded_url)
+        params = urllib.parse.parse_qs(parsed.query)
+        for key in ['asin', 'ASIN']:
+            if key in params and params[key]:
+                candidate = params[key][0].strip().upper()
+                if is_valid_asin(candidate):
+                    return candidate
+    except Exception:
+        pass
+    return None
+
+def extract_amazon_asins_from_url(url: str) -> list:
+    """
+    Decomposes multi-ASIN store and search URLs into individual ASINs.
+    Handles /stores/page/preview?asins=ASIN1,ASIN2 and hidden-keywords=ASIN1+|ASIN2.
+    Returns a deduplicated list of valid ASIN strings.
+    """
+    if not url or "amazon" not in url.lower():
+        return []
+        
+    decoded_url = urllib.parse.unquote(url)
+    found_asins = []
+    
+    # 1. Direct path check first
+    direct_asin = extract_amazon_asin(url)
+    if direct_asin:
+        return [direct_asin]
+        
+    # 2. Query parameter checks for multi-ASIN lists
+    try:
+        parsed = urllib.parse.urlparse(decoded_url)
+        params = urllib.parse.parse_qs(parsed.query)
+        
+        # Check 'asins', 'asin', 'hidden-keywords', 'keywords'
+        for param_key in ['asins', 'ASINS', 'asin', 'ASIN', 'hidden-keywords', 'keywords']:
+            param_vals = params.get(param_key, [])
+            for val in param_vals:
+                # Split by comma, pipe, space, or plus
+                raw_tokens = re.split(r'[,\|\s\+]+', val)
+                for token in raw_tokens:
+                    token_clean = token.strip().upper()
+                    if is_valid_asin(token_clean) and token_clean not in found_asins:
+                        found_asins.append(token_clean)
+    except Exception:
+        pass
+        
+    # 3. Regex scan for standard ASIN patterns in query string
+    if not found_asins:
+        candidates = re.findall(r'\b(B[0-9A-Z]{9})\b', decoded_url)
+        for c in candidates:
+            c_upper = c.upper()
+            if is_valid_asin(c_upper) and c_upper not in found_asins:
+                found_asins.append(c_upper)
+                
+    return found_asins
 
 def extract_flipkart_pid(url: str) -> str:
     parsed = urllib.parse.urlparse(url)
