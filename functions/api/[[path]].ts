@@ -142,7 +142,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // 3. Resolve candidate backend targets
   const ACTIVE_HTTP2_TUNNEL = "https://logged-vat-leg-males.trycloudflare.com";
-  const candidateTargets: string[] = [];
+  const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
     const custom = env.BACKEND_API_URL.trim().replace(/\/+$/, "");
@@ -155,9 +155,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (!candidateTargets.includes(custom)) {
       candidateTargets.push(custom);
     }
-  }
-  if (!candidateTargets.includes(ACTIVE_HTTP2_TUNNEL)) {
-    candidateTargets.push(ACTIVE_HTTP2_TUNNEL);
   }
 
   // 4. Cache incoming request body once for safe retries
