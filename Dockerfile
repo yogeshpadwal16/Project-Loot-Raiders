@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 5555
 
 # Run the master engine
-CMD ["python", "loot_scraper.py"]
+CMD ["xvfb-run", "--server-args=-screen 0 1280x720x24", "python", "loot_scraper.py"]

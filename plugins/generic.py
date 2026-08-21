@@ -756,18 +756,28 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                 
             soup = BeautifulSoup(r.text, "html.parser")
             script_tag = None
+            split_key = None
             for s in soup.find_all("script"):
-                if s.string and "window.__myx__" in s.string:
-                    script_tag = s.string
-                    break
+                if s.string:
+                    if "window.__myx__ =" in s.string:
+                        script_tag = s.string
+                        split_key = "window.__myx__ ="
+                        break
+                    elif "window.__myx =" in s.string:
+                        script_tag = s.string
+                        split_key = "window.__myx ="
+                        break
                     
             products = []
-            if script_tag:
+            if script_tag and split_key:
                 try:
-                    json_text = script_tag.split("window.__myx__ =")[1].strip().rstrip(';')
-                    if ";" in json_text:
-                        json_text = json_text.split(";")[0].strip()
-                    data = json.loads(json_text)
+                    json_text = script_tag.split(split_key)[1].strip()
+                    start_idx = json_text.find('{')
+                    if start_idx != -1:
+                        decoder = json.JSONDecoder()
+                        data, _ = decoder.raw_decode(json_text[start_idx:])
+                    else:
+                        data = {}
                     
                     def find_products_in_json(obj):
                         if isinstance(obj, dict):
@@ -820,7 +830,7 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                                 if disc_match:
                                     discount = float(disc_match.group(1))
                                     
-                        if mrp > price and discount == 0.0:
+                        if mrp > price and (discount == 0.0 or discount > 100.0):
                             discount = ((mrp - price) / mrp) * 100
                             
                         img_url = p.get("searchImage") or p.get("image")
@@ -932,172 +942,138 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
 
     def _extract_meesho_deals_sync(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         deals = []
+        browser = None
+        playwright_instance = None
         try:
-            from curl_cffi import requests
-            from bs4 import BeautifulSoup
-            import json
+            from rebrowser_playwright.sync_api import sync_playwright
             import re
+            import time
+
+            logging.info(f"[Meesho Scraper] Launching headed Playwright driver to render Meesho page: {config['url']}")
             
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "Accept-Language": "en-US,en;q=0.9",
-                "Referer": "https://www.meesho.com/"
-            }
-            logging.info(f"[Meesho Scraper] Fetching Meesho URL via curl_cffi: {config['url']}")
-            r = requests.get(config['url'], headers=headers, impersonate="chrome110", timeout=20)
+            playwright_instance = sync_playwright().start()
+            browser = playwright_instance.chromium.launch(
+                headless=False,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-blink-features=AutomationControlled"
+                ]
+            )
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                viewport={"width": 1280, "height": 720}
+            )
+            page = context.new_page()
             
-            if r.status_code != 200:
-                logging.error(f"[Meesho Scraper] Page fetch failed with status: {r.status_code}")
-                return []
-                
-            soup = BeautifulSoup(r.text, "html.parser")
-            script_tag = soup.find("script", id="__NEXT_DATA__")
+            # Evade detection
+            page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             
-            products = []
-            if script_tag and script_tag.string:
+            # Go to meesho search/offers URL
+            page.goto(config['url'], timeout=45000)
+            
+            # Wait for hydration
+            time.sleep(5)
+            
+            # Scroll down to load more products
+            page.evaluate("window.scrollTo(0, 800)")
+            time.sleep(2)
+            
+            # Select product card elements
+            cards = page.locator("a[href*='/p/']")
+            count = cards.count()
+            logging.info(f"[Meesho Scraper] Rendered page, found {count} product card link elements.")
+            
+            for i in range(count):
                 try:
-                    data = json.loads(script_tag.string)
-                    def find_products_in_json(obj):
-                        if isinstance(obj, dict):
-                            for k, v in obj.items():
-                                if k == "products" and isinstance(v, list):
-                                    return v
-                                if k == "catalog" and isinstance(v, dict) and "products" in v:
-                                    return v["products"]
-                                if k == "searchResults" and isinstance(v, dict) and "products" in v:
-                                    return v["products"]
-                                res = find_products_in_json(v)
-                                if res:
-                                    return res
-                        elif isinstance(obj, list):
-                            for item in obj:
-                                res = find_products_in_json(item)
-                                if res:
-                                    return res
-                        return None
+                    card = cards.nth(i)
+                    href = card.get_attribute("href")
+                    if not href:
+                        continue
+                    prod_url = "https://www.meesho.com" + href if not href.startswith("http") else href
                     
-                    products = find_products_in_json(data)
-                except Exception as parse_err:
-                    logging.error(f"[Meesho Scraper] JSON parsing failed: {parse_err}")
-            
-            if products:
-                logging.info(f"[Meesho Scraper] Found {len(products)} products in JSON")
-                for p in products:
-                    try:
-                        prod_id = p.get("productId") or p.get("id") or p.get("product_id")
-                        if not prod_id:
-                            continue
+                    id_match = re.search(r'/p/([a-zA-Z0-9]+)', href)
+                    prod_id = id_match.group(1) if id_match else None
+                    if not prod_id:
+                        continue
                         
-                        title = p.get("title") or p.get("name") or p.get("productName", "")
-                        price_val = p.get("price") or p.get("discountedPrice")
-                        mrp_val = p.get("mrp") or p.get("originalPrice") or price_val
+                    title = ""
+                    img_el = card.locator("img")
+                    if img_el.count() > 0:
+                        title = img_el.first.get_attribute("alt") or ""
+                    
+                    if not title:
+                        title_el = card.locator("p[class*='ProductTitle']")
+                        if title_el.count() > 0:
+                            title = title_el.first.inner_text()
+                            
+                    title = title.strip()
+                    if not title:
+                        continue
                         
-                        if not price_val:
-                            continue
+                    price = 0
+                    price_el = card.locator("h5")
+                    if price_el.count() > 0:
+                        price_text = price_el.first.inner_text()
+                        price_match = re.search(r'₹\s*([0-9,]+)', price_text)
+                        if price_match:
+                            price = int(price_match.group(1).replace(",", ""))
                             
-                        price = int(price_val)
-                        mrp = int(mrp_val)
+                    if not price:
+                        continue
                         
-                        discount = 0.0
-                        discount_val = p.get("discount")
-                        if discount_val:
-                            if isinstance(discount_val, (int, float)):
-                                discount = float(discount_val)
-                            else:
-                                disc_match = re.search(r'(\d+)', str(discount_val))
-                                if disc_match:
-                                    discount = float(disc_match.group(1))
-                                    
-                        if mrp > price and discount == 0.0:
-                            discount = ((mrp - price) / mrp) * 100
+                    mrp = price
+                    mrp_el = card.locator("p[class*='drnSnt'], p[class*='OriginalPrice'], del")
+                    if mrp_el.count() > 0:
+                        mrp_text = mrp_el.first.inner_text()
+                        mrp_match = re.search(r'₹\s*([0-9,]+)', mrp_text)
+                        if mrp_match:
+                            mrp = int(mrp_match.group(1).replace(",", ""))
+                    else:
+                        all_text = card.inner_text()
+                        prices_found = re.findall(r'₹\s*([0-9,]+)', all_text)
+                        if len(prices_found) > 1:
+                            mrp = int(prices_found[1].replace(",", ""))
                             
-                        img_url = p.get("image") or p.get("images", [None])[0] or p.get("searchImage")
-                        if isinstance(img_url, dict):
-                            img_url = img_url.get("url") or img_url.get("src")
-                            
-                        prod_url = p.get("landingPageUrl") or p.get("url", "")
-                        if prod_url and not prod_url.startswith("http"):
-                            prod_url = "https://www.meesho.com/" + prod_url.lstrip("/")
-                        else:
-                            prod_url = f"https://www.meesho.com/p/{prod_id}"
-                            
-                        min_discount = settings.get("min_discount", 30.0)
-                        if min_discount <= discount <= 98.0 and len(title) > 5:
-                            deals.append({
-                                "id": f"{self._platform_id}_{prod_id}",
-                                "title": title,
-                                "price": price,
-                                "mrp": mrp,
-                                "discount": round(discount, 2),
-                                "image_url": clean_and_upgrade_image_url(img_url),
-                                "url": prod_url,
-                                "is_lightning": False
-                            })
-                    except Exception as card_err:
-                        pass
-            else:
-                logging.info("[Meesho Scraper] Falling back to DOM Selector parsing")
-                cards = soup.select(config.get('card_selector', "a[href*='/p/']"))
-                for card in cards:
-                    try:
-                        href = card.get("href")
-                        if href and not href.startswith("http"):
-                            prod_url = "https://www.meesho.com" + href
-                        else:
-                            prod_url = href
-                            
-                        prod_id = None
-                        if href:
-                            id_match = re.search(r'/p/([a-zA-Z0-9]+)', href)
-                            if id_match:
-                                prod_id = id_match.group(1)
-                        if not prod_id:
-                            continue
-                            
-                        title_el = card.select_one(config.get('title_selector', "p[class*='ProductTitle']"))
-                        title = title_el.text.strip() if title_el else ""
+                    if mrp < price:
+                        mrp = price
                         
-                        price_el = card.select_one("[class*='Price'], p[class*='Price'], span[class*='Price']")
-                        price_text = price_el.text if price_el else ""
-                        price_val = None
-                        if price_text:
-                            price_match = re.search(r'₹\s*([0-9,]+)', price_text)
-                            if price_match:
-                                price_val = int(price_match.group(1).replace(",", ""))
-                                
-                        mrp_el = card.select_one("del, [class*='OriginalPrice'], [style*='line-through']")
-                        mrp_text = mrp_el.text if mrp_el else ""
-                        mrp_val = None
-                        if mrp_text:
-                            mrp_match = re.search(r'₹\s*([0-9,]+)', mrp_text)
-                            if mrp_match:
-                                mrp_val = int(mrp_match.group(1).replace(",", ""))
-                                
-                        if not price_val:
-                            continue
-                        if not mrp_val:
-                            mrp_val = int(price_val * 1.3)
-                            
-                        img_el = card.select_one("img")
-                        img_url = img_el.get("src") if img_el else None
+                    if mrp == price:
+                        mrp = int(price * 1.3)
                         
-                        discount = ((mrp_val - price_val) / mrp_val) * 100
+                    img_url = ""
+                    if img_el.count() > 0:
+                        img_url = img_el.first.get_attribute("src") or ""
                         
-                        min_discount = settings.get("min_discount", 30.0)
-                        if min_discount <= discount <= 98.0 and len(title) > 5:
-                            deals.append({
-                                "id": f"{self._platform_id}_{prod_id}",
-                                "title": title,
-                                "price": price_val,
-                                "mrp": mrp_val,
-                                "discount": round(discount, 2),
-                                "image_url": clean_and_upgrade_image_url(img_url),
-                                "url": prod_url,
-                                "is_lightning": False
-                            })
-                    except Exception as card_err:
-                        pass
+                    discount = 0.0
+                    if mrp > price:
+                        discount = ((mrp - price) / mrp) * 100
+                        
+                    min_discount = settings.get("min_discount", 30.0)
+                    if min_discount <= discount <= 98.0 and len(title) > 5:
+                        deals.append({
+                            "id": f"{self._platform_id}_{prod_id}",
+                            "title": title,
+                            "price": price,
+                            "mrp": mrp,
+                            "discount": round(discount, 2),
+                            "image_url": clean_and_upgrade_image_url(img_url),
+                            "url": prod_url,
+                            "is_lightning": False
+                        })
+                except Exception as card_err:
+                    pass
         except Exception as e:
             logging.error(f"[Meesho Scraper] Error fetching Meesho deals: {e}", exc_info=True)
+        finally:
+            if browser:
+                try:
+                    browser.close()
+                except Exception:
+                    pass
+            if playwright_instance:
+                try:
+                    playwright_instance.stop()
+                except Exception:
+                    pass
         return deals

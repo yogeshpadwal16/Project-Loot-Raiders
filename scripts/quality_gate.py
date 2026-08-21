@@ -66,7 +66,7 @@ def run_security_audit():
 
     for root, dirs, files in os.walk(PROJECT_ROOT):
         # Exclude directories
-        dirs[:] = [d for d in dirs if d not in ('.git', 'venv', '.venv', '__pycache__', 'chroma_db')]
+        dirs[:] = [d for d in dirs if d not in ('.git', 'venv', '.venv', '__pycache__', 'chroma_db', 'scratch', 'OmniRoute', 'node_modules')]
         for file in files:
             if file.endswith(('.py', '.json', '.yml', '.yaml', '.sh', '.ps1', '.md', '.txt')):
                 # Skip .env, settings.json, and test mock files

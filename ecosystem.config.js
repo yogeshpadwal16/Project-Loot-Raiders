@@ -2,9 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'loot-raiders',
-      script: 'loot_scraper.py',
+      script: 'scripts/start_loot_scraper.sh',
       cwd: '/var/www/loot-raiders',
-      interpreter: '/var/www/loot-raiders/venv/bin/python', // Uses the virtual environment python interpreter
       autorestart: true,
       watch: false,
       max_memory_restart: '1200M',      // Automatically restart if memory exceeds 1.2GB (prevents VPS freeze due to leaks)
