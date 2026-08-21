@@ -140,6 +140,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
+  if (!isPublicDeals) {
+    return new Response(JSON.stringify({
+      error: "Gateway Communication Error",
+      message: "Please connect directly to the secure tunnel.",
+      status: "gateway_error"
+    }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   // 3. Resolve candidate backend targets
   const ACTIVE_HTTP2_TUNNEL = "https://logged-vat-leg-males.trycloudflare.com";
   const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
