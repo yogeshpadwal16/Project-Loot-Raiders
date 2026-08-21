@@ -251,6 +251,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   return new Response(JSON.stringify({
     error: isTimeout ? "Gateway Timeout" : "Gateway Communication Error",
     message: message,
+    details: err ? String(err.message || err) : "Unknown error",
+    stack: err ? String(err.stack || "") : "",
     status: "gateway_error"
   }), {
     status: status,
