@@ -18,7 +18,7 @@ import {
   ProcessDealPayload
 } from '../types/api';
 
-const ACTIVE_TUNNEL_FALLBACK = 'https://standard-license-arabic-shaft.trycloudflare.com';
+const ACTIVE_TUNNEL_FALLBACK = 'https://logged-vat-leg-males.trycloudflare.com';
 
 /**
  * Resilient multi-target fetch utility.
