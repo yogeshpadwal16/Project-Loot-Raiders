@@ -187,7 +187,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   });
 
-  const timeoutMs = isPublicDeals ? 2500 : 15000;
+  const timeoutMs = isPublicDeals ? 10000 : 15000;
   let lastError: any = null;
 
   // 6. Iterate through candidate targets with failover
