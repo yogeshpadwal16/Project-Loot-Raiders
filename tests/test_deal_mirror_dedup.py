@@ -148,7 +148,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
     @patch("deal_engine.mirroring.processor.scrape_product_details")
     @patch("deal_engine.mirroring.processor.DealMirrorProcessor._expand_url_with_retry")
     def test_03_existing_product_price_drop_accepted(self, mock_expand, mock_scrape, mock_score, mock_save, mock_enqueue):
-        """Scenario 3: Existing product (Rs. 1000) with a lower price (Rs. 900) MUST be accepted."""
+        """Scenario 3: Existing product (Rs. 1000) with a lower price (Rs. 900) MUST be rejected under strict rules."""
         self._seed_product("B0PRICEDRP", "Gaming Keyboard", "https://www.amazon.in/dp/B0PRICEDRP", initial_price=1000)
 
         mock_expand.return_value = "https://www.amazon.in/dp/B0PRICEDRP"
@@ -178,11 +178,8 @@ class TestDealMirrorDeduplication(unittest.TestCase):
             db=self.db
         )
 
-        # Must be accepted and enqueued
-        mock_enqueue.assert_called_once()
-        call_kwargs = mock_enqueue.call_args.kwargs
-        self.assertEqual(call_kwargs["unique_id"], "B0PRICEDRP")
-        self.assertEqual(call_kwargs["price"], 900)
+        # Must NOT be enqueued because the product is already posted
+        mock_enqueue.assert_not_called()
 
     @patch("deal_engine.notifier.enqueue_alert")
     @patch("deal_engine.mirroring.processor.save_deal_to_db")
@@ -190,7 +187,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
     @patch("deal_engine.mirroring.processor.scrape_product_details")
     @patch("deal_engine.mirroring.processor.DealMirrorProcessor._expand_url_with_retry")
     def test_04_multi_point_history_price_drop_accepted(self, mock_expand, mock_scrape, mock_score, mock_save, mock_enqueue):
-        """Scenario 4: History Rs. 1200, Rs. 1000 -> Incoming Rs. 900 MUST be accepted."""
+        """Scenario 4: History Rs. 1200, Rs. 1000 -> Incoming Rs. 900 must be rejected."""
         now = time.time()
         # Seed older price Rs. 1200 (t = now - 100)
         self._seed_product("B0HISTMLT1", "USB Hub", "https://www.amazon.in/dp/B0HISTMLT1", initial_price=1200, timestamp=now - 100)
@@ -234,8 +231,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
             db=self.db
         )
 
-        mock_enqueue.assert_called_once()
-        self.assertEqual(mock_enqueue.call_args.kwargs["price"], 900)
+        mock_enqueue.assert_not_called()
 
     @patch("deal_engine.notifier.enqueue_alert")
     @patch("deal_engine.mirroring.processor.scrape_product_details")
@@ -325,7 +321,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
     @patch("deal_engine.mirroring.processor.scrape_product_details")
     @patch("deal_engine.mirroring.processor.DealMirrorProcessor._expand_url_with_retry")
     def test_07_existing_product_no_price_history_accepted(self, mock_expand, mock_scrape, mock_score, mock_save, mock_enqueue):
-        """Scenario 7: Product exists in DB with no PriceHistory records -> must be accepted."""
+        """Scenario 7: Product exists in DB with no PriceHistory records -> must be rejected under strict rules."""
         # Seed product with NO price history
         self._seed_product("B0NOHIST01", "Laptop Stand", "https://www.amazon.in/dp/B0NOHIST01", create_price_history=False)
 
@@ -355,9 +351,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
             db=self.db
         )
 
-        mock_enqueue.assert_called_once()
-        self.assertEqual(mock_enqueue.call_args.kwargs["unique_id"], "B0NOHIST01")
-        self.assertEqual(mock_enqueue.call_args.kwargs["price"], 599)
+        mock_enqueue.assert_not_called()
 
     @patch("deal_engine.notifier.enqueue_alert")
     @patch("deal_engine.mirroring.processor.save_deal_to_db")
@@ -365,7 +359,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
     @patch("deal_engine.mirroring.processor.scrape_product_details")
     @patch("deal_engine.mirroring.processor.DealMirrorProcessor._expand_url_with_retry")
     def test_08_canonical_url_match_price_drop_accepted(self, mock_expand, mock_scrape, mock_score, mock_save, mock_enqueue):
-        """Scenario 8: Matching via canonical URL with price drop must be accepted."""
+        """Scenario 8: Matching via canonical URL with price drop must be rejected under strict rules."""
         # Seed product with full canonical URL
         self._seed_product("B0CANONMT1", "Power Bank", "https://www.amazon.in/dp/B0CANONMT1", initial_price=1200)
 
@@ -396,9 +390,7 @@ class TestDealMirrorDeduplication(unittest.TestCase):
             db=self.db
         )
 
-        mock_enqueue.assert_called_once()
-        self.assertEqual(mock_enqueue.call_args.kwargs["unique_id"], "B0CANONMT1")
-        self.assertEqual(mock_enqueue.call_args.kwargs["price"], 899)
+        mock_enqueue.assert_not_called()
 
 
 if __name__ == "__main__":

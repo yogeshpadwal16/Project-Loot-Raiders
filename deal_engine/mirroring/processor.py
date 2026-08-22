@@ -212,33 +212,26 @@ class DealMirrorProcessor:
         except Exception as guard_err:
             logging.error(f"[GUARDRAIL ERROR] Validation error for deal '{title}': {guard_err}")
         
-        # 5. Intelligent Deduplication & Price-Drop Validation
-        # Check if product exists in database to compare against latest price
-        matched_product_id = None
-        prod = None
+        # 5. STRICT "SINGLE PRODUCT DEDUPLICATION" ONLY
+        product_already_posted = False
         if platform and unique_id:
             from knowledge_base.models import Product
             prod = db.query(Product).filter_by(id=unique_id).first()
+            if prod:
+                product_already_posted = True
 
-        if not prod and expanded_url:
+        if not product_already_posted and expanded_url:
             from utils.deduplicator import get_canonical_url
             canon_url = get_canonical_url(expanded_url)
             if canon_url:
                 from knowledge_base.models import Product
                 prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
+                if prod:
+                    product_already_posted = True
 
-        if prod:
-            matched_product_id = prod.id
-        # If product exists in database, verify whether this is a genuine price drop
-        if matched_product_id:
-            from knowledge_base.models import PriceHistory
-            latest = db.query(PriceHistory).filter_by(product_id=matched_product_id).order_by(PriceHistory.timestamp.desc()).first()
-            if latest:
-                if price >= latest.price:
-                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({matched_product_id}) price has not dropped (Current: Rs.{price}, Previous: Rs.{latest.price}).")
-                    return
-                else:
-                    logging.info(f"[DEDUP] [CorrID: {correlation_id}] Accepted price drop: Product '{title[:30]}' ({matched_product_id}) dropped from Rs.{latest.price} to Rs.{price}.")
+        if product_already_posted:
+            logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({unique_id}) was already posted to channel.")
+            return
         
         # 6. Check price trends
         is_verified_low = True
