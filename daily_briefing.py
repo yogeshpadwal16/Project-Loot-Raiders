@@ -116,54 +116,45 @@ async def fetch_sindhudurg_headlines() -> list:
     Duplicates are filtered using the database posted_briefings table.
     """
     headlines = []
-    seen_urls = set()
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
     
     async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
-        # 1. FETCH GOOGLE NEWS SEARCH RSS FEED FOR SINDHUDURG SITE:ESAKAL.COM IN MARATHI
+        # 1. FETCH GOOGLE NEWS RSS FEED FOR SINDHUDURG MARATHI NEWS (MULTI-SOURCE)
         try:
-            url = "https://news.google.com/rss/search?q=sindhudurg+site:esakal.com&hl=mr&gl=IN&ceid=IN:mr"
+            url = "https://news.google.com/rss/search?q=sindhudurg&hl=mr&gl=IN&ceid=IN:mr"
             res_rss = await client.get(url)
             if res_rss.status_code == 200:
                 feed = feedparser.parse(res_rss.text)
                 for entry in feed.entries:
                     title = entry.title.strip()
-                    # Clean publisher suffix (e.g. " - Agrowon", " - Esakal")
-                    title = re.sub(r'\s*-\s*(?:Agrowon|Esakal|Sakal|सकाळ|Agrowon - Sakal|Saam TV)\s*$', '', title, flags=re.IGNORECASE).strip()
+                    # Clean publisher suffixes
+                    title = re.sub(r'\s*-\s*(?:Agrowon|Sakal|सकाळ|Pudhari|पुढारी|Loksatta|लोकसत्ता|Maharashtra Times|महाराष्ट्र टाईम्स|Saam TV|ABP Majha|TV9 Marathi)\s*$', '', title, flags=re.IGNORECASE).strip()
                     # Clean prefix/suffixes (e.g. "Sindhudurg : ")
                     title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
-                    # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
+                    # Strip English title tags / subtitles
                     title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
                     
-                    if title and title not in headlines:
+                    if title and title not in headlines and "esakal" not in title.lower() and "esakal.com" not in title.lower():
                         headlines.append(title)
         except Exception as e:
             logger.warning(f"[Briefing Scraper] RSS feed fetching failed: {e}")
 
-        # 2. FALLBACK TO TOPIC SCRAPE (If RSS returned nothing)
-        if not headlines:
+        # 2. FALLBACK TO PUDHARI SINDHUDURG MARATHI RSS (If primary RSS returned < 5 headlines)
+        if len(headlines) < 5:
             try:
-                res_topic = await client.get("https://www.esakal.com/topic/sindhudurg")
-                if res_topic.status_code == 200:
-                    soup = BeautifulSoup(res_topic.text, "html.parser")
-                    for a in soup.find_all("a"):
-                        href = a.get("href")
-                        if href and "sindhudurg" in href.lower() and a.text.strip():
-                            # Exclude duplicates in same run
-                            if href in seen_urls:
-                                continue
-                            seen_urls.add(href)
-                            
-                            title = a.text.strip()
-                            # Clean prefix/suffixes (e.g. "Sindhudurg : ")
-                            title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
-                            # Strip English title tags / subtitles (e.g. "Snake in Tourist Car : ")
-                            title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
-                            
-                            if title not in headlines:
-                                headlines.append(title)
+                fallback_url = "https://news.google.com/rss/search?q=sindhudurg+pudhari&hl=mr&gl=IN&ceid=IN:mr"
+                res_fb = await client.get(fallback_url)
+                if res_fb.status_code == 200:
+                    feed_fb = feedparser.parse(res_fb.text)
+                    for entry in feed_fb.entries:
+                        title = entry.title.strip()
+                        title = re.sub(r'\s*-\s*(?:Pudhari|पुढारी|Saam TV|ABP Majha)\s*$', '', title, flags=re.IGNORECASE).strip()
+                        title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
+                        title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
+                        if title and title not in headlines and "esakal" not in title.lower() and "esakal.com" not in title.lower():
+                            headlines.append(title)
             except Exception as e:
-                logger.warning(f"[Briefing Scraper] Topic Page scraping failed: {e}")
+                logger.warning(f"[Briefing Scraper] Fallback RSS scraping failed: {e}")
                 
     return headlines
 
