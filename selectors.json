@@ -29,31 +29,31 @@
     },
     "flipkart_sitewide_offers": {
         "url": "https://www.flipkart.com/search?q=offers&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1, div[class*='KzDlHZ']",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img.DCY me, img._2r_T1I, img"
     },
     "flipkart_clearance_master_feed": {
         "url": "https://www.flipkart.com/search?q=clearance sale",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1, div[class*='KzDlHZ']",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img.DCY me, img._2r_T1I, img"
     },
     "flipkart_electronics_deals": {
         "url": "https://www.flipkart.com/search?q=electronics&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img"
     },
     "flipkart_appliances_deals": {
         "url": "https://www.flipkart.com/search?q=appliances&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore",
-        "card_selector": "div[style*='flex'], div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP",
-        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div[data-id], div._1AtVbE, div.cPHR1N, div.slAVV4, div._1sdMkc, div._4ddWXP, div.DOjaG1, div._75nlfW, div[class*='cPHR1N'], div[class*='slAVV4'], div[style*='flex']",
+        "title_selector": "a, div.KzDlHZ, a.IRpwTa, a.wjcEwN, div._2WkVR1",
+        "link_selector": "a[href*='/p/'], a[href*='pid='], a",
+        "image_selector": "img._396cs4, img"
     },
     "myntra_deals": {
         "url": "https://www.myntra.com/deals?f=discount%3A50.0",
