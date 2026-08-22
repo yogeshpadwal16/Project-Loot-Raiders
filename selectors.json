@@ -57,17 +57,17 @@
     },
     "myntra_deals": {
         "url": "https://www.myntra.com/deals?f=discount%3A50.0",
-        "card_selector": "li.product-base",
-        "title_selector": "h4.product-product, h3.product-brand",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "li.product-base, div.product-base, div.product-tuple-image, section[class*='product']",
+        "title_selector": "h4.product-product, h3.product-brand, div.product-product, h4[class*='product']",
+        "link_selector": "a[href*='/buy/'], a",
+        "image_selector": "img.product-thumb, img"
     },
     "ajio_deals": {
         "url": "https://www.ajio.com/s/discount-50-percent-and-above",
-        "card_selector": "div.item",
-        "title_selector": "div.name",
-        "link_selector": "a",
-        "image_selector": "img"
+        "card_selector": "div.item, div.riltrx-card, div[class*='item']",
+        "title_selector": "div.name, div.brand, [class*='name']",
+        "link_selector": "a[href*='/p/'], a",
+        "image_selector": "img.riltrx-img, img"
     },
     "meesho_deals": {
         "url": "https://www.meesho.com/search?q=offers",
