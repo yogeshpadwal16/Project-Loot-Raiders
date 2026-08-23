@@ -2,12 +2,11 @@ module.exports = {
   apps: [
     {
       name: 'loot-raiders',
-      script: 'loot_scraper.py',
+      script: 'scripts/start_loot_scraper.sh',
       cwd: '/var/www/loot-raiders',
-      interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
-      max_memory_restart: '1000M',
+      max_memory_restart: '1200M',
       restart_delay: 5000,
       cron_restart: '0 4 * * *',
       env: {
@@ -19,7 +18,6 @@ module.exports = {
       name: 'loot-raiders-mirror',
       script: 'deal_engine/channel_mirror.py',
       cwd: '/var/www/loot-raiders',
-      interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
       max_memory_restart: '500M',
@@ -34,7 +32,6 @@ module.exports = {
       name: 'loot-raiders-backup',
       script: 'scripts/backup_db.py',
       cwd: '/var/www/loot-raiders',
-      interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: false,
       cron_restart: '0 */12 * * *',
       env: {
@@ -46,7 +43,6 @@ module.exports = {
       name: 'loot-raiders-briefing',
       script: 'main_briefing.py',
       cwd: '/var/www/loot-raiders',
-      interpreter: '/var/www/loot-raiders/venv/bin/python',
       autorestart: true,
       watch: false,
       max_memory_restart: '400M',

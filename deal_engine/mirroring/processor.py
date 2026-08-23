@@ -219,7 +219,7 @@ class DealMirrorProcessor:
             prod = db.query(Product).filter_by(id=unique_id).first()
             if prod:
                 product_already_posted = True
-                
+
         if not product_already_posted and expanded_url:
             from utils.deduplicator import get_canonical_url
             canon_url = get_canonical_url(expanded_url)
@@ -228,7 +228,7 @@ class DealMirrorProcessor:
                 prod = db.query(Product).filter(Product.url.like(f"%{canon_url}%")).first()
                 if prod:
                     product_already_posted = True
-        
+
         if product_already_posted:
             logging.info(f"[DEDUP] [CorrID: {correlation_id}] Skipping duplicate: Product '{title[:30]}' ({unique_id}) was already posted to channel.")
             return

@@ -140,8 +140,19 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
+  if (!isPublicDeals) {
+    return new Response(JSON.stringify({
+      error: "Gateway Communication Error",
+      message: "Please connect directly to the secure tunnel.",
+      status: "gateway_error"
+    }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
   // 3. Resolve candidate backend targets
-  const ACTIVE_HTTP2_TUNNEL = "https://les-tribe-margin-side.trycloudflare.com";
+  const ACTIVE_HTTP2_TUNNEL = "https://logged-vat-leg-males.trycloudflare.com";
   const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
@@ -176,7 +187,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   });
 
-  const timeoutMs = isPublicDeals ? 2500 : 15000;
+  const timeoutMs = isPublicDeals ? 10000 : 15000;
   let lastError: any = null;
 
   // 6. Iterate through candidate targets with failover
@@ -248,6 +259,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   return new Response(JSON.stringify({
     error: isTimeout ? "Gateway Timeout" : "Gateway Communication Error",
     message: message,
+    details: err ? String(err.message || err) : "Unknown error",
+    stack: err ? String(err.stack || "") : "",
     status: "gateway_error"
   }), {
     status: status,

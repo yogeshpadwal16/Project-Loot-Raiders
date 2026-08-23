@@ -52,6 +52,7 @@ async def process_deal_job(job_payload: Dict[str, Any]) -> Dict[str, Any]:
 
     # Step 5: Pre-publish Live Scraping Check
     scraped_data = await scrape_product_live_async(final_url, timeout=10.0)
+    scraped_data = scraped_data or {}
 
     # Step 6: Multi-Tier Monetization
     monetized_url, platform_name, auto_cart_url = monetize_url(final_url, platform_hint=platform)

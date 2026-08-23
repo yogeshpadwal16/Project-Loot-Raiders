@@ -29,7 +29,7 @@ def format_e164_phone(phone: Optional[str]) -> str:
     Normalizes Indian mobile numbers (10 digits) to +91XXXXXXXXXX.
     """
     if not phone or not isinstance(phone, str):
-        return "+917302427167"
+        return "+910000000000"
 
     clean = re.sub(r'[\s\-\(\)\.]', '', phone.strip())
 
@@ -45,8 +45,16 @@ def format_e164_phone(phone: Optional[str]) -> str:
     if clean.isdigit() and 10 <= len(clean) <= 15:
         return f"+{clean}"
 
-    return "+917302427167"
+    return "+910000000000"
 
+
+
+# Secure dynamically-generated fallback credentials on module load
+# to prevent unauthorized access if not configured in environment/settings.
+_FALLBACK_PASS = secrets.token_hex(32)
+_FALLBACK_USER = "admin"
+_FALLBACK_TOKEN = secrets.token_hex(32)
+_FALLBACK_MOBILE = "+910000000000"
 
 def get_owner_credentials() -> Tuple[str, str, str, str]:
     """
@@ -54,18 +62,18 @@ def get_owner_credentials() -> Tuple[str, str, str, str]:
     Returns (username, password, session_token, owner_mobile).
     """
     settings = load_settings()
-    env_user = (os.environ.get("DASHBOARD_USERNAME") or settings.get("dashboard_username") or "yogeshpadwal16").strip().lower()
-    env_pass = (os.environ.get("DASHBOARD_PASSWORD") or settings.get("dashboard_password") or "Vihan@143").strip()
-    env_token = (os.environ.get("DASHBOARD_SESSION_TOKEN") or settings.get("dashboard_session_token") or "admin_session_key_default").strip()
-    raw_mobile = (os.environ.get("OWNER_MOBILE_NUMBER") or settings.get("owner_mobile_number") or "+917302427167").strip()
+    env_user = (os.environ.get("DASHBOARD_USERNAME") or settings.get("dashboard_username") or _FALLBACK_USER).strip().lower()
+    env_pass = (os.environ.get("DASHBOARD_PASSWORD") or settings.get("dashboard_password") or _FALLBACK_PASS).strip()
+    env_token = (os.environ.get("DASHBOARD_SESSION_TOKEN") or settings.get("dashboard_session_token") or _FALLBACK_TOKEN).strip()
+    raw_mobile = (os.environ.get("OWNER_MOBILE_NUMBER") or settings.get("owner_mobile_number") or _FALLBACK_MOBILE).strip()
     owner_mobile = format_e164_phone(raw_mobile)
     return env_user, env_pass, env_token, owner_mobile
 
 
 def mask_mobile_number(mobile: str) -> str:
-    """Masks a phone number securely (e.g., +917302427167 -> +91 ******7167)."""
+    """Masks a phone number securely (e.g., +919876543210 -> +91 ******3210)."""
     if not mobile:
-        return "+91 ******7167"
+        return "+91 ******0000"
     clean = mobile.strip()
     if len(clean) >= 10:
         prefix = clean[:3] if clean.startswith("+") else "+91"

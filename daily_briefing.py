@@ -116,7 +116,6 @@ async def fetch_sindhudurg_headlines() -> list:
     Duplicates are filtered using the database posted_briefings table.
     """
     headlines = []
-    seen_urls = set()
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"}
     
     async with httpx.AsyncClient(timeout=10.0, headers=headers) as client:
@@ -135,7 +134,7 @@ async def fetch_sindhudurg_headlines() -> list:
                     # Strip English title tags / subtitles
                     title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
                     
-                    if title and title not in headlines and "esakal.com" not in title.lower():
+                    if title and title not in headlines and "esakal" not in title.lower() and "esakal.com" not in title.lower():
                         headlines.append(title)
         except Exception as e:
             logger.warning(f"[Briefing Scraper] RSS feed fetching failed: {e}")
@@ -152,7 +151,7 @@ async def fetch_sindhudurg_headlines() -> list:
                         title = re.sub(r'\s*-\s*(?:Pudhari|पुढारी|Saam TV|ABP Majha)\s*$', '', title, flags=re.IGNORECASE).strip()
                         title = re.sub(r'^(?:sindhudurg|sinhudurg)\s*:\s*', '', title, flags=re.IGNORECASE).strip()
                         title = re.sub(r'^[A-Za-z0-9\s\'\&\-\:\,\(\)]+\s*:\s*(?=[\u0900-\u097F])', '', title).strip()
-                        if title and title not in headlines and "esakal.com" not in title.lower():
+                        if title and title not in headlines and "esakal" not in title.lower() and "esakal.com" not in title.lower():
                             headlines.append(title)
             except Exception as e:
                 logger.warning(f"[Briefing Scraper] Fallback RSS scraping failed: {e}")
@@ -300,8 +299,8 @@ async def build_morning_news_post() -> tuple:
     # 3. Fetch rates
     rates = await fetch_live_rates()
     
-    # Header: 📰 <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>
-    header = "📰 <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>\n"
+    # Header: <b>लूट रेडर्स - सिंधुदुर्ग चालू घडामोडी</b>
+    header = "<b>\u0932\u0942\u091f \u0930\u0947\u0921\u0930\u094d\u0938 - \u0938\u093f\u0902\u0927\u0941\u0926\u0941\u0930\u094d\u0917 \u091a\u093e\u0932\u0942 \u0918\u0921\u093e\u092e\u094b\u0921\u0940</b>\n"
     
     # Separator
     separator = "———————————————\n\n"
@@ -399,7 +398,7 @@ async def generate_general_marathi_briefing(headlines: list, rates: dict) -> str
     import google.generativeai as genai
     
     settings = load_settings()
-    api_key = os.getenv("GEMINI_API_KEY") or settings.get("gemini_api_key")
+    api_key = settings.get("gemini_api_key")
     if not api_key or "YOUR_GEMINI" in api_key or api_key.strip() == "":
         logger.warning("[BRIEFING_FAIL] Gemini API key not configured. Returning None.")
         return None
