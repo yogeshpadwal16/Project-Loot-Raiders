@@ -152,9 +152,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   // 3. Resolve candidate backend targets
-  const DIRECT_VPS_API = "http://92.4.70.19:5555";
   const ACTIVE_HTTP2_TUNNEL = "https://logged-vat-leg-males.trycloudflare.com";
-  const candidateTargets: string[] = [DIRECT_VPS_API, ACTIVE_HTTP2_TUNNEL];
+  const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
     const custom = env.BACKEND_API_URL.trim().replace(/\/+$/, "");
