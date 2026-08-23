@@ -383,87 +383,157 @@ def scrape_platform(platform: str, config: dict, history: set):
             try: driver.quit()
             except: pass
 
-def sync_database_to_json():
-    db = SessionLocal()
+_SNAPSHOT_SYNC_LOCK = threading.Lock()
+_LAST_SNAPSHOT_PUSH_TIME = 0.0
+_SNAPSHOT_PUSH_COOLDOWN = 900.0  # 15 minutes minimum between git pushes
+
+def sync_database_to_json(force_push: bool = False):
+    """
+    Exports latest verified public deal data from SQLite to dashboard/deals_history.json atomically,
+    and synchronizes snapshot to origin/main with throttled git pushes when content changes.
+    """
+    global _LAST_SNAPSHOT_PUSH_TIME
+    if not _SNAPSHOT_SYNC_LOCK.acquire(blocking=False):
+        logging.info("[Snapshot Sync] Previous synchronization in progress. Skipping.")
+        return
+
     try:
-        from sqlalchemy import func
-        from sqlalchemy.orm import joinedload
-        
-        # Get the latest price history record ID for each product
-        latest_ph_ids_query = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
-        
-        # Get the top 300 price histories (which represent the latest state of the top 300 products) sorted by timestamp desc
-        price_histories = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(
-            PriceHistory.id.in_(latest_ph_ids_query)
-        ).order_by(PriceHistory.timestamp.desc()).limit(300).all()
-        
-        product_ids = [ph.product_id for ph in price_histories if ph.product]
-        
-        # Fetch click counts in a single query
-        click_data = db.query(ClickLog.product_id, func.count(ClickLog.id)).filter(
-            ClickLog.product_id.in_(product_ids)
-        ).group_by(ClickLog.product_id).all()
-        click_map = {pid: count for pid, count in click_data}
-        
-        # Fetch price history (last 15 points) for only these 300 product IDs
-        history_records = db.query(PriceHistory).filter(
-            PriceHistory.product_id.in_(product_ids)
-        ).order_by(PriceHistory.product_id, PriceHistory.timestamp.desc()).all()
-        
-        history_map = {}
-        for hr in history_records:
-            pid = hr.product_id
-            if pid not in history_map:
-                history_map[pid] = []
-            if len(history_map[pid]) < 15:
-                history_map[pid].append({"price": hr.price, "timestamp": hr.timestamp})
-        
-        # Reverse each list so it's in chronological order
-        for pid in history_map:
-            history_map[pid].reverse()
-            
-        deals = []
-        for ph in price_histories:
-            p = ph.product
-            if not p:
-                continue
-            
-            click_count = click_map.get(p.id, 0)
-            price_history = history_map.get(p.id, [])
-            
-            deals.append({
-                "id": p.id,
-                "platform": p.platform,
-                "title": p.title,
-                "price": ph.price,
-                "mrp": ph.mrp,
-                "discount": ph.discount,
-                "image_url": p.image_url,
-                "url": p.url,
-                "is_verified_low": ph.is_verified_low,
-                "deal_score": ph.deal_score,
-                "timestamp": ph.timestamp,
-                "clicks": click_count,
-                "price_history": price_history
-            })
-        
-        # Already ordered by timestamp desc from the DB query
-        deals_file = os.path.join(DASHBOARD_DIR, "deals_history.json")
-        with open(deals_file, 'w', encoding='utf-8') as f:
-            json.dump(deals, f, indent=2)
-            
-        # Get all product IDs in a single column query to write omega_history.json
-        product_ids_all = db.query(Product.id).all()
-        omega = {pid[0]: time.time() for pid in product_ids_all}
-        history_file = os.path.join(BASE_DIR, "omega_history.json")
-        with open(history_file, 'w', encoding='utf-8') as f:
-            json.dump(omega, f, indent=2)
-            
-        logging.info("SQLite database synchronized to static JSON files successfully (Highly Optimized).")
+        db = SessionLocal()
+        try:
+            from sqlalchemy import func
+            from sqlalchemy.orm import joinedload
+
+            # Get the latest price history record ID for each product
+            latest_ph_ids_query = db.query(func.max(PriceHistory.id)).group_by(PriceHistory.product_id)
+
+            # Get the top 300 price histories (which represent the latest state of the top 300 products) sorted by timestamp desc
+            price_histories = db.query(PriceHistory).options(joinedload(PriceHistory.product)).filter(
+                PriceHistory.id.in_(latest_ph_ids_query)
+            ).order_by(PriceHistory.timestamp.desc()).limit(300).all()
+
+            product_ids = [ph.product_id for ph in price_histories if ph.product]
+
+            # Fetch click counts in a single query
+            click_data = db.query(ClickLog.product_id, func.count(ClickLog.id)).filter(
+                ClickLog.product_id.in_(product_ids)
+            ).group_by(ClickLog.product_id).all()
+            click_map = {pid: count for pid, count in click_data}
+
+            # Fetch price history (last 15 points) for only these 300 product IDs
+            history_records = db.query(PriceHistory).filter(
+                PriceHistory.product_id.in_(product_ids)
+            ).order_by(PriceHistory.product_id, PriceHistory.timestamp.desc()).all()
+
+            history_map = {}
+            for hr in history_records:
+                pid = hr.product_id
+                if pid not in history_map:
+                    history_map[pid] = []
+                if len(history_map[pid]) < 15:
+                    history_map[pid].append({"price": hr.price, "timestamp": hr.timestamp})
+
+            # Reverse each list so it's in chronological order
+            for pid in history_map:
+                history_map[pid].reverse()
+
+            deals = []
+            for ph in price_histories:
+                p = ph.product
+                if not p:
+                    continue
+
+                click_count = click_map.get(p.id, 0)
+                price_history = history_map.get(p.id, [])
+
+                deals.append({
+                    "id": p.id,
+                    "platform": p.platform,
+                    "title": p.title,
+                    "price": ph.price,
+                    "mrp": ph.mrp,
+                    "discount": ph.discount,
+                    "image_url": p.image_url,
+                    "url": p.url,
+                    "is_verified_low": ph.is_verified_low,
+                    "deal_score": ph.deal_score,
+                    "timestamp": ph.timestamp,
+                    "clicks": click_count,
+                    "price_history": price_history
+                })
+
+            # Atomic write for dashboard/deals_history.json
+            deals_file = os.path.join(DASHBOARD_DIR, "deals_history.json")
+            deals_tmp = deals_file + ".tmp"
+            with open(deals_tmp, 'w', encoding='utf-8') as f:
+                json.dump(deals, f, indent=2)
+            os.replace(deals_tmp, deals_file)
+
+            # Atomic write for omega_history.json
+            product_ids_all = db.query(Product.id).all()
+            omega = {pid[0]: time.time() for pid in product_ids_all}
+            history_file = os.path.join(BASE_DIR, "omega_history.json")
+            history_tmp = history_file + ".tmp"
+            with open(history_tmp, 'w', encoding='utf-8') as f:
+                json.dump(omega, f, indent=2)
+            os.replace(history_tmp, history_file)
+
+            logging.info(f"SQLite database synchronized to static JSON ({len(deals)} deals exported atomically).")
+        finally:
+            db.close()
+
+        # Throttled Git commit and push to origin/main
+        now = time.time()
+        if force_push or (now - _LAST_SNAPSHOT_PUSH_TIME >= _SNAPSHOT_PUSH_COOLDOWN):
+            _push_snapshot_to_origin(deals_file)
     except Exception as e:
         logging.error(f"Failed to sync database to JSON exports: {e}")
     finally:
-        db.close()
+        _SNAPSHOT_SYNC_LOCK.release()
+
+def _push_snapshot_to_origin(deals_file: str):
+    """Safely commits and pushes only dashboard/deals_history.json to origin/main."""
+    global _LAST_SNAPSHOT_PUSH_TIME
+    import subprocess
+    try:
+        # Check git status specifically for dashboard/deals_history.json
+        status = subprocess.run(
+            ["git", "-C", BASE_DIR, "status", "--porcelain", "dashboard/deals_history.json"],
+            capture_output=True, text=True, timeout=10
+        )
+        if not status.stdout.strip():
+            logging.info("[Snapshot Git Sync] Snapshot JSON unchanged. Skipping push.")
+            return
+
+        # Validate that the file is valid JSON before staging
+        with open(deals_file, 'r', encoding='utf-8') as f:
+            verified_data = json.load(f)
+            if not isinstance(verified_data, list):
+                logging.error("[Snapshot Git Sync] Exported deals JSON is not a list. Aborting git push.")
+                return
+
+        # Stage ONLY dashboard/deals_history.json
+        subprocess.run(
+            ["git", "-C", BASE_DIR, "add", "dashboard/deals_history.json"],
+            check=True, capture_output=True, text=True, timeout=10
+        )
+
+        commit_msg = f"chore(snapshot): auto-sync deals snapshot ({time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())})"
+        subprocess.run(
+            ["git", "-C", BASE_DIR, "commit", "--no-verify", "-m", commit_msg],
+            check=True, capture_output=True, text=True, timeout=15
+        )
+
+        push_res = subprocess.run(
+            ["git", "-C", BASE_DIR, "push", "origin", "main"],
+            capture_output=True, text=True, timeout=30
+        )
+        if push_res.returncode == 0:
+            _LAST_SNAPSHOT_PUSH_TIME = time.time()
+            logging.info(f"[Snapshot Git Sync] Successfully pushed updated snapshot to origin/main ({len(verified_data)} deals).")
+        else:
+            logging.warning(f"[Snapshot Git Sync] Git push returned non-zero ({push_res.returncode}): {push_res.stderr.strip()[:100]}")
+    except Exception as git_err:
+        logging.error(f"[Snapshot Git Sync] Snapshot push error (non-fatal): {git_err}")
 
 def scrape_product_details(url: str, driver=None) -> dict:
     """
