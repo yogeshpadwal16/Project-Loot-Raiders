@@ -1162,10 +1162,20 @@ def main():
                     t = threading.Thread(
                         target=run_scraper_safe,
                         args=(platform, config, history),
-                        name=f"Scraper-{platform}"
+                        name=f"Scraper-{platform}",
+                        daemon=True
                     )
                     t.start()
-                    t.join() # Wait for this scraper to finish before launching the next one.
+                    t.join(timeout=180) # Wait up to 180s for this scraper to finish before advancing
+                    if t.is_alive():
+                        logging.warning(
+                            f"[Scraper Timeout] Platform scan for '{platform}' exceeded 180s timeout threshold. "
+                            f"Continuing pipeline to preserve scanner and snapshot sync continuity."
+                        )
+                        if platform in scraper_state.get("crawler_health", {}):
+                            scraper_state["crawler_health"][platform]["status"] = "Timeout"
+                            scraper_state["crawler_health"][platform]["last_failure"] = time.time()
+                            scraper_state["crawler_health"][platform]["last_error"] = "Execution exceeded 180s timeout"
                 
                 # Export SQLite state to JSON for static host environment (like GitHub Pages)
                 sync_database_to_json()
