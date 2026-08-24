@@ -1,5 +1,33 @@
 [
   {
+    "id": "B0CQ4TSFPS",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
+    "price": 21999,
+    "mrp": 33999,
+    "discount": 35.29,
+    "image_url": "https://m.media-amazon.com/images/I/71V--WZVUIL._AC_SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
+    "is_verified_low": true,
+    "deal_score": 78.032,
+    "timestamp": 1787601418.4463553,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2848,
+        "timestamp": 1784269940.6960933
+      },
+      {
+        "price": 24999,
+        "timestamp": 1787601414.9768343
+      },
+      {
+        "price": 21999,
+        "timestamp": 1787601418.4463553
+      }
+    ]
+  },
+  {
     "id": "meesho_ah28g9",
     "platform": "meesho_deals",
     "title": "Fancy Stylish Women Western Dresses",
@@ -68,50 +96,6 @@
       {
         "price": 999,
         "timestamp": 1787601415.4486089
-      }
-    ]
-  },
-  {
-    "id": "AFRF8H5GYZZMTHWZ",
-    "platform": "flipkart_appliances_deals",
-    "title": "BAJAJ 15 L Storage Water Geyser (Shield Series New Shakti)",
-    "price": 5499,
-    "mrp": 10950,
-    "discount": 49.78,
-    "image_url": "https://rukminim2.flixcart.com/image/832/832/xif0q/water-geyser/f/8/h/-original-imagp8h5gyzzmthw.jpeg",
-    "url": "https://www.flipkart.com/product/p/itm?pid=AFRF8H5GYZZMTHWZ",
-    "is_verified_low": false,
-    "deal_score": 50.86082222222222,
-    "timestamp": 1787601415.444294,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 5499,
-        "timestamp": 1787601415.444294
-      }
-    ]
-  },
-  {
-    "id": "B0CQ4TSFPS",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
-    "price": 24999,
-    "mrp": 33999,
-    "discount": 26.47,
-    "image_url": "https://m.media-amazon.com/images/I/71V--WZVUIL._AC_SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 57.376,
-    "timestamp": 1787601414.9768343,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2848,
-        "timestamp": 1784269940.6960933
-      },
-      {
-        "price": 24999,
-        "timestamp": 1787601414.9768343
       }
     ]
   },
