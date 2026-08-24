@@ -146,6 +146,14 @@ def save_deal_to_db(platform: str, title: str, price: int, mrp: int, discount: f
     logging.info(f"[DB Save] Entering save_deal_to_db for '{title[:30]}' (ID: {unique_id})")
     from database.repository import SQLAlchemyDealRepository
     repo = SQLAlchemyDealRepository()
+
+    # Normalize image_url to prevent dirty placeholder strings in DB
+    if not img_url:
+        img_url = ""
+    else:
+        img_url = str(img_url).strip()
+        if img_url.lower() in ("none", "null", "undefined", "nan", "") or len(img_url) < 10 or not (img_url.startswith("http://") or img_url.startswith("https://") or img_url.startswith("//") or img_url.startswith("data:image")):
+            img_url = ""
     
     close_db = False
     if db is None:

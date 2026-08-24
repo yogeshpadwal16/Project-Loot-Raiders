@@ -25,9 +25,14 @@ def clean_and_truncate_html(html_content: str, max_chars: int = 10000) -> str:
 def clean_and_upgrade_image_url(url: str) -> str:
     if not url:
         return ""
-    url = url.strip()
+    url = str(url).strip()
+    if url.lower() in ("none", "null", "undefined", "nan", "") or len(url) < 10:
+        return ""
     if url.startswith("//"):
         url = "https:" + url
+
+    if not (url.startswith("http://") or url.startswith("https://") or url.startswith("data:image")):
+        return ""
 
     url_lower = url.lower()
     banned_keywords = [
