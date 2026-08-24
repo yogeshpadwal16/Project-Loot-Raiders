@@ -10,7 +10,7 @@
     "url": "https://www.ajio.com/gap-men-straight-fit-flat-front-trousers/p/442711767_olivegreen",
     "is_verified_low": false,
     "deal_score": 48.330622222222225,
-    "timestamp": 1787604249.2335699,
+    "timestamp": 1787604839.7286222,
     "clicks": 0,
     "price_history": [
       {
@@ -20,6 +20,14 @@
       {
         "price": 2025,
         "timestamp": 1787604249.2335699
+      },
+      {
+        "price": 2309,
+        "timestamp": 1787604839.1790175
+      },
+      {
+        "price": 2025,
+        "timestamp": 1787604839.7286222
       }
     ]
   },
@@ -34,7 +42,7 @@
     "url": "https://www.ajio.com/biba-women-embellished-straight-kurta-with-pants--dupatta/p/469722157_yellow",
     "is_verified_low": false,
     "deal_score": 48.17755555555556,
-    "timestamp": 1787604249.193279,
+    "timestamp": 1787604839.6816318,
     "clicks": 0,
     "price_history": [
       {
@@ -48,6 +56,14 @@
       {
         "price": 2254,
         "timestamp": 1787604249.193279
+      },
+      {
+        "price": 2199,
+        "timestamp": 1787604839.2662268
+      },
+      {
+        "price": 2254,
+        "timestamp": 1787604839.6816318
       }
     ]
   },
@@ -62,7 +78,7 @@
     "url": "https://www.ajio.com/dezano-men-regular-fit-shirt-with-patch-pocket/p/467075836_brown",
     "is_verified_low": false,
     "deal_score": 45.56506666666667,
-    "timestamp": 1787604249.1462586,
+    "timestamp": 1787604839.640291,
     "clicks": 0,
     "price_history": [
       {
@@ -92,6 +108,22 @@
       {
         "price": 1000,
         "timestamp": 1787604249.1462586
+      },
+      {
+        "price": 2260,
+        "timestamp": 1787604839.020367
+      },
+      {
+        "price": 500,
+        "timestamp": 1787604839.3249395
+      },
+      {
+        "price": 1199,
+        "timestamp": 1787604839.4934425
+      },
+      {
+        "price": 1000,
+        "timestamp": 1787604839.640291
       }
     ]
   },
@@ -106,7 +138,7 @@
     "url": "https://www.ajio.com/jack--jones-men-typographic-print-slim-fit-crew-neck-t-shirt/p/467120477_white",
     "is_verified_low": false,
     "deal_score": 41.03475555555555,
-    "timestamp": 1787604249.0859175,
+    "timestamp": 1787604839.5861628,
     "clicks": 0,
     "price_history": [
       {
@@ -124,6 +156,1322 @@
       {
         "price": 637,
         "timestamp": 1787604249.0859175
+      },
+      {
+        "price": 1379,
+        "timestamp": 1787604839.1060655
+      },
+      {
+        "price": 637,
+        "timestamp": 1787604839.5861628
+      }
+    ]
+  },
+  {
+    "id": "ajio_467043815001",
+    "platform": "ajio_deals",
+    "title": "Women Snake Analogue Watch - JC1L269M0075",
+    "price": 15500,
+    "mrp": 31000,
+    "discount": 50.0,
+    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240206/WUMM/65c189be16fd2c6e6adcd341/-286Wx359H-467043739-black-MODEL.jpg",
+    "url": "https://www.ajio.com/just-cavalli-women-snake-analogue-watch--jc1l269m0075/p/467043739_black",
+    "is_verified_low": false,
+    "deal_score": 76.4,
+    "timestamp": 1787604839.3936715,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 18300,
+        "timestamp": 1787604176.445329
+      },
+      {
+        "price": 15500,
+        "timestamp": 1787604233.689069
+      },
+      {
+        "price": 18300,
+        "timestamp": 1787604838.7886384
+      },
+      {
+        "price": 15500,
+        "timestamp": 1787604839.3936715
+      }
+    ]
+  },
+  {
+    "id": "ajio_410456622002",
+    "platform": "ajio_deals",
+    "title": "Men Striped Slim Fit Shirt with Button-Down Collar",
+    "price": 1195,
+    "mrp": 2299,
+    "discount": 48.0,
+    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240103/ETy9/65946625ddf7791519fd5944/-286Wx359H-466940537-navy-MODEL.jpg",
+    "url": "https://www.ajio.com/giordano-men-striped-slim-fit-shirt-with-button-down-collar/p/466940537_navy",
+    "is_verified_low": false,
+    "deal_score": 44.81528888888889,
+    "timestamp": 1787604838.9193513,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3160,
+        "timestamp": 1787592896.7852147
+      },
+      {
+        "price": 1195,
+        "timestamp": 1787592906.7497633
+      },
+      {
+        "price": 3160,
+        "timestamp": 1787604186.6505077
+      },
+      {
+        "price": 1195,
+        "timestamp": 1787604201.7809134
+      },
+      {
+        "price": 3160,
+        "timestamp": 1787604838.8263297
+      },
+      {
+        "price": 1195,
+        "timestamp": 1787604838.9193513
+      }
+    ]
+  },
+  {
+    "id": "myntra_42067452",
+    "platform": "myntra_deals",
+    "title": "HRX by Hrithik Roshan HRX by Hrithik Roshan Unisex Printed Sliders",
+    "price": 586,
+    "mrp": 2399,
+    "discount": 75.57,
+    "image_url": "http://assets.myntassets.com/assets/images/2026/JULY/17/oMym6IrH_ab352a1037514d3aa004f4a75f2c505d.jpg",
+    "url": "https://www.myntra.com/flip-flops/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-unisex-printed-sliders/36064830/buy",
+    "is_verified_low": false,
+    "deal_score": 56.072411111111116,
+    "timestamp": 1787604833.6199205,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 749,
+        "timestamp": 1787592856.2057686
+      },
+      {
+        "price": 586,
+        "timestamp": 1787592878.6543796
+      },
+      {
+        "price": 749,
+        "timestamp": 1787604170.7690756
+      },
+      {
+        "price": 586,
+        "timestamp": 1787604171.2185497
+      },
+      {
+        "price": 749,
+        "timestamp": 1787604833.1598969
+      },
+      {
+        "price": 586,
+        "timestamp": 1787604833.6199205
+      }
+    ]
+  },
+  {
+    "id": "myntra_33673022",
+    "platform": "myntra_deals",
+    "title": "HRX by Hrithik Roshan HRX by Hrithik Roshan Women Rapid-Dry Running Tracksuit",
+    "price": 1220,
+    "mrp": 3299,
+    "discount": 63.02,
+    "image_url": "http://assets.myntassets.com/assets/images/2026/JULY/17/3J5dvQPS_eb9845dbb866466294ef8a048f1c2c22.jpg",
+    "url": "https://www.myntra.com/tracksuits/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-women-rapid-dry-running-tracksuit/29143060/buy",
+    "is_verified_low": false,
+    "deal_score": 56.4024,
+    "timestamp": 1787604833.5359514,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1439,
+        "timestamp": 1787592854.1138532
+      },
+      {
+        "price": 1220,
+        "timestamp": 1787592876.54185
+      },
+      {
+        "price": 1439,
+        "timestamp": 1787604170.7010455
+      },
+      {
+        "price": 1220,
+        "timestamp": 1787604171.1396348
+      },
+      {
+        "price": 1439,
+        "timestamp": 1787604833.0867465
+      },
+      {
+        "price": 1220,
+        "timestamp": 1787604833.5359514
+      }
+    ]
+  },
+  {
+    "id": "MIXH63QPVDNAEA5S",
+    "platform": "flipkart_appliances_deals",
+    "title": "Sansui Plus 500 W Juicer Mixer Grinder",
+    "price": 1549,
+    "mrp": 3599,
+    "discount": 57.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/sansui-plus-500-w-juicer-mixer-grinder/p/itm829997849ca1e?pid=MIXGRH82YRZPZBZH&lid=LSTMIXGRH82YRZPZBZHJS6PKJ&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_40&otracker=search&fm=organic&iid=a9f75158-fb88-42c4-88b0-14e399f25483.MIXGRH82YRZPZBZH.SEARCH&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 58.507777777777775,
+    "timestamp": 1787604826.0797822,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3499,
+        "timestamp": 1787604012.6252158
+      },
+      {
+        "price": 1140,
+        "timestamp": 1787604089.0131905
+      },
+      {
+        "price": 1989,
+        "timestamp": 1787604155.7846437
+      },
+      {
+        "price": 1599,
+        "timestamp": 1787604155.9039288
+      },
+      {
+        "price": 1549,
+        "timestamp": 1787604155.9604588
+      },
+      {
+        "price": 3499,
+        "timestamp": 1787604810.3430102
+      },
+      {
+        "price": 1989,
+        "timestamp": 1787604825.8892648
+      },
+      {
+        "price": 1599,
+        "timestamp": 1787604826.0202012
+      },
+      {
+        "price": 1549,
+        "timestamp": 1787604826.0797822
+      }
+    ]
+  },
+  {
+    "id": "AFRHCHFGYNJGYAPX",
+    "platform": "flipkart_appliances_deals",
+    "title": "Pigeon Healthifry Plus Digital Airfryer 4.2 L 1400W Air Fryer",
+    "price": 3345,
+    "mrp": 7995,
+    "discount": 58.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/pigeon-healthifry-plus-digital-airfryer-4-2-l-1400w-air-fryer/p/itmdbbc45906f365?pid=AFRHYVQYZV6UCWHP&lid=LSTAFRHYVQYZV6UCWHPDTBH0B&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_38&otracker=search&fm=organic&iid=a9f75158-fb88-42c4-88b0-14e399f25483.AFRHYVQYZV6UCWHP.SEARCH&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 58.09555555555555,
+    "timestamp": 1787604825.959643,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3299,
+        "timestamp": 1787603990.8576856
+      },
+      {
+        "price": 2950,
+        "timestamp": 1787604020.799647
+      },
+      {
+        "price": 5729,
+        "timestamp": 1787604043.5241957
+      },
+      {
+        "price": 2629,
+        "timestamp": 1787604110.9563465
+      },
+      {
+        "price": 3345,
+        "timestamp": 1787604155.84887
+      },
+      {
+        "price": 3299,
+        "timestamp": 1787604810.2392106
+      },
+      {
+        "price": 2950,
+        "timestamp": 1787604810.392872
+      },
+      {
+        "price": 2629,
+        "timestamp": 1787604825.4821377
+      },
+      {
+        "price": 3299,
+        "timestamp": 1787604825.795651
+      },
+      {
+        "price": 3345,
+        "timestamp": 1787604825.959643
+      }
+    ]
+  },
+  {
+    "id": "IRNEVTESQWWGWZZG",
+    "platform": "flipkart_appliances_deals",
+    "title": "Orient Electric by Orient Electric Fabriknight DIFK10BP 1000 W Dry Iron",
+    "price": 579,
+    "mrp": 940,
+    "discount": 38.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/orient-electric-fabriknight-difk10bp-1000-w-dry-iron/p/itm59599843e3db2?pid=IRNHYMZGZCTRPEGY&lid=LSTIRNHYMZGZCTRPEGYSZVNR9&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_32&otracker=search&fm=organic&iid=a9f75158-fb88-42c4-88b0-14e399f25483.IRNHYMZGZCTRPEGY.SEARCH&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 47.6776,
+    "timestamp": 1787604825.7509055,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 599,
+        "timestamp": 1787604028.6791513
+      },
+      {
+        "price": 579,
+        "timestamp": 1787604141.1627488
+      },
+      {
+        "price": 599,
+        "timestamp": 1787604810.5016985
+      },
+      {
+        "price": 579,
+        "timestamp": 1787604825.7509055
+      }
+    ]
+  },
+  {
+    "id": "MIXGK4FM2GTWUDYN",
+    "platform": "flipkart_appliances_deals",
+    "title": "Longway Powerful Motor for Grinding, Mixing, Juicing Up to 750 W Juicer Mixer Grinder",
+    "price": 1599,
+    "mrp": 3889,
+    "discount": 59.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/longway-powerful-motor-grinding-mixing-juicing-up-750-w-juicer-mixer-grinder/p/itmcc75842305646?pid=MIXF5FSZGNZKYFTG&lid=LSTMIXF5FSZGNZKYFTGMC3NPY&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_25&otracker=search&fm=organic&iid=a9f75158-fb88-42c4-88b0-14e399f25483.MIXF5FSZGNZKYFTG.SEARCH&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 54.74733333333334,
+    "timestamp": 1787604825.5729194,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1424,
+        "timestamp": 1787604020.9171917
+      },
+      {
+        "price": 1699,
+        "timestamp": 1787604096.0504165
+      },
+      {
+        "price": 1599,
+        "timestamp": 1787604111.053367
+      },
+      {
+        "price": 1424,
+        "timestamp": 1787604810.448615
+      },
+      {
+        "price": 1699,
+        "timestamp": 1787604817.7671242
+      },
+      {
+        "price": 1599,
+        "timestamp": 1787604825.5729194
+      }
+    ]
+  },
+  {
+    "id": "WAPHHSR2XPMADMFW",
+    "platform": "flipkart_appliances_deals",
+    "title": "LIVPURE LIV-PEP-STAR-COPPER 2X Power Filter No Filter Cost for 2 Year 7 L RO + UV + UF + Copper + Minerals Water Purifier",
+    "price": 10499,
+    "mrp": 19490,
+    "discount": 46.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/livpure-liv-pep-star-copper-2x-power-filter-no-cost-2-year-7-l-ro-uv-uf-copper-minerals-water-purifier/p/itmbc899e31faf4f?pid=WAPHHSR2XPMADMFW&lid=LSTWAPHHSR2XPMADMFWQXG7KT&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_21&otracker=search&fm=organic&iid=en_8OtcWiNOMveKVgnRcRYt5Hu1VNlKj_xaWxNpMGFzIXYqcIbAPjkSsBMmQFLU3B5eb9e-5OUhKsOw9ku69D8wS48NSlwE2xux-o0nY5KDhdCMOdw26vUJp-RN74tJB7bS&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 76.51893333333332,
+    "timestamp": 1787604817.895292,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 10499,
+        "timestamp": 1787604817.895292
+      }
+    ]
+  },
+  {
+    "id": "AFRHFGKK3DPVSMYY",
+    "platform": "flipkart_appliances_deals",
+    "title": "KENT Ultra Digital Air Fryer 5L Bake, Grill & Roast Up to 80% Less Oil Usage Air Fryer",
+    "price": 3999,
+    "mrp": 12499,
+    "discount": 68.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/kent-ultra-digital-air-fryer-5l-bake-grill-roast-up-80-less-oil-usage/p/itm74d3d6bf81fe2?pid=AFRHMW8ZXY5DAG8M&lid=LSTAFRHMW8ZXY5DAG8MVHC5AP&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_14&otracker=search&fm=organic&iid=en_8OtcWiNOMveKVgnRcRYt5Hu1VNlKj_xaWxNpMGFzIXYidpLV9QLDonw_ZfTDrNNN_5qsOkRbCBr02jmZ_v7zdZfSx3owNfOv7vbIVX15AfL7acWhiU_E9PArshfeg6Wk&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 66.53333333333333,
+    "timestamp": 1787604817.632909,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2549,
+        "timestamp": 1787603997.95466
+      },
+      {
+        "price": 3999,
+        "timestamp": 1787604817.632909
+      }
+    ]
+  },
+  {
+    "id": "AFRHDYGBE34WSTFS",
+    "platform": "flipkart_appliances_deals",
+    "title": "Sansui CRISP PRO Air Fryer",
+    "price": 2999,
+    "mrp": 5799,
+    "discount": 48.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/sansui-crisp-pro-air-fryer/p/itm4bc888199e6e2?pid=AFRHDYGBE34WSTFS&lid=LSTAFRHDYGBE34WSTFS3EZPGO&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_11&otracker=search&fm=organic&iid=en_8OtcWiNOMveKVgnRcRYt5Hu1VNlKj_xaWxNpMGFzIXbrwIzYn6v7eb6KWnFnXUdG4j0xgBNOPHoCxjS2Y2YHw2sNu4UCJAsSx4LD1eX_eST7acWhiU_E9PArshfeg6Wk&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 53.85777777777778,
+    "timestamp": 1787604810.5944898,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2999,
+        "timestamp": 1787604810.5944898
+      }
+    ]
+  },
+  {
+    "id": "WSLGYKZGEHFXXBB2",
+    "platform": "flipkart_appliances_deals",
+    "title": "Misuhrobir Electronic Kitchen Scale 10Kg Weighing Scale",
+    "price": 298,
+    "mrp": 1299,
+    "discount": 77.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/misuhrobir-electronic-kitchen-scale-10kg-weighing/p/itm7422493ef7d8b?pid=WSLGYKZGEHFXXBB2&lid=LSTWSLGYKZGEHFXXBB2VMMF4D&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_3&otracker=search&fm=organic&iid=en_8OtcWiNOMveKVgnRcRYt5Hu1VNlKj_xaWxNpMGFzIXYpVQC5LDjEOeFcCsDEWUS2iFnWNwT1ReuWgkujLEHrQBorwDjN2T_4IuymixDhpzfD7MSd_jiqHwszVGqZWpLM&ppt=None&ppn=None&ssid=p4lymya9io0000001787604776318&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 60.16826666666666,
+    "timestamp": 1787604810.3117445,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 298,
+        "timestamp": 1787604005.430494
+      },
+      {
+        "price": 309,
+        "timestamp": 1787604768.8260458
+      },
+      {
+        "price": 298,
+        "timestamp": 1787604810.3117445
+      }
+    ]
+  },
+  {
+    "id": "SOIG57XVGTZYUSBN",
+    "platform": "flipkart_electronics_deals",
+    "title": "Walkers Basic 5 in1 Mobile Soldering Iron Equipment Tool Machine Combo Kit Set with Flux Paste and Wire 30 W Simple",
+    "price": 347,
+    "mrp": 449,
+    "discount": 23.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/walkers-basic-5-in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-flux-paste-wire-30-w-simple/p/itm5f319d60548f9?pid=SOIGYEEVSWSWCHHA&lid=LSTSOIGYEEVSWSWCHHAOISMFT&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_40&otracker=search&fm=organic&iid=caa38e6d-2238-4505-a394-1fb16054738f.SOIGYEEVSWSWCHHA.SEARCH&ppt=None&ppn=None&ssid=l81qmtmbc00000001787604736510&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 33.5632,
+    "timestamp": 1787604770.365559,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 359,
+        "timestamp": 1787603871.941308
+      },
+      {
+        "price": 434,
+        "timestamp": 1787603933.6950111
+      },
+      {
+        "price": 419,
+        "timestamp": 1787603941.3227644
+      },
+      {
+        "price": 376,
+        "timestamp": 1787603949.6361897
+      },
+      {
+        "price": 359,
+        "timestamp": 1787604768.6726573
+      },
+      {
+        "price": 434,
+        "timestamp": 1787604769.5029573
+      },
+      {
+        "price": 419,
+        "timestamp": 1787604769.8418443
+      },
+      {
+        "price": 376,
+        "timestamp": 1787604770.299163
+      },
+      {
+        "price": 347,
+        "timestamp": 1787604770.365559
+      }
+    ]
+  },
+  {
+    "id": "SOIH2HZMX4YCENCX",
+    "platform": "flipkart_electronics_deals",
+    "title": "Hillgrove HGSOI15M1 Electric Gadget 8in1 New Mobile Soldering Iron Machine Combo Kit Set 25 W Simple",
+    "price": 390,
+    "mrp": 899,
+    "discount": 57.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/hillgrove-hgsoi15m1-electric-gadget-8in1-new-mobile-soldering-iron-machine-combo-kit-set-25-w-simple/p/itm1777a3ee9ee14?pid=SOIGGZ7Y2XDQBRYZ&lid=LSTSOIGGZ7Y2XDQBRYZYKTMJY&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_38&otracker=search&fm=organic&iid=caa38e6d-2238-4505-a394-1fb16054738f.SOIGGZ7Y2XDQBRYZ.SEARCH&ppt=None&ppn=None&ssid=l81qmtmbc00000001787604736510&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 51.681066666666666,
+    "timestamp": 1787604770.2332032,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 477,
+        "timestamp": 1787603941.0059276
+      },
+      {
+        "price": 390,
+        "timestamp": 1787603941.0733333
+      },
+      {
+        "price": 405,
+        "timestamp": 1787603941.1365118
+      },
+      {
+        "price": 749,
+        "timestamp": 1787603941.3690004
+      },
+      {
+        "price": 390,
+        "timestamp": 1787603941.4382503
+      },
+      {
+        "price": 364,
+        "timestamp": 1787603941.5086617
+      },
+      {
+        "price": 390,
+        "timestamp": 1787603941.5816898
+      },
+      {
+        "price": 376,
+        "timestamp": 1787604769.573109
+      },
+      {
+        "price": 477,
+        "timestamp": 1787604769.6389732
+      },
+      {
+        "price": 390,
+        "timestamp": 1787604769.7066267
+      },
+      {
+        "price": 405,
+        "timestamp": 1787604769.7744076
+      },
+      {
+        "price": 749,
+        "timestamp": 1787604770.0161607
+      },
+      {
+        "price": 364,
+        "timestamp": 1787604770.0986624
+      },
+      {
+        "price": 390,
+        "timestamp": 1787604770.166443
+      },
+      {
+        "price": 390,
+        "timestamp": 1787604770.2332032
+      }
+    ]
+  },
+  {
+    "id": "SOIFRAQZAHUVEMFF",
+    "platform": "flipkart_electronics_deals",
+    "title": "FADMAN Electronic 7in1 Mobile Soldering Iron Equipment Tool Machine Combo Kit Set 25 W Simple",
+    "price": 303,
+    "mrp": 799,
+    "discount": 62.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/fadman-electronic-7in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-25-w-simple/p/itme9c0da03488d8?pid=SOIHBMH4XRFH8D5T&lid=LSTSOIHBMH4XRFH8D5TPC38HW&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_33&otracker=search&fm=organic&iid=caa38e6d-2238-4505-a394-1fb16054738f.SOIHBMH4XRFH8D5T.SEARCH&ppt=None&ppn=None&ssid=l81qmtmbc00000001787604736510&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 52.393600000000006,
+    "timestamp": 1787604769.9461064,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 308,
+        "timestamp": 1787603917.995869
+      },
+      {
+        "price": 237,
+        "timestamp": 1787603925.814827
+      },
+      {
+        "price": 198,
+        "timestamp": 1787603933.4640582
+      },
+      {
+        "price": 359,
+        "timestamp": 1787603933.5261993
+      },
+      {
+        "price": 319,
+        "timestamp": 1787603941.199012
+      },
+      {
+        "price": 303,
+        "timestamp": 1787603941.2599337
+      },
+      {
+        "price": 410,
+        "timestamp": 1787604768.7202718
+      },
+      {
+        "price": 168,
+        "timestamp": 1787604769.0328395
+      },
+      {
+        "price": 308,
+        "timestamp": 1787604769.1010387
+      },
+      {
+        "price": 308,
+        "timestamp": 1787604769.1597905
+      },
+      {
+        "price": 237,
+        "timestamp": 1787604769.286069
+      },
+      {
+        "price": 198,
+        "timestamp": 1787604769.3615177
+      },
+      {
+        "price": 359,
+        "timestamp": 1787604769.4204252
+      },
+      {
+        "price": 319,
+        "timestamp": 1787604769.8862846
+      },
+      {
+        "price": 303,
+        "timestamp": 1787604769.9461064
+      }
+    ]
+  },
+  {
+    "id": "TMRGB9NKKVZTGTK9",
+    "platform": "flipkart_electronics_deals",
+    "title": "NOVA NHT 1095 Trimmer 90 min Runtime 5 Length Settings",
+    "price": 587,
+    "mrp": 1199,
+    "discount": 51.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/nova-nht-1095-trimmer-90-min-runtime-5-length-settings/p/itm19e8e00c4488e?pid=TMRHNCSQYGDVHAG3&lid=LSTTMRHNCSQYGDVHAG3EREBJH&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_14&otracker=search&fm=organic&iid=en_b1GflvFWfXnbWN-P0_yhmJQhfzlIgBHoS0p9VoYb_RvEnEiYewkiuxB3pMpQrJ4i2kBVK8hq2zeUsuE5xBJ9lD-n2YiKchSPYqfHxXbtx7Pu0Aoodp_qKNpYi154Bguy&ppt=None&ppn=None&ssid=l81qmtmbc00000001787604736510&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 49.44586666666667,
+    "timestamp": 1787604768.9512098,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 548,
+        "timestamp": 1787603841.9546988
+      },
+      {
+        "price": 799,
+        "timestamp": 1787603871.8290892
+      },
+      {
+        "price": 587,
+        "timestamp": 1787603894.4808464
+      },
+      {
+        "price": 699,
+        "timestamp": 1787603902.9731414
+      },
+      {
+        "price": 548,
+        "timestamp": 1787604768.5030286
+      },
+      {
+        "price": 799,
+        "timestamp": 1787604768.603325
+      },
+      {
+        "price": 898,
+        "timestamp": 1787604768.7603917
+      },
+      {
+        "price": 699,
+        "timestamp": 1787604768.8859036
+      },
+      {
+        "price": 587,
+        "timestamp": 1787604768.9512098
+      }
+    ]
+  },
+  {
+    "id": "SHOFQU45R45RAHER",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "Mesh Walking Outdoor Daily Use Casuals For Men",
+    "price": 383,
+    "mrp": 1999,
+    "discount": 81.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/aadi-mesh-lightweight-comfort-summer-trendy-walking-outdoor-daily-use-casuals-men/p/itmd0575e04ca6f0?pid=SHOG585V54BCSGU5&lid=LSTSHOG585V54BCSGU5ZSNT8M&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_40&otracker=search&fm=organic&iid=29d79303-f03d-400f-83de-4cf8e6fd98bb.SHOG585V54BCSGU5.SEARCH&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 54.71893333333334,
+    "timestamp": 1787604730.8849692,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 301,
+        "timestamp": 1787603775.3209548
+      },
+      {
+        "price": 383,
+        "timestamp": 1787603797.2822115
+      },
+      {
+        "price": 301,
+        "timestamp": 1787604730.2731357
+      },
+      {
+        "price": 383,
+        "timestamp": 1787604730.8849692
+      }
+    ]
+  },
+  {
+    "id": "SHOGQHGGRZT6WJME",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "Lightweight,Comfort,Summer,Trendy,Walking,Outdoor,Stylish,Training,Daily Use Sneakers For Men",
+    "price": 317,
+    "mrp": 1999,
+    "discount": 84.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/aadi-lightweight-comfort-summer-trendy-walking-outdoor-stylish-training-daily-use-sneakers-men/p/itmad091180f098e?pid=SHOGNFV96HYMZEZQ&lid=LSTSHOGNFV96HYMZEZQUJTIO5&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_39&otracker=search&fm=organic&iid=29d79303-f03d-400f-83de-4cf8e6fd98bb.SHOGNFV96HYMZEZQ.SEARCH&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 61.891200000000005,
+    "timestamp": 1787604730.8174372,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 337,
+        "timestamp": 1787603767.6867077
+      },
+      {
+        "price": 395,
+        "timestamp": 1787603782.257913
+      },
+      {
+        "price": 319,
+        "timestamp": 1787603782.3142993
+      },
+      {
+        "price": 395,
+        "timestamp": 1787603782.4491012
+      },
+      {
+        "price": 428,
+        "timestamp": 1787603789.9421854
+      },
+      {
+        "price": 317,
+        "timestamp": 1787603797.2258155
+      },
+      {
+        "price": 352,
+        "timestamp": 1787604722.1795933
+      },
+      {
+        "price": 337,
+        "timestamp": 1787604729.9013839
+      },
+      {
+        "price": 270,
+        "timestamp": 1787604730.005772
+      },
+      {
+        "price": 337,
+        "timestamp": 1787604730.155076
+      },
+      {
+        "price": 395,
+        "timestamp": 1787604730.3344991
+      },
+      {
+        "price": 319,
+        "timestamp": 1787604730.3980825
+      },
+      {
+        "price": 395,
+        "timestamp": 1787604730.5647626
+      },
+      {
+        "price": 428,
+        "timestamp": 1787604730.7043855
+      },
+      {
+        "price": 317,
+        "timestamp": 1787604730.8174372
+      }
+    ]
+  },
+  {
+    "id": "SHOGAYVWV7BUBS2D",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "Synthetic Leather Walking Outdoor Daily Use Sneakers For Men",
+    "price": 270,
+    "mrp": 1199,
+    "discount": 77.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/aadi-synthetic-leather-lightweight-comfort-summer-trendy-walking-outdoor-daily-use-sneakers-men/p/itm4776f0ba0d12a?pid=SHOGG3NUYTKSHTK6&lid=LSTSHOGG3NUYTKSHTK6B7HCIN&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_35&otracker=search&fm=organic&iid=29d79303-f03d-400f-83de-4cf8e6fd98bb.SHOGG3NUYTKSHTK6.SEARCH&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 59.2864,
+    "timestamp": 1787604730.6422207,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 423,
+        "timestamp": 1787603767.9651492
+      },
+      {
+        "price": 270,
+        "timestamp": 1787603782.5220444
+      },
+      {
+        "price": 423,
+        "timestamp": 1787604730.1894639
+      },
+      {
+        "price": 270,
+        "timestamp": 1787604730.6422207
+      }
+    ]
+  },
+  {
+    "id": "SHOGMKFZHHBGKTE3",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "Men's Lightweight Comfortable Trendy Outdoor Stylish Lace Up Casual Sneakers For Men",
+    "price": 317,
+    "mrp": 1999,
+    "discount": 84.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/aadi-men-s-lightweight-comfortable-trendy-outdoor-stylish-lace-up-casual-sneakers-men/p/itm86f3b6e5eb79e?pid=SHOHH9TMUBGQ7T8G&lid=LSTSHOHH9TMUBGQ7T8GKEYHON&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_32&otracker=search&fm=organic&iid=29d79303-f03d-400f-83de-4cf8e6fd98bb.SHOHH9TMUBGQ7T8G.SEARCH&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 63.0912,
+    "timestamp": 1787604730.5008013,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 360,
+        "timestamp": 1787603745.643983
+      },
+      {
+        "price": 442,
+        "timestamp": 1787603760.1054764
+      },
+      {
+        "price": 471,
+        "timestamp": 1787603760.1654155
+      },
+      {
+        "price": 430,
+        "timestamp": 1787603760.2180278
+      },
+      {
+        "price": 2753,
+        "timestamp": 1787603767.5832055
+      },
+      {
+        "price": 2624,
+        "timestamp": 1787603767.8007114
+      },
+      {
+        "price": 395,
+        "timestamp": 1787603775.2259421
+      },
+      {
+        "price": 317,
+        "timestamp": 1787603782.3867323
+      },
+      {
+        "price": 360,
+        "timestamp": 1787604721.898135
+      },
+      {
+        "price": 442,
+        "timestamp": 1787604721.9556613
+      },
+      {
+        "price": 471,
+        "timestamp": 1787604722.012218
+      },
+      {
+        "price": 430,
+        "timestamp": 1787604722.066368
+      },
+      {
+        "price": 2753,
+        "timestamp": 1787604722.1179442
+      },
+      {
+        "price": 395,
+        "timestamp": 1787604730.2313957
+      },
+      {
+        "price": 317,
+        "timestamp": 1787604730.5008013
+      }
+    ]
+  },
+  {
+    "id": "SHOHYMZNUDMC5ZFW",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "Synthetic Leather Comfortable Lightweight Outdoor Casual Shoes Outdoors For Men",
+    "price": 416,
+    "mrp": 1999,
+    "discount": 79.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/aadi-synthetic-leather-comfortable-lightweight-outdoor-casual-shoes-outdoors-men/p/itme721aeec1d88a?pid=SHOHYNYUVG9UURXY&lid=LSTSHOHYNYUVG9UURXYUE39D2&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_18&otracker=search&fm=organic&iid=29d79303-f03d-400f-83de-4cf8e6fd98bb.SHOHYNYUVG9UURXY.SEARCH&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 60.86613333333334,
+    "timestamp": 1787604730.0662403,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 416,
+        "timestamp": 1787603760.4384582
+      },
+      {
+        "price": 437,
+        "timestamp": 1787603767.740542
+      },
+      {
+        "price": 416,
+        "timestamp": 1787603767.8545249
+      },
+      {
+        "price": 437,
+        "timestamp": 1787604729.9590113
+      },
+      {
+        "price": 416,
+        "timestamp": 1787604730.0662403
+      }
+    ]
+  },
+  {
+    "id": "SHOHFRMDMDWUFZJD",
+    "platform": "flipkart_clearance_master_feed",
+    "title": "680 Running Shoes For Men",
+    "price": 5159,
+    "mrp": 11999,
+    "discount": 57.0,
+    "image_url": "",
+    "url": "https://www.flipkart.com/new-balance-680-running-shoes-men/p/itmc98847a6740fa?pid=SHOHFRMDMDWUFZJD&lid=LSTSHOHFRMDMDWUFZJDLQKYPR&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_12&otracker=search&fm=organic&iid=en_nV4KSA2QZFeO3CxlhVNpHrf8mIJVd-ZH-MQloCw3V5_CZZaFNV07UHKyzDlcYc8xl7a4rC06Yb8S4iS44-k0BesMhnH0p4GZBaFq43xkFRO2IGdGDeozkaH--hJpADEM&ppt=None&ppn=None&ssid=dwa9i4cp5c0000001787604695402&qH=d424b868764ef9b8&ov_redirect=true",
+    "is_verified_low": false,
+    "deal_score": 60.010666666666665,
+    "timestamp": 1787604722.3380585,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 5159,
+        "timestamp": 1787604722.3380585
+      }
+    ]
+  },
+  {
+    "id": "B0FG7SDJ1Q",
+    "platform": "amazon_appliances_deals",
+    "title": "Selvel Elegance Insulated Casserole Set of 2, 700ml, 1200ml, Advanced PU Insulation, Hot Box for Roti, Chapati, Biryani, Keeps Food Hot 6 Hours, Housewarming Gift, Ceramica White, Diwali Gift",
+    "price": 991,
+    "mrp": 2784,
+    "discount": 64.40373563218391,
+    "image_url": "https://m.media-amazon.com/images/I/71ztE6z1tuL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0FG7SDJ1Q?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 60.390543295019164,
+    "timestamp": 1787604646.0386279,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 991,
+        "timestamp": 1787603631.1018019
+      },
+      {
+        "price": 2089,
+        "timestamp": 1787603636.6905015
+      },
+      {
+        "price": 991,
+        "timestamp": 1787604639.2608988
+      },
+      {
+        "price": 2089,
+        "timestamp": 1787604642.3731835
+      },
+      {
+        "price": 991,
+        "timestamp": 1787604646.0386279
+      }
+    ]
+  },
+  {
+    "id": "B0FRNBPVHL",
+    "platform": "amazon_appliances_deals",
+    "title": "Gesto 3-in-1 Portable Car Vacuum Cleaner, Air Duster & Inflator | 70W High Power, 12000Pa Brushless Motor, 4000mAh Type-C Rechargeable Cordless Handheld Vacuum with Multi Nozzle for Car,Office,Home",
+    "price": 999,
+    "mrp": 3999,
+    "discount": 75.01875468867217,
+    "image_url": "https://m.media-amazon.com/images/I/71RMXfWL20L._AC_UY218_.jpg",
+    "url": "https://www.amazon.in/dp/B0FRNBPVHL?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 68.4754188547137,
+    "timestamp": 1787604643.2974906,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 999,
+        "timestamp": 1787604643.2974906
+      }
+    ]
+  },
+  {
+    "id": "B0F6LXSHNH",
+    "platform": "amazon_appliances_deals",
+    "title": "10 Pcs Dishcloths | 12x16 Inches | Bulk Cotton Kitchen Cleaning Dish Cloths | Scrubbing Wash Cloth Sets | Multipurpose Cloth | 100% Cotton. (Multicolor, Set of 10)",
+    "price": 196,
+    "mrp": 700,
+    "discount": 72.0,
+    "image_url": "https://m.media-amazon.com/images/I/71aAtoJvYyL._AC_UY218_.jpg",
+    "url": "https://www.amazon.in/dp/B0F6LXSHNH?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 43.38417777777778,
+    "timestamp": 1787604642.673731,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 196,
+        "timestamp": 1787603637.0393605
+      },
+      {
+        "price": 207,
+        "timestamp": 1787603648.203369
+      },
+      {
+        "price": 196,
+        "timestamp": 1787604642.673731
+      }
+    ]
+  },
+  {
+    "id": "B0D841G1WW",
+    "platform": "amazon_appliances_deals",
+    "title": "VOLTURI Vegetable Bag for Fridge (6 pcs), Fridge Storage bags with Drawstrings, 100% Cotton Vegetable Storage Bags for Refrigerator, Keeps Veggies Fresh Longer, Eco-Friendly Fridge Bag",
+    "price": 299,
+    "mrp": 999,
+    "discount": 70.07007007007007,
+    "image_url": "https://m.media-amazon.com/images/I/A1DGze7wgeL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0D841G1WW?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 76.08603269936603,
+    "timestamp": 1787604639.5402439,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 299,
+        "timestamp": 1787604639.5402439
+      }
+    ]
+  },
+  {
+    "id": "B0D7ZLSVRQ",
+    "platform": "amazon_appliances_deals",
+    "title": "Amazon Basics - Multipurpose Slider Storage Bags | 45 Bags | Assorted Sizes, 15 Each - S, M, L | Reusable and Reclosable | Material Plastic | Leak- Proof | Food Grade | Microwave Safe",
+    "price": 449,
+    "mrp": 1000,
+    "discount": 55.1,
+    "image_url": "https://m.media-amazon.com/images/I/612zyCJu7mL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0D7ZMZWS9?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 60.861599999999996,
+    "timestamp": 1787604639.3760092,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 245,
+        "timestamp": 1787603628.2368104
+      },
+      {
+        "price": 379,
+        "timestamp": 1787604639.1864293
+      },
+      {
+        "price": 449,
+        "timestamp": 1787604639.3760092
+      }
+    ]
+  },
+  {
+    "id": "B0FVFX1PFQ",
+    "platform": "amazon_electronics_deals",
+    "title": "coocaa 108 cm (43 inch) Frameless QLED Ultra Smart Google TV 43Y74 Pro",
+    "price": 26999,
+    "mrp": 39999,
+    "discount": 32.50081252031301,
+    "image_url": "https://m.media-amazon.com/images/I/81Z0uE+oBfL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0FVFX1PFQ?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 63.000650016250404,
+    "timestamp": 1787604600.331211,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 26999,
+        "timestamp": 1787604600.331211
+      }
+    ]
+  },
+  {
+    "id": "B07TF7G89F",
+    "platform": "amazon_electronics_deals",
+    "title": "Tamron 20mm F/2.8 Di III OSD M1:2 for Sony Full-Frame mirrorless Camera",
+    "price": 18290,
+    "mrp": 32000,
+    "discount": 42.84375,
+    "image_url": "https://m.media-amazon.com/images/I/51htgoUskOL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B07ZZHNXJH?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 58.275000000000006,
+    "timestamp": 1787604600.1620278,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 17990,
+        "timestamp": 1787603581.1519766
+      },
+      {
+        "price": 18290,
+        "timestamp": 1787603583.851287
+      },
+      {
+        "price": 17990,
+        "timestamp": 1787604600.0731032
+      },
+      {
+        "price": 18290,
+        "timestamp": 1787604600.1620278
+      }
+    ]
+  },
+  {
+    "id": "B0CHMN4KVN",
+    "platform": "amazon_electronics_deals",
+    "title": "JBL Live 770NC Wireless Over Ear Headphones with True Adaptive Noise Cancelling, Smart Ambient, Spatial Sound, Multipoint Connect, PersoniFi 2.0, Customized EQ, Google Fast Pair, BT 5.3 Black",
+    "price": 9999,
+    "mrp": 14999,
+    "discount": 33.33555570371358,
+    "image_url": "https://m.media-amazon.com/images/I/812p44DERdL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0CHMN4KVN?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 36.82325932839967,
+    "timestamp": 1787604596.2211473,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 9999,
+        "timestamp": 1787604596.2211473
+      }
+    ]
+  },
+  {
+    "id": "B084D3141X",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "HEELIUM Bamboo Hand Towel | Ultra Absorbent & Anti-Bacterial | 3X Softer Than Cotton Towels | 65 X 40 cm - 600 GSM | Pack of 3 - Grey",
+    "price": 999,
+    "mrp": 1499,
+    "discount": 33.3555703802535,
+    "image_url": "https://m.media-amazon.com/images/I/81dm9o51VXL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B07NC936L3?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 45.03259951078497,
+    "timestamp": 1787604558.1391091,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 1899,
+        "timestamp": 1787604549.776662
+      },
+      {
+        "price": 999,
+        "timestamp": 1787604558.1391091
+      }
+    ]
+  },
+  {
+    "id": "B0FBGWNLXH",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Earthy Fables Premium Hand Towels \u2013 100% Combed Cotton, 600 GSM, Ultra Soft, Quick Dry & Highly Absorbent, for Home, Gym & Travel, 60 x 40 cm, Set of 2 (White)",
+    "price": 499,
+    "mrp": 799,
+    "discount": 37.546933667083856,
+    "image_url": "https://m.media-amazon.com/images/I/61hKmp0Mn5L._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0FBGWNLXH?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 40.703807537199275,
+    "timestamp": 1787604555.429702,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 499,
+        "timestamp": 1787604555.429702
+      }
+    ]
+  },
+  {
+    "id": "B0F7FBCNRX",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Earthy Fables Soft Microfiber Bath Mat - Cut Pile, Quick Dry, Anti-Skid, Water Absorbent, Non-Slip, Machine Washable Floor Rug, Shower Mat, Door Mat for Bathroom, Bedroom, 60x40 cm - Navy Blue",
+    "price": 498,
+    "mrp": 799,
+    "discount": 37.6720901126408,
+    "image_url": "https://m.media-amazon.com/images/I/71MBOmm+Y7L._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0F7FBCNRX?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 45.72857538589904,
+    "timestamp": 1787604552.6425157,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 498,
+        "timestamp": 1787604552.6425157
+      }
+    ]
+  },
+  {
+    "id": "B0GHFRVBDG",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Cortina Towels for Bath (70 x 140 cm) \u2013 380 GSM Microfiber Bath Towels, Ultra Soft, Highly Absorbent & Quick Dry for Gym, Beach & Bathroom Towels for Men, Women & Kids : Light Green",
+    "price": 259,
+    "mrp": 1449,
+    "discount": 82.1256038647343,
+    "image_url": "https://m.media-amazon.com/images/I/61jYyE+Z6VL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0GHFRVBDG?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 61.903999999999996,
+    "timestamp": 1787604547.040513,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 259,
+        "timestamp": 1787604547.040513
+      }
+    ]
+  },
+  {
+    "id": "B0FH2CJF45",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "TAGDO Men's Straight Fit Cotton Cargo Jeans Pant (2040)",
+    "price": 644,
+    "mrp": 3199,
+    "discount": 79.86870897155362,
+    "image_url": "https://m.media-amazon.com/images/I/51zIF61nvjL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0FH2BZ77V?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 70.62673085339169,
+    "timestamp": 1787604546.2984807,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 699,
+        "timestamp": 1787603489.1901424
+      },
+      {
+        "price": 644,
+        "timestamp": 1787604546.2984807
+      }
+    ]
+  },
+  {
+    "id": "B0CZ9MDSWX",
+    "platform": "amazon_sitewide_search_deals",
+    "title": "Kaththai High Waist Body Shaper Briefs for Women | Tummy Tucker Shapewear Panty for Women | Shaper Seamless Panty for Women | Hipster Concealed Waistband Thigh Shaper",
+    "price": 299,
+    "mrp": 1299,
+    "discount": 76.98229407236336,
+    "image_url": "https://m.media-amazon.com/images/I/61q2+uIwjoL._AC_UL320_.jpg",
+    "url": "https://www.amazon.in/dp/B0CZ9MDSWX?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 50.72782482251305,
+    "timestamp": 1787604543.3095412,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 299,
+        "timestamp": 1787604543.3095412
+      }
+    ]
+  },
+  {
+    "id": "B0GW61YKQK",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Tecno POP X 5G (Ripple Green, 6GB+128GB) | 6500mAh+45W Fast Charger | IP64 Pro | MIL-STD 810H Protection | Upto 18GB* RAM | Fastest 8X Network Speed* with URSP | 120Hz Smooth Display | 50MP Camera",
+    "price": 17999,
+    "mrp": 31999,
+    "discount": 43.751367230225945,
+    "image_url": "https://m.media-amazon.com/images/I/61atDI4JmDL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
+    "url": "https://www.amazon.in/dp/B0GW69R46K?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 62.60109378418076,
+    "timestamp": 1787604492.6483407,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 15999,
+        "timestamp": 1787603390.2946365
+      },
+      {
+        "price": 17999,
+        "timestamp": 1787604492.6483407
       }
     ]
   },
@@ -192,30 +1540,6 @@
       {
         "price": 6000,
         "timestamp": 1787604238.854878
-      }
-    ]
-  },
-  {
-    "id": "ajio_467043815001",
-    "platform": "ajio_deals",
-    "title": "Women Snake Analogue Watch - JC1L269M0075",
-    "price": 15500,
-    "mrp": 31000,
-    "discount": 50.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240206/WUMM/65c189be16fd2c6e6adcd341/-286Wx359H-467043739-black-MODEL.jpg",
-    "url": "https://www.ajio.com/just-cavalli-women-snake-analogue-watch--jc1l269m0075/p/467043739_black",
-    "is_verified_low": false,
-    "deal_score": 76.4,
-    "timestamp": 1787604233.689069,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 18300,
-        "timestamp": 1787604176.445329
-      },
-      {
-        "price": 15500,
-        "timestamp": 1787604233.689069
       }
     ]
   },
@@ -344,38 +1668,6 @@
     ]
   },
   {
-    "id": "ajio_410456622002",
-    "platform": "ajio_deals",
-    "title": "Men Striped Slim Fit Shirt with Button-Down Collar",
-    "price": 1195,
-    "mrp": 2299,
-    "discount": 48.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240103/ETy9/65946625ddf7791519fd5944/-286Wx359H-466940537-navy-MODEL.jpg",
-    "url": "https://www.ajio.com/giordano-men-striped-slim-fit-shirt-with-button-down-collar/p/466940537_navy",
-    "is_verified_low": false,
-    "deal_score": 44.81528888888889,
-    "timestamp": 1787604201.7809134,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3160,
-        "timestamp": 1787592896.7852147
-      },
-      {
-        "price": 1195,
-        "timestamp": 1787592906.7497633
-      },
-      {
-        "price": 3160,
-        "timestamp": 1787604186.6505077
-      },
-      {
-        "price": 1195,
-        "timestamp": 1787604201.7809134
-      }
-    ]
-  },
-  {
     "id": "ajio_465427516001",
     "platform": "ajio_deals",
     "title": "Heathered Print Pathani Kurta",
@@ -476,70 +1768,6 @@
     ]
   },
   {
-    "id": "myntra_42067452",
-    "platform": "myntra_deals",
-    "title": "HRX by Hrithik Roshan HRX by Hrithik Roshan Unisex Printed Sliders",
-    "price": 586,
-    "mrp": 2399,
-    "discount": 75.57,
-    "image_url": "http://assets.myntassets.com/assets/images/2026/JULY/17/oMym6IrH_ab352a1037514d3aa004f4a75f2c505d.jpg",
-    "url": "https://www.myntra.com/flip-flops/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-unisex-printed-sliders/36064830/buy",
-    "is_verified_low": false,
-    "deal_score": 56.072411111111116,
-    "timestamp": 1787604171.2185497,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 749,
-        "timestamp": 1787592856.2057686
-      },
-      {
-        "price": 586,
-        "timestamp": 1787592878.6543796
-      },
-      {
-        "price": 749,
-        "timestamp": 1787604170.7690756
-      },
-      {
-        "price": 586,
-        "timestamp": 1787604171.2185497
-      }
-    ]
-  },
-  {
-    "id": "myntra_33673022",
-    "platform": "myntra_deals",
-    "title": "HRX by Hrithik Roshan HRX by Hrithik Roshan Women Rapid-Dry Running Tracksuit",
-    "price": 1220,
-    "mrp": 3299,
-    "discount": 63.02,
-    "image_url": "http://assets.myntassets.com/assets/images/2026/JULY/17/3J5dvQPS_eb9845dbb866466294ef8a048f1c2c22.jpg",
-    "url": "https://www.myntra.com/tracksuits/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-women-rapid-dry-running-tracksuit/29143060/buy",
-    "is_verified_low": false,
-    "deal_score": 56.4024,
-    "timestamp": 1787604171.1396348,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 1439,
-        "timestamp": 1787592854.1138532
-      },
-      {
-        "price": 1220,
-        "timestamp": 1787592876.54185
-      },
-      {
-        "price": 1439,
-        "timestamp": 1787604170.7010455
-      },
-      {
-        "price": 1220,
-        "timestamp": 1787604171.1396348
-      }
-    ]
-  },
-  {
     "id": "myntra_40138773",
     "platform": "myntra_deals",
     "title": "HRX by Hrithik Roshan HRX by Hrithik Roshan Women Mesh training or GYM non-marking shoes",
@@ -612,78 +1840,6 @@
     ]
   },
   {
-    "id": "MIXH63QPVDNAEA5S",
-    "platform": "flipkart_appliances_deals",
-    "title": "Sansui Plus 500 W Juicer Mixer Grinder",
-    "price": 1549,
-    "mrp": 3599,
-    "discount": 57.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/sansui-plus-500-w-juicer-mixer-grinder/p/itm829997849ca1e?pid=MIXGRH82YRZPZBZH&lid=LSTMIXGRH82YRZPZBZHJS6PKJ&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_39&otracker=search&fm=organic&iid=ffdd2c1e-d009-44a2-8a4d-b5921c34cc84.MIXGRH82YRZPZBZH.SEARCH&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 58.507777777777775,
-    "timestamp": 1787604155.9604588,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3499,
-        "timestamp": 1787604012.6252158
-      },
-      {
-        "price": 1140,
-        "timestamp": 1787604089.0131905
-      },
-      {
-        "price": 1989,
-        "timestamp": 1787604155.7846437
-      },
-      {
-        "price": 1599,
-        "timestamp": 1787604155.9039288
-      },
-      {
-        "price": 1549,
-        "timestamp": 1787604155.9604588
-      }
-    ]
-  },
-  {
-    "id": "AFRHCHFGYNJGYAPX",
-    "platform": "flipkart_appliances_deals",
-    "title": "Pigeon Healthifry Plus Digital Airfryer 4.2 L 1400W Air Fryer",
-    "price": 3345,
-    "mrp": 7995,
-    "discount": 58.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/pigeon-healthifry-plus-digital-airfryer-4-2-l-1400w-air-fryer/p/itmdbbc45906f365?pid=AFRHYVQYZV6UCWHP&lid=LSTAFRHYVQYZV6UCWHPDTBH0B&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_37&otracker=search&fm=organic&iid=ffdd2c1e-d009-44a2-8a4d-b5921c34cc84.AFRHYVQYZV6UCWHP.SEARCH&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 58.09555555555555,
-    "timestamp": 1787604155.84887,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3299,
-        "timestamp": 1787603990.8576856
-      },
-      {
-        "price": 2950,
-        "timestamp": 1787604020.799647
-      },
-      {
-        "price": 5729,
-        "timestamp": 1787604043.5241957
-      },
-      {
-        "price": 2629,
-        "timestamp": 1787604110.9563465
-      },
-      {
-        "price": 3345,
-        "timestamp": 1787604155.84887
-      }
-    ]
-  },
-  {
     "id": "AFRHDYGBWHJXAKFX",
     "platform": "flipkart_appliances_deals",
     "title": "Sansui CRISP FRY Air Fryer",
@@ -744,30 +1900,6 @@
       {
         "price": 779,
         "timestamp": 1787604141.2724562
-      }
-    ]
-  },
-  {
-    "id": "IRNEVTESQWWGWZZG",
-    "platform": "flipkart_appliances_deals",
-    "title": "Orient Electric by Orient Electric Fabriknight DIFK10BP 1000 W Dry Iron",
-    "price": 579,
-    "mrp": 940,
-    "discount": 38.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/orient-electric-fabriknight-difk10bp-1000-w-dry-iron/p/itm59599843e3db2?pid=IRNHYMZGZCTRPEGY&lid=LSTIRNHYMZGZCTRPEGYSZVNR9&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_31&otracker=search&fm=organic&iid=ffdd2c1e-d009-44a2-8a4d-b5921c34cc84.IRNHYMZGZCTRPEGY.SEARCH&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 47.6776,
-    "timestamp": 1787604141.1627488,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 599,
-        "timestamp": 1787604028.6791513
-      },
-      {
-        "price": 579,
-        "timestamp": 1787604141.1627488
       }
     ]
   },
@@ -872,34 +2004,6 @@
       {
         "price": 6999,
         "timestamp": 1787604111.1620805
-      }
-    ]
-  },
-  {
-    "id": "MIXGK4FM2GTWUDYN",
-    "platform": "flipkart_appliances_deals",
-    "title": "Longway Powerful Motor for Grinding, Mixing, Juicing Up to 750 W Juicer Mixer Grinder",
-    "price": 1599,
-    "mrp": 3889,
-    "discount": 59.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/longway-powerful-motor-grinding-mixing-juicing-up-750-w-juicer-mixer-grinder/p/itmcc75842305646?pid=MIXF5FSZGNZKYFTG&lid=LSTMIXF5FSZGNZKYFTGMC3NPY&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_24&otracker=search&fm=organic&iid=ffdd2c1e-d009-44a2-8a4d-b5921c34cc84.MIXF5FSZGNZKYFTG.SEARCH&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 54.74733333333334,
-    "timestamp": 1787604111.053367,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 1424,
-        "timestamp": 1787604020.9171917
-      },
-      {
-        "price": 1699,
-        "timestamp": 1787604096.0504165
-      },
-      {
-        "price": 1599,
-        "timestamp": 1787604111.053367
       }
     ]
   },
@@ -1148,78 +2252,6 @@
     ]
   },
   {
-    "id": "WSLGYKZGEHFXXBB2",
-    "platform": "flipkart_appliances_deals",
-    "title": "Misuhrobir Electronic Kitchen Scale 10Kg Weighing Scale",
-    "price": 298,
-    "mrp": 1299,
-    "discount": 77.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/misuhrobir-electronic-kitchen-scale-10kg-weighing/p/itm7422493ef7d8b?pid=WSLGYKZGEHFXXBB2&lid=LSTWSLGYKZGEHFXXBB2VMMF4D&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_3&otracker=search&fm=organic&iid=en_cebcVVW4slUiDDU4HcQrGIKrbdEn_yLGhDXFK6vdPjU7hlGd6seIzJeWaTUCedHciFnWNwT1ReuWgkujLEHrQBorwDjN2T_4IuymixDhpzdDti_bJbunAZn3zUODBr8f&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 60.16826666666666,
-    "timestamp": 1787604005.430494,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 298,
-        "timestamp": 1787604005.430494
-      }
-    ]
-  },
-  {
-    "id": "AFRHFGKK3DPVSMYY",
-    "platform": "flipkart_appliances_deals",
-    "title": "KENT Ultra Air Fryer 4L 1300W Fry, Bake, Grill & Roast Up to 80% Less Oil Usage Rapid Heat Circulation Adjustable Temperature Control Knob 80 to 200 Auto Cut-Off Air Fryer",
-    "price": 2549,
-    "mrp": 8000,
-    "discount": 68.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/kent-ultra-air-fryer-4l-1300w-fry-bake-grill-roast-up-80-less-oil-usage-rapid-heat-circulation-adjustable-temperature-control-knob-80-200-auto-cut-off/p/itm8ff620a1caba2?pid=AFRHFGKK3DPVSMYY&lid=LSTAFRHFGKK3DPVSMYYU4Z7LO&marketplace=FLIPKART&q=appliances&store=j9e&srno=s_1_2&otracker=search&fm=organic&iid=en_cebcVVW4slUiDDU4HcQrGIKrbdEn_yLGhDXFK6vdPjX5yEGu49Jt8IHMMlKLhJbYtfzXbMtN-gVZRa7rYou3GEb3mvbS5mbkAs5BzBcepeOSEFu_3XuXX5wwkZa4M7IN&ppt=None&ppn=None&ssid=vemsx3k8y80000001787603955364&qH=fea3a660827437aa&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 61.65493333333334,
-    "timestamp": 1787603997.95466,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2549,
-        "timestamp": 1787603997.95466
-      }
-    ]
-  },
-  {
-    "id": "SOIG57XVGTZYUSBN",
-    "platform": "flipkart_electronics_deals",
-    "title": "Walkers Electronic 7in1 Mobile Soldering Iron Equipment Tool Machine Combo Kit Set with Flux Paste and 5 Meter Wire 25 W Simple",
-    "price": 376,
-    "mrp": 549,
-    "discount": 32.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/walkers-electronic-7in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-flux-paste-5-meter-wire-25-w-simple/p/itm7f26d5189f1c4?pid=SOIFZUNFRYSMGVPX&lid=LSTSOIFZUNFRYSMGVPXIL9LJF&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_40&otracker=search&fm=organic&iid=42127e61-778c-441f-a8ce-3e5b23ff7a96.SOIFZUNFRYSMGVPX.SEARCH&ppt=None&ppn=None&ssid=sx126q98z40000001787603803235&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 37.8768,
-    "timestamp": 1787603949.6361897,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 359,
-        "timestamp": 1787603871.941308
-      },
-      {
-        "price": 434,
-        "timestamp": 1787603933.6950111
-      },
-      {
-        "price": 419,
-        "timestamp": 1787603941.3227644
-      },
-      {
-        "price": 376,
-        "timestamp": 1787603949.6361897
-      }
-    ]
-  },
-  {
     "id": "TMRH2Z49Z9EEQ5HG",
     "platform": "flipkart_electronics_deals",
     "title": "One Plus OP 11 Cordless Professional Hair Trimmer Titanium coated blade waterproof Trimmer 120 min Runtime 12 Length Settings",
@@ -1236,114 +2268,6 @@
       {
         "price": 579,
         "timestamp": 1787603941.7002795
-      }
-    ]
-  },
-  {
-    "id": "SOIH2HZMX4YCENCX",
-    "platform": "flipkart_electronics_deals",
-    "title": "Hillgrove HGSOI15M1 Electric Gadget 8in1 New Mobile Soldering Iron Machine Combo Kit Set 25 W Simple",
-    "price": 390,
-    "mrp": 899,
-    "discount": 57.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/hillgrove-hgsoi15m1-electric-gadget-8in1-new-mobile-soldering-iron-machine-combo-kit-set-25-w-simple/p/itm1777a3ee9ee14?pid=SOIGGZ7Y2XDQBRYZ&lid=LSTSOIGGZ7Y2XDQBRYZYKTMJY&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_38&otracker=search&fm=organic&iid=42127e61-778c-441f-a8ce-3e5b23ff7a96.SOIGGZ7Y2XDQBRYZ.SEARCH&ppt=None&ppn=None&ssid=sx126q98z40000001787603803235&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 51.681066666666666,
-    "timestamp": 1787603941.5816898,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 379,
-        "timestamp": 1787603925.9283743
-      },
-      {
-        "price": 599,
-        "timestamp": 1787603933.596598
-      },
-      {
-        "price": 376,
-        "timestamp": 1787603933.7712185
-      },
-      {
-        "price": 477,
-        "timestamp": 1787603941.0059276
-      },
-      {
-        "price": 390,
-        "timestamp": 1787603941.0733333
-      },
-      {
-        "price": 405,
-        "timestamp": 1787603941.1365118
-      },
-      {
-        "price": 749,
-        "timestamp": 1787603941.3690004
-      },
-      {
-        "price": 390,
-        "timestamp": 1787603941.4382503
-      },
-      {
-        "price": 364,
-        "timestamp": 1787603941.5086617
-      },
-      {
-        "price": 390,
-        "timestamp": 1787603941.5816898
-      }
-    ]
-  },
-  {
-    "id": "SOIFRAQZAHUVEMFF",
-    "platform": "flipkart_electronics_deals",
-    "title": "FADMAN Electronic 7in1 Mobile Soldering Iron Equipment Tool Machine Combo Kit Set 25 W Simple",
-    "price": 303,
-    "mrp": 799,
-    "discount": 62.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/fadman-electronic-7in1-mobile-soldering-iron-equipment-tool-machine-combo-kit-set-25-w-simple/p/itme9c0da03488d8?pid=SOIHBMH4XRFH8D5T&lid=LSTSOIHBMH4XRFH8D5TPC38HW&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_32&otracker=search&fm=organic&iid=42127e61-778c-441f-a8ce-3e5b23ff7a96.SOIHBMH4XRFH8D5T.SEARCH&ppt=None&ppn=None&ssid=sx126q98z40000001787603803235&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 52.393600000000006,
-    "timestamp": 1787603941.2599337,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 410,
-        "timestamp": 1787603886.971025
-      },
-      {
-        "price": 168,
-        "timestamp": 1787603910.3958185
-      },
-      {
-        "price": 308,
-        "timestamp": 1787603917.9182215
-      },
-      {
-        "price": 308,
-        "timestamp": 1787603917.995869
-      },
-      {
-        "price": 237,
-        "timestamp": 1787603925.814827
-      },
-      {
-        "price": 198,
-        "timestamp": 1787603933.4640582
-      },
-      {
-        "price": 359,
-        "timestamp": 1787603933.5261993
-      },
-      {
-        "price": 319,
-        "timestamp": 1787603941.199012
-      },
-      {
-        "price": 303,
-        "timestamp": 1787603941.2599337
       }
     ]
   },
@@ -1408,38 +2332,6 @@
       {
         "price": 518,
         "timestamp": 1787603903.1211462
-      }
-    ]
-  },
-  {
-    "id": "TMRGB9NKKVZTGTK9",
-    "platform": "flipkart_electronics_deals",
-    "title": "NOVA NHT 1052 Trimmer 90 min Runtime 40 Length Settings",
-    "price": 699,
-    "mrp": 1995,
-    "discount": 65.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/nova-nht-1052-trimmer-90-min-runtime-40-length-settings/p/itmd164bdfeecb32?pid=TMRFZ9NQWGHEKQBS&lid=LSTTMRFZ9NQWGHEKQBSBZBZHT&marketplace=FLIPKART&q=electronics&store=search.flipkart.com&srno=s_1_13&otracker=search&fm=organic&iid=42127e61-778c-441f-a8ce-3e5b23ff7a96.TMRFZ9NQWGHEKQBS.SEARCH&ppt=None&ppn=None&ssid=sx126q98z40000001787603803235&qH=9ca91fd2ee5f4b46&ov_redirect=true&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 59.0736,
-    "timestamp": 1787603902.9731414,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 548,
-        "timestamp": 1787603841.9546988
-      },
-      {
-        "price": 799,
-        "timestamp": 1787603871.8290892
-      },
-      {
-        "price": 587,
-        "timestamp": 1787603894.4808464
-      },
-      {
-        "price": 699,
-        "timestamp": 1787603902.9731414
       }
     ]
   },
@@ -1564,78 +2456,6 @@
     ]
   },
   {
-    "id": "SHOFQU45R45RAHER",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Mesh Walking Outdoor Daily Use Casuals For Men",
-    "price": 383,
-    "mrp": 1999,
-    "discount": 81.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/aadi-mesh-lightweight-comfort-summer-trendy-walking-outdoor-daily-use-casuals-men/p/itmd0575e04ca6f0?pid=SHOG585V54BCSGU5&lid=LSTSHOG585V54BCSGU5ZSNT8M&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_40&otracker=search&fm=organic&iid=1c00e6cb-c0de-48b7-82ee-b18e89a49cb3.SHOG585V54BCSGU5.SEARCH&ppt=None&ppn=None&ssid=ixnb5y3eow0000001787603719424&qH=d424b868764ef9b8&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 54.71893333333334,
-    "timestamp": 1787603797.2822115,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 301,
-        "timestamp": 1787603775.3209548
-      },
-      {
-        "price": 383,
-        "timestamp": 1787603797.2822115
-      }
-    ]
-  },
-  {
-    "id": "SHOGQHGGRZT6WJME",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Lightweight,Comfort,Summer,Trendy,Walking,Outdoor,Stylish,Training,Daily Use Sneakers For Men",
-    "price": 317,
-    "mrp": 1999,
-    "discount": 84.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/aadi-lightweight-comfort-summer-trendy-walking-outdoor-stylish-training-daily-use-sneakers-men/p/itmad091180f098e?pid=SHOGNFV96HYMZEZQ&lid=LSTSHOGNFV96HYMZEZQUJTIO5&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_39&otracker=search&fm=organic&iid=1c00e6cb-c0de-48b7-82ee-b18e89a49cb3.SHOGNFV96HYMZEZQ.SEARCH&ppt=None&ppn=None&ssid=ixnb5y3eow0000001787603719424&qH=d424b868764ef9b8&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 61.891200000000005,
-    "timestamp": 1787603797.2258155,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 270,
-        "timestamp": 1787603752.8796837
-      },
-      {
-        "price": 352,
-        "timestamp": 1787603760.2969978
-      },
-      {
-        "price": 337,
-        "timestamp": 1787603767.6867077
-      },
-      {
-        "price": 395,
-        "timestamp": 1787603782.257913
-      },
-      {
-        "price": 319,
-        "timestamp": 1787603782.3142993
-      },
-      {
-        "price": 395,
-        "timestamp": 1787603782.4491012
-      },
-      {
-        "price": 428,
-        "timestamp": 1787603789.9421854
-      },
-      {
-        "price": 317,
-        "timestamp": 1787603797.2258155
-      }
-    ]
-  },
-  {
     "id": "SHOGKA9QFYF9KNZH",
     "platform": "flipkart_clearance_master_feed",
     "title": "Ultralightweight Comfortable Breathable Walking Outdoor Daily Use Sneakers For Men",
@@ -1652,106 +2472,6 @@
       {
         "price": 337,
         "timestamp": 1787603790.0644102
-      }
-    ]
-  },
-  {
-    "id": "SHOGAYVWV7BUBS2D",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Synthetic Leather Walking Outdoor Daily Use Sneakers For Men",
-    "price": 270,
-    "mrp": 1199,
-    "discount": 77.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/aadi-synthetic-leather-lightweight-comfort-summer-trendy-walking-outdoor-daily-use-sneakers-men/p/itm4776f0ba0d12a?pid=SHOGG3NUYTKSHTK6&lid=LSTSHOGG3NUYTKSHTK6B7HCIN&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_35&otracker=search&fm=organic&iid=1c00e6cb-c0de-48b7-82ee-b18e89a49cb3.SHOGG3NUYTKSHTK6.SEARCH&ppt=None&ppn=None&ssid=ixnb5y3eow0000001787603719424&qH=d424b868764ef9b8&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 59.2864,
-    "timestamp": 1787603782.5220444,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 423,
-        "timestamp": 1787603767.9651492
-      },
-      {
-        "price": 270,
-        "timestamp": 1787603782.5220444
-      }
-    ]
-  },
-  {
-    "id": "SHOGMKFZHHBGKTE3",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Men's Lightweight Comfortable Trendy Outdoor Stylish Lace Up Casual Sneakers For Men",
-    "price": 317,
-    "mrp": 1999,
-    "discount": 84.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/aadi-men-s-lightweight-comfortable-trendy-outdoor-stylish-lace-up-casual-sneakers-men/p/itm86f3b6e5eb79e?pid=SHOHH9TMUBGQ7T8G&lid=LSTSHOHH9TMUBGQ7T8GKEYHON&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_32&otracker=search&fm=organic&iid=1c00e6cb-c0de-48b7-82ee-b18e89a49cb3.SHOHH9TMUBGQ7T8G.SEARCH&ppt=None&ppn=None&ssid=ixnb5y3eow0000001787603719424&qH=d424b868764ef9b8&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 63.0912,
-    "timestamp": 1787603782.3867323,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 360,
-        "timestamp": 1787603745.643983
-      },
-      {
-        "price": 442,
-        "timestamp": 1787603760.1054764
-      },
-      {
-        "price": 471,
-        "timestamp": 1787603760.1654155
-      },
-      {
-        "price": 430,
-        "timestamp": 1787603760.2180278
-      },
-      {
-        "price": 2753,
-        "timestamp": 1787603767.5832055
-      },
-      {
-        "price": 2624,
-        "timestamp": 1787603767.8007114
-      },
-      {
-        "price": 395,
-        "timestamp": 1787603775.2259421
-      },
-      {
-        "price": 317,
-        "timestamp": 1787603782.3867323
-      }
-    ]
-  },
-  {
-    "id": "SHOHYMZNUDMC5ZFW",
-    "platform": "flipkart_clearance_master_feed",
-    "title": "Synthetic Leather Comfortable Lightweight Outdoor Casual Shoes Outdoors For Men",
-    "price": 416,
-    "mrp": 1999,
-    "discount": 79.0,
-    "image_url": "",
-    "url": "https://www.flipkart.com/aadi-synthetic-leather-comfortable-lightweight-outdoor-casual-shoes-outdoors-men/p/itme721aeec1d88a?pid=SHOHYNYUVG9UURXY&lid=LSTSHOHYNYUVG9UURXYUE39D2&marketplace=FLIPKART&q=clearance+sale&store=search.flipkart.com&srno=s_1_18&otracker=search&fm=organic&iid=1c00e6cb-c0de-48b7-82ee-b18e89a49cb3.SHOHYNYUVG9UURXY.SEARCH&ppt=None&ppn=None&ssid=ixnb5y3eow0000001787603719424&qH=d424b868764ef9b8&ov_redirect=true",
-    "is_verified_low": false,
-    "deal_score": 60.86613333333334,
-    "timestamp": 1787603767.8545249,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 416,
-        "timestamp": 1787603760.4384582
-      },
-      {
-        "price": 437,
-        "timestamp": 1787603767.740542
-      },
-      {
-        "price": 416,
-        "timestamp": 1787603767.8545249
       }
     ]
   },
@@ -1900,30 +2620,6 @@
     ]
   },
   {
-    "id": "B0F6LXSHNH",
-    "platform": "amazon_appliances_deals",
-    "title": "12 Pcs Dishcloths | 12x16 Inches | Bulk Cotton Kitchen Cleaning Dish Cloths | Scrubbing Wash Cloth Sets | Multipurpose Cloth | 100% Cotton. (Multicolor, Set of 12)",
-    "price": 207,
-    "mrp": 700,
-    "discount": 70.42857142857143,
-    "image_url": "https://m.media-amazon.com/images/I/71LuKLvWCGL._AC_UY218_.jpg",
-    "url": "https://www.amazon.in/dp/B0F6LS5ZHS?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 48.799911111111115,
-    "timestamp": 1787603648.203369,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 196,
-        "timestamp": 1787603637.0393605
-      },
-      {
-        "price": 207,
-        "timestamp": 1787603648.203369
-      }
-    ]
-  },
-  {
     "id": "B0FV8TRT6T",
     "platform": "amazon_appliances_deals",
     "title": "Travel Garment Steamer for Clothes| 180 degree rotation| Ultra Fast 15s Heat-Up| 1300W Powerful Wrinkle Remover| Portable & Lightweight | 2 in 1 Vertical and Horizontal Use| Home & Travel use",
@@ -1984,30 +2680,6 @@
     ]
   },
   {
-    "id": "B0FG7SDJ1Q",
-    "platform": "amazon_appliances_deals",
-    "title": "Selvel Elegance Royal Insulated Casserole Set of 3, 600ml, 1200ml, 1700ml, Stainless Steel Inner, Hot Box for Roti, Chapati, Biryani, Keeps Food Hot 6 Hours, Housewarming Gift, Dark Grey",
-    "price": 2089,
-    "mrp": 4999,
-    "discount": 58.21164232846569,
-    "image_url": "https://m.media-amazon.com/images/I/71x+9LKGMdL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0D6GHV1JN?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 55.40209144051032,
-    "timestamp": 1787603636.6905015,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 991,
-        "timestamp": 1787603631.1018019
-      },
-      {
-        "price": 2089,
-        "timestamp": 1787603636.6905015
-      }
-    ]
-  },
-  {
     "id": "B0FTT24MP7",
     "platform": "amazon_appliances_deals",
     "title": "VOLTURI 304 Stainless Steel Chopping Board (32 x 21.5 cm), Upgraded to Surgical-Level Hygiene, Food-Grade, Non-Porous, Rustproof, Heat Resistant Heavy-Duty Cutting Board Built for Daily Indian Cooking",
@@ -2024,26 +2696,6 @@
       {
         "price": 299,
         "timestamp": 1787603633.9247508
-      }
-    ]
-  },
-  {
-    "id": "B0D7ZLSVRQ",
-    "platform": "amazon_appliances_deals",
-    "title": "Amazon Basics - Multipurpose Zip Lock Storage Bags | 45 Count | Small | 21.3 x 18 cm | Reusable and Reclosable with Double Zipper | Material Plastic | Leak- Proof | Food Grade | Microwave Safe",
-    "price": 245,
-    "mrp": 600,
-    "discount": 59.166666666666664,
-    "image_url": "https://m.media-amazon.com/images/I/71i16Mx24hL._AC_UY218_.jpg",
-    "url": "https://www.amazon.in/dp/B0D7ZLSVRQ?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 61.245777777777775,
-    "timestamp": 1787603628.2368104,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 245,
-        "timestamp": 1787603628.2368104
       }
     ]
   },
@@ -2104,30 +2756,6 @@
       {
         "price": 2999,
         "timestamp": 1787603583.987276
-      }
-    ]
-  },
-  {
-    "id": "B07TF7G89F",
-    "platform": "amazon_electronics_deals",
-    "title": "Tamron 20mm F/2.8 Di III OSD M1:2 for Sony Full-Frame mirrorless Camera",
-    "price": 18290,
-    "mrp": 32000,
-    "discount": 42.84375,
-    "image_url": "https://m.media-amazon.com/images/I/51htgoUskOL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B07ZZHNXJH?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 58.275000000000006,
-    "timestamp": 1787603583.851287,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 17990,
-        "timestamp": 1787603581.1519766
-      },
-      {
-        "price": 18290,
-        "timestamp": 1787603583.851287
       }
     ]
   },
@@ -2560,26 +3188,6 @@
     ]
   },
   {
-    "id": "B0FH2CJF45",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "TAGDO Men's Straight Fit Cotton Cargo Jeans Pant (2040)",
-    "price": 699,
-    "mrp": 3199,
-    "discount": 78.14942169427947,
-    "image_url": "https://m.media-amazon.com/images/I/61HsIWeo8bL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0FH2CJF45?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 69.73639679066375,
-    "timestamp": 1787603489.1901424,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 699,
-        "timestamp": 1787603489.1901424
-      }
-    ]
-  },
-  {
     "id": "B0D2R4GV94",
     "platform": "amazon_sitewide_search_deals",
     "title": "Crompton Laser Ray Smile 20W LED Batten |4 feet Slim Batten for Living Room & Bedroom | Energy Efficient Tubelight for Home | BIS Approved | Cool Day Light (6500K) (Pack of 2)",
@@ -2944,26 +3552,6 @@
       {
         "price": 21999,
         "timestamp": 1787603392.9423337
-      }
-    ]
-  },
-  {
-    "id": "B0GW61YKQK",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Tecno POP X 5G (Ripple Green, 4GB+128GB) | 6500mAh+45W Fast Charger | IP64 Pro | MIL-STD 810H Protection | Upto 18GB* RAM | Fastest 8X Network Speed* with URSP | 120Hz Smooth Display | 50MP Camera",
-    "price": 15999,
-    "mrp": 27999,
-    "discount": 42.85867352405443,
-    "image_url": "https://m.media-amazon.com/images/I/61atDI4JmDL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GW61YKQK?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 61.886938819243554,
-    "timestamp": 1787603390.2946365,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 15999,
-        "timestamp": 1787603390.2946365
       }
     ]
   },
@@ -6356,246 +6944,6 @@
       {
         "price": 2749,
         "timestamp": 1784269987.497053
-      }
-    ]
-  },
-  {
-    "id": "B0G821YMW4",
-    "platform": "amazon_appliances_deals",
-    "title": "Xmart India Chopper for Kitchen Use, 900ml Push Chopper with 5 Blades, Vegetable Cutter Kitchen Accessories Items for Home Cutting Vegetables, Onion, Ginger, Garlic, Salad, Tomato, Potato (Pista)",
-    "price": 279,
-    "mrp": 599,
-    "discount": 53.42237061769616,
-    "image_url": "https://m.media-amazon.com/images/I/71lMeNgPvfL._AC_UY218_.jpg",
-    "url": "https://www.amazon.in/dp/B0G821YMW4?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 61.528992765720645,
-    "timestamp": 1784269985.678933,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 279,
-        "timestamp": 1784269985.678933
-      }
-    ]
-  },
-  {
-    "id": "B0BRQGL35H",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "Cockatoo YM100 Yoga Mat For Women & Men, Anti Slip, EVA Material, (4mm-6mm) Exercise Mat For Home Gym |Yoga Mat For Gym Workout and Yoga Exercise (4MM, Grey)",
-    "price": 359,
-    "mrp": 599,
-    "discount": 40.06677796327212,
-    "image_url": "https://m.media-amazon.com/images/I/71Z0q+VOv4L._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0BRQGL35H?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 54.64674457429049,
-    "timestamp": 1784269984.9131126,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 359,
-        "timestamp": 1784269984.9131126
-      }
-    ]
-  },
-  {
-    "id": "B0DQD8HWWG",
-    "platform": "amazon_master_lightning_deals",
-    "title": "GRENARO Mic for YouTube Wireless, 3-Level Adjustable Noise Reduction Mic Wireless,S12 Wireless Microphone for Youtubers with LED Indicator Light (Single Channel Type-C Port Version)",
-    "price": 786,
-    "mrp": 1999,
-    "discount": 60.680340170085046,
-    "image_url": "https://m.media-amazon.com/images/I/71dhDqkgHPL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0DQD8HWWG?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 74.0629047857262,
-    "timestamp": 1784269984.1716955,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 786,
-        "timestamp": 1784269984.1716955
-      }
-    ]
-  },
-  {
-    "id": "B0G52VRVC8",
-    "platform": "amazon_appliances_deals",
-    "title": "Qlect Premium Automatic Electric Water Dispenser Pump for 20 Litre Bottle Portable Water Pump Dispenser for Home, Office, and Outdoors | 1200 mAh C-Type Fast Charging Battery (Black)",
-    "price": 248,
-    "mrp": 1999,
-    "discount": 87.59379689844923,
-    "image_url": "https://m.media-amazon.com/images/I/61S35bKSeEL._AC_UY218_.jpg",
-    "url": "https://www.amazon.in/dp/B0G52VRVC8?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 100.0,
-    "timestamp": 1784269982.3456652,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 248,
-        "timestamp": 1784269982.3456652
-      }
-    ]
-  },
-  {
-    "id": "B0FMRH6X8Y",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Havells Gatik Pro 400mm Wall Mount Fan|RPM: 1350|Double string for Speed & Oscillation control | Thermal Overloaded Protected Motor | 100% Copper Wire Winding Motor | 2 Year Warranty,230 Volts(Black)",
-    "price": 2190,
-    "mrp": 4090,
-    "discount": 46.454767726161364,
-    "image_url": "https://m.media-amazon.com/images/I/71Z2zCJH5iL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0FMRH6X8Y?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 68.68500407497962,
-    "timestamp": 1784269980.8841958,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2190,
-        "timestamp": 1784269980.8841958
-      }
-    ]
-  },
-  {
-    "id": "B0F9YGHHXG",
-    "platform": "amazon_appliances_deals",
-    "title": "Qlect Portable Blender Electric Juicers Fruit Mixers USB Rechargeable Smoothie Mini Personal Juicer 6 Blades 3Gears With 1500 Mah Rechargeable Battery-Smoothie Blender",
-    "price": 698,
-    "mrp": 1999,
-    "discount": 65.08254127063532,
-    "image_url": "https://m.media-amazon.com/images/I/41Sb3p-NPBL._AC_UY218_.jpg",
-    "url": "https://www.amazon.in/dp/B0F9YGHHXG?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 64.23111222277805,
-    "timestamp": 1784269979.0230675,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 698,
-        "timestamp": 1784269979.0230675
-      }
-    ]
-  },
-  {
-    "id": "B0CS3KQWMM",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "Wuze Electric Pocket Hot Warm Water Heating Bag for Instant Pain Relief in Menstrual Cramps, Arthritis, Back Pain Hot Water Bottle | 2 Hours Retention | Quick Charging |",
-    "price": 189,
-    "mrp": 349,
-    "discount": 45.845272206303726,
-    "image_url": "https://m.media-amazon.com/images/I/71uYsTxPHYL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0CS3KQWMM?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 55.15835721107928,
-    "timestamp": 1784269978.2705507,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 189,
-        "timestamp": 1784269978.2705507
-      }
-    ]
-  },
-  {
-    "id": "B0CFYQKHJN",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "One94Store Rose Flower LED String Fairy Light \u2013 14 LED 3-Meter Night Light for Home Decor, Bedroom, Indoor & Outdoor Use, Valentine Day Gift",
-    "price": 199,
-    "mrp": 999,
-    "discount": 80.08008008008008,
-    "image_url": "https://m.media-amazon.com/images/I/71PPEO-O0kL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0CFYQKHJN?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 86.33333333333334,
-    "timestamp": 1784269974.928434,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 199,
-        "timestamp": 1784269974.928434
-      }
-    ]
-  },
-  {
-    "id": "B0CVF9YPPD",
-    "platform": "amazon_master_lightning_deals",
-    "title": "SEZNIK Josh Bluetooth Thermal Label Printer | Inkless Mini Rechargeable | MRP, Barcode, Excel File Print | Cloud, Mobile, Desktop | Jewellery, Round Labels | 2-inch Print | Free App | 1 Year Warranty",
-    "price": 2977,
-    "mrp": 4999,
-    "discount": 40.448089617923586,
-    "image_url": "https://m.media-amazon.com/images/I/81skHl4UDzL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0CVF9YPPD?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 70.29366273254651,
-    "timestamp": 1784269974.2217152,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2977,
-        "timestamp": 1784269974.2217152
-      }
-    ]
-  },
-  {
-    "id": "B0FNVSG8HR",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "Clovia Women's Cotton Printed Button Down Shirt & Pyjama Night Suit Set",
-    "price": 1266,
-    "mrp": 2299,
-    "discount": 44.93257938234015,
-    "image_url": "https://m.media-amazon.com/images/I/71uamc0RijL._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0FNVSG8HR?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 65.33947223430476,
-    "timestamp": 1784269971.593757,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 1266,
-        "timestamp": 1784269971.593757
-      }
-    ]
-  },
-  {
-    "id": "B0GJ4HDXR3",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Mova E40 Ultra Robot Vacuum Cleaner with Mop Function & Auto Empty, 19,000 Pa Suction, MaxiReach Mop T, Tangle-Free Side Brush, 80ml Water Tank, All-in-One Station for 75 Days Cleaning, White",
-    "price": 41999,
-    "mrp": 109999,
-    "discount": 61.81874380676188,
-    "image_url": "https://m.media-amazon.com/images/I/61z9DKM9arL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0GJ4HDXR3?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 86.77312066473331,
-    "timestamp": 1784269970.941945,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 41999,
-        "timestamp": 1784269970.941945
-      }
-    ]
-  },
-  {
-    "id": "B0CKK57LBY",
-    "platform": "amazon_sitewide_search_deals",
-    "title": "MIRADH Rain Drop LED Meteor Shower 192 LEDs 8 Tubes (11.8\") | Icicle Falling Effect for Diwali, Christmas, New Year, Home & Outdoor Decoration, Balcony, Tree, Party Decor (Warm White)",
-    "price": 649,
-    "mrp": 1999,
-    "discount": 67.53376688344173,
-    "image_url": "https://m.media-amazon.com/images/I/71m3c8OToML._AC_UL320_.jpg",
-    "url": "https://www.amazon.in/dp/B0CKK57LBY?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 63.273636818409216,
-    "timestamp": 1784269968.2956574,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 649,
-        "timestamp": 1784269968.2956574
       }
     ]
   }
