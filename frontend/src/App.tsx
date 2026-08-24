@@ -16,6 +16,7 @@ import { TelegramMiniApp } from "./components/tma/TelegramMiniApp";
 import { LootMobileShell } from "./components/mobile/LootMobileShell";
 import { DealItem } from "./types/api";
 import { ApiClient } from "./services/api";
+import { getEffectiveDealScore } from "./utils/scoreDecay";
 import { Zap, Search, SlidersHorizontal, RefreshCw, Layers } from "lucide-react";
 
 export function AppContent() {
@@ -180,8 +181,11 @@ export function AppContent() {
     0
   );
 
-  // Highest scoring deal for TopLoot hero feature card
-  const topDeal = deals.length > 0 ? [...deals].sort((a, b) => b.deal_score - a.deal_score)[0] : null;
+  // Highest effective scoring deal for TopLoot hero feature card (factoring in temporal decay)
+  const topDeal =
+    deals.length > 0
+      ? [...deals].sort((a, b) => getEffectiveDealScore(b) - getEffectiveDealScore(a))[0]
+      : null;
 
   const gridColsClass =
     density === "compact"

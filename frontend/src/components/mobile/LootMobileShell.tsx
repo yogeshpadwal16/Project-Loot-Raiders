@@ -9,6 +9,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { LootMap } from "../deals/LootMap";
 import { BrainConsole } from "../brain/BrainConsole";
 import { HealthMonitor } from "../admin/HealthMonitor";
+import { getEffectiveDealScore } from "../../utils/scoreDecay";
 import { Zap, SlidersHorizontal, RefreshCw } from "lucide-react";
 
 interface LootMobileShellProps {
@@ -99,10 +100,10 @@ export const LootMobileShell: React.FC<LootMobileShellProps> = ({
     return true;
   });
 
-  // Top featured deal (highest score or biggest discount)
+  // Top featured deal (highest effective score factoring in temporal decay)
   const featuredDeal =
     filteredDeals.length > 0
-      ? [...filteredDeals].sort((a, b) => (b.deal_score || 0) - (a.deal_score || 0))[0]
+      ? [...filteredDeals].sort((a, b) => getEffectiveDealScore(b) - getEffectiveDealScore(a))[0]
       : null;
 
   const remainingDeals = featuredDeal
