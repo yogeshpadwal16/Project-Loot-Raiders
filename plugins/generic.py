@@ -250,7 +250,22 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
 
                 // Title
                 let title = "";
-                if (titleSel) {
+                const brandEl = card.querySelector("h3.product-brand, .product-brand, .brand");
+                const productEl = card.querySelector("h4.product-product, .product-product");
+                if (brandEl && productEl) {
+                    const bText = (brandEl.textContent || "").trim();
+                    const pText = (productEl.textContent || "").trim();
+                    if (bText && pText) {
+                        if (pText.toLowerCase().startsWith(bText.toLowerCase())) {
+                            title = pText;
+                        } else {
+                            title = bText + " " + pText;
+                        }
+                    } else {
+                        title = pText || bText;
+                    }
+                }
+                if (!title && titleSel) {
                     const titleEl = card.querySelector(titleSel);
                     if (titleEl) {
                         title = titleEl.getAttribute("title") || titleEl.getAttribute("alt") || titleEl.textContent || "";
