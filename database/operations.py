@@ -237,19 +237,30 @@ def log_click_to_db(deal_id: str, title: str, ip: str, user: str, user_agent: st
         db.close()
 
 def verify_historical_low(driver, product_url: str, current_price: int, unique_id: str = None, discount: float = 0.0) -> bool:
+    """
+    Evaluates whether the current price observation represents a verified historical low.
+
+    Approved Rule:
+    1. At least 3 total observations exist for the product (>= 2 prior + current).
+    2. Earliest-to-latest observation span is at least 24.0 hours (86,400s).
+    3. Current price is the minimum observed price across all observations.
+    4. Current price is at least 5.0% below the observed historical maximum.
+
+    Otherwise: Returns False.
+    """
     from selenium.webdriver.common.by import By
     settings = load_settings()
     external_enabled = settings.get("external_price_tracker_enabled", False)
-    
+
     # If the platform is not Amazon or Flipkart, we cannot query buyhatke
     is_supported = any(r in product_url.lower() for r in ["amazon", "flipkart"])
-    
+
     historical_prices = []
     if external_enabled and is_supported:
         try:
             encoded_url = urllib.parse.quote_plus(product_url)
             tracker_query_url = f"https://price.buyhatke.com/products.php?url={encoded_url}"
-            
+
             driver.execute_script("window.open('');")
             driver.switch_to.window(driver.window_handles[1])
             driver.set_page_load_timeout(5)
@@ -257,10 +268,10 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
                 driver.get(tracker_query_url)
                 time.sleep(1.5)
                 page_text = driver.find_element(By.TAG_NAME, "body").text.replace(',', '')
-                historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|â‚¹)\s*([0-9]+)', page_text)]
+                historical_prices = [int(n) for n in re.findall(r'(?:Rs\.?|₹)\s*([0-9]+)', page_text)]
             except Exception:
                 historical_prices = []
-                
+
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
         except Exception:
@@ -271,50 +282,58 @@ def verify_historical_low(driver, product_url: str, current_price: int, unique_i
             except Exception:
                 pass
 
-        # If external tracker succeeded, use its data
-        if historical_prices:
+        # If external tracker succeeded and has sufficient baseline history (>= 2 points)
+        if len(historical_prices) >= 2:
             lowest_ever = min(historical_prices)
             highest_ever = max(historical_prices)
-            
-            is_near_low = current_price <= (lowest_ever * 1.05)
-            has_real_drop = False
-            if highest_ever > current_price:
-                drop_from_peak = ((highest_ever - current_price) / highest_ever) * 100
-                if drop_from_peak >= 15.0:
-                    has_real_drop = True
-                    
-            if is_near_low and has_real_drop:
+
+            is_min = current_price <= lowest_ever
+            has_real_drop = (highest_ever - current_price) / highest_ever >= 0.05 if highest_ever > 0 else False
+            if is_min and has_real_drop:
                 return True
             return False
-        
-    # Fallback: Compare against our local historical deals database
+
+    # Compare against our local historical deals database
     if unique_id:
         from database.repository import SQLAlchemyDealRepository
         repo = SQLAlchemyDealRepository()
         db = SessionLocal()
         try:
             prices = repo.get_price_history(db, unique_id)
-            if prices:
+            # Must have at least 2 prior historical observations to reach 3 total observations with current
+            if prices and len(prices) >= 2:
                 prices_list = [p.price for p in prices]
-                min_price = min(prices_list)
-                max_price = max(prices_list)
-                
-                is_near_low = current_price <= min_price
-                has_real_drop = False
-                if max_price > current_price:
-                    drop_from_peak = ((max_price - current_price) / max_price) * 100
-                    if drop_from_peak >= 15.0:
-                        has_real_drop = True
-                        
-                if is_near_low and (has_real_drop or len(prices_list) < 3):
-                    return True
-                return False
+                timestamps = [p.timestamp for p in prices if getattr(p, 'timestamp', None)]
+
+                # Full observation set including current
+                all_prices = prices_list + [current_price]
+                now_ts = time.time()
+                all_timestamps = timestamps + [now_ts]
+
+                # Rule 1: Total observations >= 3
+                if len(all_prices) >= 3:
+                    # Rule 2: Earliest-to-latest span >= 24.0 hours (86,400s)
+                    time_span = max(all_timestamps) - min(all_timestamps)
+                    if time_span >= 86400.0:
+                        min_price = min(all_prices)
+                        max_price = max(all_prices)
+
+                        # Rule 3: Current price is the minimum observed price
+                        is_min = (current_price <= min_price)
+
+                        # Rule 4: Current price is >= 5.0% below the historical maximum
+                        has_real_drop = (max_price - current_price) / max_price >= 0.05 if max_price > 0 else False
+
+                        if is_min and has_real_drop:
+                            return True
+            return False
         except Exception as e:
             logging.error(f"Local price check failed: {e}")
+            return False
         finally:
             db.close()
-            
-    return True
+
+    return False
 
 def update_selector_in_db_and_json(platform: str, card_selector=None, title_selector=None, link_selector=None, image_selector=None):
     import json
