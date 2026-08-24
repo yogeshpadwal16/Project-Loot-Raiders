@@ -140,20 +140,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
-  if (!isPublicDeals) {
-    return new Response(JSON.stringify({
-      error: "Gateway Communication Error",
-      message: "Please connect directly to the secure tunnel.",
-      status: "gateway_error"
-    }), {
-      status: 502,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-
-  // 3. Resolve candidate backend targets
-  const ACTIVE_HTTP2_TUNNEL = "https://logged-vat-leg-males.trycloudflare.com";
-  const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
+  // 3. Resolve candidate backend targets from environment configuration
+  const candidateTargets: string[] = [];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
     const custom = env.BACKEND_API_URL.trim().replace(/\/+$/, "");
@@ -166,6 +154,23 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (!candidateTargets.includes(custom)) {
       candidateTargets.push(custom);
     }
+  }
+
+  // For public read-only deal requests, if no explicit backend tunnel is configured,
+  // serve directly from the fresh Edge Snapshot immediately (zero latency, 100% reliable)
+  if (isPublicDeals && candidateTargets.length === 0) {
+    return await serveEdgeSnapshotFallback(context);
+  }
+
+  if (!isPublicDeals && candidateTargets.length === 0) {
+    return new Response(JSON.stringify({
+      error: "Gateway Communication Error",
+      message: "Please connect directly to the secure tunnel.",
+      status: "gateway_error"
+    }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 
   // 4. Cache incoming request body once for safe retries
