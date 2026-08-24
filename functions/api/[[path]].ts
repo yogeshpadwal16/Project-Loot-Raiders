@@ -81,7 +81,7 @@ async function serveEdgeSnapshotFallback(context: EventContext<Env, any, any>): 
       const params = url.searchParams;
       const platform = (params.get("platform") || "all").toLowerCase();
       const minScore = parseInt(params.get("min_score") || "0", 10);
-      const limit = Math.min(100, parseInt(params.get("limit") || "50", 10));
+      const limit = Math.min(300, parseInt(params.get("limit") || "50", 10));
 
       let filtered = deals;
       if (platform !== "all") {

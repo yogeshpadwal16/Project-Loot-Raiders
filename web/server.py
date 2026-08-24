@@ -912,7 +912,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             params = parse_qs(parsed_url.query)
             platform = params.get('platform', ['all'])[0].lower()
             min_score = int(params.get('min_score', [0])[0])
-            limit = min(100, int(params.get('limit', [50])[0]))
+            limit = min(300, int(params.get('limit', [50])[0]))
 
             try:
                 all_deals = get_cached_public_deals()

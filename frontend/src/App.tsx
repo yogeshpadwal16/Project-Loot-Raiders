@@ -75,7 +75,7 @@ export function AppContent() {
   const loadDeals = () => {
     setLoading(true);
     setFetchError(null);
-    ApiClient.fetchPublicDeals(100)
+    ApiClient.fetchPublicDeals(300)
       .then((data) => {
         setDeals(data || []);
         setFetchError(null);
