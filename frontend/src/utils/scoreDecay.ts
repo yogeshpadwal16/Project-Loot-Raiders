@@ -7,7 +7,10 @@ import { DealItem } from "../types/api";
  * - 6–24 hours:  0.95 (95% raw score)
  * - 1–3 days:    0.85 (85% raw score)
  * - 3–7 days:    0.70 (70% raw score)
- * - >7 days:     0.60 (60% raw score)
+ * - 7–14 days:   0.50 (50% raw score)
+ * - 14–30 days:  0.35 (35% raw score)
+ * - 30–60 days:  0.20 (20% raw score)
+ * - >60 days:    0.10 (10% raw score)
  * 
  * Historical-low protection:
  * Verified all-time lows receive a +0.08 score retention resilience boost.
@@ -30,8 +33,14 @@ export function getEffectiveDealScore(deal: DealItem, nowEpochSeconds: number = 
     baseMultiplier = 0.85;
   } else if (ageHours <= 168) {
     baseMultiplier = 0.70;
+  } else if (ageHours <= 336) {
+    baseMultiplier = 0.50;
+  } else if (ageHours <= 720) {
+    baseMultiplier = 0.35;
+  } else if (ageHours <= 1440) {
+    baseMultiplier = 0.20;
   } else {
-    baseMultiplier = 0.60;
+    baseMultiplier = 0.10;
   }
 
   // Historical-low protection: Verified all-time record lows receive +0.08 retention resilience
