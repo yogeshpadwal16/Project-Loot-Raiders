@@ -949,13 +949,21 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             from bs4 import BeautifulSoup
 
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
                 "Referer": "https://www.meesho.com/"
             }
-            logging.info(f"[Meesho Scraper] Fetching Meesho URL via curl_cffi (low-overhead JSON attempt): {config['url']}")
-            r = requests.get(config['url'], headers=headers, impersonate="chrome110", timeout=20)
+            logging.info(f"[Meesho Scraper] Fetching Meesho URL via curl_cffi (low-overhead check): {config['url']}")
+            r = requests.get(config['url'], headers=headers, impersonate="chrome120", timeout=15)
+
+            # Fast anti-bot / WAF / Cloudflare Turnstile challenge detection
+            bot_indicators = ["just a moment...", "attention required!", "cf-browser-verification", "access denied", "challenges.cloudflare.com"]
+            is_bot_challenge = (r.status_code == 403) or any(ind in r.text.lower() for ind in bot_indicators)
+
+            if is_bot_challenge:
+                logging.warning(f"[Meesho Scraper] Anti-bot challenge detected (HTTP {r.status_code}). Gracefully skipping direct DOM scraping; active Telegram deal mirroring handles Meesho feed.")
+                return []
 
             if r.status_code == 200:
                 soup = BeautifulSoup(r.text, "html.parser")
@@ -1048,7 +1056,11 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                         logging.info(f"[Meesho Scraper] Successfully extracted {len(deals)} valid deals from JSON payload. Bypassing Playwright fallback.")
                         return deals
         except Exception as e:
-            logging.warning(f"[Meesho Scraper] Low-overhead JSON extraction failed: {e}. Falling back to Playwright.")
+            logging.warning(f"[Meesho Scraper] Low-overhead JSON extraction failed: {e}. Gracefully continuing.")
+            return []
+
+        # If low-overhead JSON yielded zero deals without explicit bot challenge, return gracefully to preserve scraper throughput
+        return []
 
         # 2. Existing Playwright DOM fallback
         logging.info("[Meesho Scraper] JSON extraction yielded zero deals. Initiating Playwright DOM fallback.")

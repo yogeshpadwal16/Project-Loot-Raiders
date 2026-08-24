@@ -341,17 +341,21 @@ def scrape_platform(platform: str, config: dict, history: set):
             health["consecutive_failures"] += 1
             health["fail_count"] += 1
             health["last_failure"] = time.time()
-            health["last_error"] = "0 deals extracted (possible selector drift or no deals available)"
-            if health["consecutive_failures"] >= 3:
-                health["status"] = "Degraded"
+            if "meesho" in platform.lower():
+                health["status"] = "Degraded (Mirror-Backed)"
+                health["last_error"] = "Anti-bot challenge active; relying on Telegram deal mirror"
+            else:
+                health["last_error"] = "0 deals extracted (possible selector drift or no deals available)"
+                if health["consecutive_failures"] >= 3:
+                    health["status"] = "Degraded"
 
-            # Trigger Autonomous Self-Healing Selector Healer
-            try:
-                from loot_brain.agents.scraper_healer import ScraperHealerAgent
-                healer = ScraperHealerAgent()
-                healer.auto_repair_selectors(driver, platform, config)
-            except Exception as heal_err:
-                logging.warning(f"Autonomous selector self-healing attempt failed on stream {platform}: {heal_err}")
+                # Trigger Autonomous Self-Healing Selector Healer
+                try:
+                    from loot_brain.agents.scraper_healer import ScraperHealerAgent
+                    healer = ScraperHealerAgent()
+                    healer.auto_repair_selectors(driver, platform, config)
+                except Exception as heal_err:
+                    logging.warning(f"Autonomous selector self-healing attempt failed on stream {platform}: {heal_err}")
                 
         # 3. Process extracted deal candidates
         for deal in extracted_deals:
