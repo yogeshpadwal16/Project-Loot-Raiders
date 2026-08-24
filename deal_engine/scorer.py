@@ -419,8 +419,16 @@ def calculate_deal_score(
             title, price, mrp, discount, platform
         )
 
+    # Check if this is a price glitch / extreme price error
+    is_glitch = check_if_glitch(price, mrp, discount, product_id, title)
+
     # Use heuristic score in the weighted scoring model.
     ai_score = heuristic_ai_score
+
+    # Confidence-adjusted discount signal for unverified, non-glitch deals
+    if not is_verified_low and not is_glitch:
+        confidence_factor = max(0.40, min(1.0, (ai_score or 50.0) / 60.0))
+        s_disc = s_disc * confidence_factor
 
     active_weights = dict(weights)
 
@@ -501,18 +509,10 @@ def calculate_deal_score(
         
     final_score += die_adjustment
     
-    # Check if this is a price glitch / extreme price error
-    is_glitch = check_if_glitch(price, mrp, discount, product_id, title)
     if is_glitch:
         final_score += 15.0
         logging.info(f"[AI Scorer] Price glitch detected for product {product_id}! Score boosted.")
     
-    # 7. Shield Against Fake Quoted Discounts / Fake MRPs
-    # If the price drop is not historically verified and it's not a glitch, cap the score below the publish threshold
-    if not is_verified_low and not is_glitch:
-        min_publish = rules.get("min_publish_score", 45.0)
-        final_score = min(min_publish - 2.0, final_score)
-        
     final_score = max(0.0, min(100.0, final_score))
     
     logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, AI Score: {ai_score}, Glitch: {is_glitch}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
