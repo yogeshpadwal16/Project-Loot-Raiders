@@ -1,5 +1,121 @@
 [
   {
+    "id": "meesho_ah28g9",
+    "platform": "meesho_deals",
+    "title": "Fancy Stylish Women Western Dresses",
+    "price": 389,
+    "mrp": 999,
+    "discount": 61.06,
+    "image_url": "https://images.meesho.com/images/products/ah28g9/1_512.jpg",
+    "url": "https://www.meesho.com/fancy-stylish-women-western-dresses/p/ah28g9",
+    "is_verified_low": false,
+    "deal_score": 48.45991111111111,
+    "timestamp": 1787601415.458398,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 178,
+        "timestamp": 1784270085.1287656
+      },
+      {
+        "price": 389,
+        "timestamp": 1787601415.458398
+      }
+    ]
+  },
+  {
+    "id": "ajio_466907858001",
+    "platform": "ajio_deals",
+    "title": "LEVIS Men 511 Slim Fit Mid-Rise Jeans",
+    "price": 1799,
+    "mrp": 3999,
+    "discount": 55.01,
+    "image_url": "https://assets.ajio.com/medias/sys_master/root/466907858001/image.jpg",
+    "url": "https://www.ajio.com/levis-men-511-slim-fit-mid-rise-jeans/p/466907858001",
+    "is_verified_low": false,
+    "deal_score": 51.257999999999996,
+    "timestamp": 1787601415.4533055,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3843,
+        "timestamp": 1784270060.395741
+      },
+      {
+        "price": 1799,
+        "timestamp": 1787601415.4533055
+      }
+    ]
+  },
+  {
+    "id": "myntra_11607574",
+    "platform": "myntra_deals",
+    "title": "Roadster Men Navy Blue Solid Bomber Jacket",
+    "price": 999,
+    "mrp": 3299,
+    "discount": 69.72,
+    "image_url": "https://assets.myntassets.com/h_1440,q_90,w_1080/v1/assets/images/11607574/img.jpg",
+    "url": "https://www.myntra.com/jacket/roadster/11607574/buy",
+    "is_verified_low": false,
+    "deal_score": 59.88266666666666,
+    "timestamp": 1787601415.4486089,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 674,
+        "timestamp": 1784270072.6048088
+      },
+      {
+        "price": 999,
+        "timestamp": 1787601415.4486089
+      }
+    ]
+  },
+  {
+    "id": "AFRF8H5GYZZMTHWZ",
+    "platform": "flipkart_appliances_deals",
+    "title": "BAJAJ 15 L Storage Water Geyser (Shield Series New Shakti)",
+    "price": 5499,
+    "mrp": 10950,
+    "discount": 49.78,
+    "image_url": "https://rukminim2.flixcart.com/image/832/832/xif0q/water-geyser/f/8/h/-original-imagp8h5gyzzmthw.jpeg",
+    "url": "https://www.flipkart.com/product/p/itm?pid=AFRF8H5GYZZMTHWZ",
+    "is_verified_low": false,
+    "deal_score": 50.86082222222222,
+    "timestamp": 1787601415.444294,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 5499,
+        "timestamp": 1787601415.444294
+      }
+    ]
+  },
+  {
+    "id": "B0CQ4TSFPS",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
+    "price": 24999,
+    "mrp": 33999,
+    "discount": 26.47,
+    "image_url": "https://m.media-amazon.com/images/I/71V--WZVUIL._AC_SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 57.376,
+    "timestamp": 1787601414.9768343,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2848,
+        "timestamp": 1784269940.6960933
+      },
+      {
+        "price": 24999,
+        "timestamp": 1787601414.9768343
+      }
+    ]
+  },
+  {
     "id": "ajio_442252974002",
     "platform": "ajio_deals",
     "title": "Girls LoveShackFancy Long Sleeve Ruffle Hem Dress",
@@ -1424,26 +1540,6 @@
     ]
   },
   {
-    "id": "meesho_ah28g9",
-    "platform": "meesho_deals",
-    "title": "BRIT ACCENT | Combo Pack Of 2|DEPTH OF OCEAN-NOIR OUD|Parfum|Long-Lasting|Specially Currated| Eau de Toilette - 100 ml (For Men & Women)",
-    "price": 178,
-    "mrp": 798,
-    "discount": 77.69423558897243,
-    "image_url": "https://images.meesho.com/images/products/633319497/ngnog_512.webp?width=360",
-    "url": "https://www.meesho.com/brit-accent-combo-pack-of-2depth-of-ocean-noir-oudparfumlong-lastingspecially-currated-eau-de-toilette-100-ml-for-men-women/p/ah28g9",
-    "is_verified_low": false,
-    "deal_score": 75.51929824561404,
-    "timestamp": 1784270085.1287656,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 178,
-        "timestamp": 1784270085.1287656
-      }
-    ]
-  },
-  {
     "id": "myntra_33632916",
     "platform": "myntra_deals",
     "title": "Roadster",
@@ -1760,26 +1856,6 @@
       {
         "price": 150,
         "timestamp": 1784270073.1130197
-      }
-    ]
-  },
-  {
-    "id": "myntra_11607574",
-    "platform": "myntra_deals",
-    "title": "Allen Solly",
-    "price": 674,
-    "mrp": 1499,
-    "discount": 55.03669112741828,
-    "image_url": "https://assets.myntassets.com/dpr_2,q_60,w_210,c_limit,fl_progressive/assets/images/11607574/2020/6/26/f1300cff-104c-4d40-a8a0-c17cd96103971593168105237-Allen-Solly-Men-Navy-Blue-Printed-Leather-Two-Fold-Wallet-44-1.jpg",
-    "url": "https://www.myntra.com/wallets/allen+solly/allen-solly-men-navy-blue-printed-leather-two-fold-wallet/11607574/buy",
-    "is_verified_low": false,
-    "deal_score": 71.0256837891928,
-    "timestamp": 1784270072.6048088,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 674,
-        "timestamp": 1784270072.6048088
       }
     ]
   },
@@ -2580,26 +2656,6 @@
       {
         "price": 1750,
         "timestamp": 1784270060.907827
-      }
-    ]
-  },
-  {
-    "id": "ajio_466907858001",
-    "platform": "ajio_deals",
-    "title": "Pearl Orbit Perreti Logo Pendant",
-    "price": 3843,
-    "mrp": 5490,
-    "discount": 30.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20250625/m2CZ/685bfc752b1ad9265b6a15b5/-286Wx359H-466907858-white-MODEL.jpg",
-    "url": "https://www.ajio.com/ted-baker-pearl-orbit-perreti-logo-pendant/p/466907858_white",
-    "is_verified_low": false,
-    "deal_score": 48.980000000000004,
-    "timestamp": 1784270060.395741,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3843,
-        "timestamp": 1784270060.395741
       }
     ]
   },
@@ -4180,26 +4236,6 @@
       {
         "price": 6999,
         "timestamp": 1784269941.1036513
-      }
-    ]
-  },
-  {
-    "id": "B0CQ4TSFPS",
-    "platform": "amazon_master_lightning_deals",
-    "title": "OWNAIR Steam Iron Handheld for Clothes - 1500W Steamer for Ironing Clothes - 24g/min High Steam, Fast Heat-Up in 15s, 110ml Tank, Vertical & Horizontal Garments Steamer for Fabrics",
-    "price": 2848,
-    "mrp": 4999,
-    "discount": 43.02860572114423,
-    "image_url": "https://m.media-amazon.com/images/I/51yW87aqMQL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 67.96002400480097,
-    "timestamp": 1784269940.6960933,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2848,
-        "timestamp": 1784269940.6960933
       }
     ]
   },
