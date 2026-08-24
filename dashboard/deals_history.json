@@ -1,33 +1,5 @@
 [
   {
-    "id": "B0CQ4TSFPS",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
-    "price": 21999,
-    "mrp": 33999,
-    "discount": 35.29,
-    "image_url": "https://m.media-amazon.com/images/I/71V--WZVUIL._AC_SL1500_.jpg",
-    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
-    "is_verified_low": true,
-    "deal_score": 78.032,
-    "timestamp": 1787601418.4463553,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 2848,
-        "timestamp": 1784269940.6960933
-      },
-      {
-        "price": 24999,
-        "timestamp": 1787601414.9768343
-      },
-      {
-        "price": 21999,
-        "timestamp": 1787601418.4463553
-      }
-    ]
-  },
-  {
     "id": "meesho_ah28g9",
     "platform": "meesho_deals",
     "title": "Fancy Stylish Women Western Dresses",
@@ -38,7 +10,7 @@
     "url": "https://www.meesho.com/fancy-stylish-women-western-dresses/p/ah28g9",
     "is_verified_low": false,
     "deal_score": 48.45991111111111,
-    "timestamp": 1787601415.458398,
+    "timestamp": 1787603116.8271677,
     "clicks": 0,
     "price_history": [
       {
@@ -48,6 +20,34 @@
       {
         "price": 389,
         "timestamp": 1787601415.458398
+      },
+      {
+        "price": 389,
+        "timestamp": 1787603116.8271677
+      }
+    ]
+  },
+  {
+    "id": "ajio_467011005001",
+    "platform": "ajio_deals",
+    "title": "GAP Men Logo Print Crew-Neck T-Shirt",
+    "price": 699,
+    "mrp": 1499,
+    "discount": 53.37,
+    "image_url": "https://assets.ajio.com/medias/sys_master/root/467011005001/image.jpg",
+    "url": "https://www.ajio.com/gap-men-logo-print-tshirt/p/467011005001",
+    "is_verified_low": false,
+    "deal_score": 46.79312222222222,
+    "timestamp": 1787603116.8229458,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 12347,
+        "timestamp": 1784270067.1084654
+      },
+      {
+        "price": 699,
+        "timestamp": 1787603116.8229458
       }
     ]
   },
@@ -62,7 +62,7 @@
     "url": "https://www.ajio.com/levis-men-511-slim-fit-mid-rise-jeans/p/466907858001",
     "is_verified_low": false,
     "deal_score": 51.257999999999996,
-    "timestamp": 1787601415.4533055,
+    "timestamp": 1787603116.819787,
     "clicks": 0,
     "price_history": [
       {
@@ -72,6 +72,34 @@
       {
         "price": 1799,
         "timestamp": 1787601415.4533055
+      },
+      {
+        "price": 1799,
+        "timestamp": 1787603116.819787
+      }
+    ]
+  },
+  {
+    "id": "myntra_42067457",
+    "platform": "myntra_deals",
+    "title": "HRX by Hrithik Roshan Men Solid Track Pants",
+    "price": 749,
+    "mrp": 2499,
+    "discount": 70.02,
+    "image_url": "",
+    "url": "https://www.myntra.com/track-pants/hrx/42067457/buy",
+    "is_verified_low": false,
+    "deal_score": 59.14266666666666,
+    "timestamp": 1787603116.813225,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 749,
+        "timestamp": 1784270075.1829977
+      },
+      {
+        "price": 749,
+        "timestamp": 1787603116.813225
       }
     ]
   },
@@ -86,7 +114,7 @@
     "url": "https://www.myntra.com/jacket/roadster/11607574/buy",
     "is_verified_low": false,
     "deal_score": 59.88266666666666,
-    "timestamp": 1787601415.4486089,
+    "timestamp": 1787603116.8082154,
     "clicks": 0,
     "price_history": [
       {
@@ -96,6 +124,142 @@
       {
         "price": 999,
         "timestamp": 1787601415.4486089
+      },
+      {
+        "price": 999,
+        "timestamp": 1787603116.8082154
+      }
+    ]
+  },
+  {
+    "id": "EDFGFMSJVHHHVHWQ",
+    "platform": "flipkart_appliances_deals",
+    "title": "LG 7 kg 5 Star Fully Automatic Front Load Washing Machine",
+    "price": 28990,
+    "mrp": 43990,
+    "discount": 34.09,
+    "image_url": "https://rukminim2.flixcart.com/image/832/832/xif0q/washing-machine-new/m/j/b/-original-imagx4t5gyzzmthw.jpeg",
+    "url": "https://www.flipkart.com/product/p/itm?pid=EDFGFMSJVHHHVHWQ",
+    "is_verified_low": false,
+    "deal_score": 65.872,
+    "timestamp": 1787603116.8030944,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 777,
+        "timestamp": 1784270066.7272522
+      },
+      {
+        "price": 28990,
+        "timestamp": 1787603116.8030944
+      }
+    ]
+  },
+  {
+    "id": "AFRF8H5GYZZMTHWZ",
+    "platform": "flipkart_appliances_deals",
+    "title": "BAJAJ 15 L Storage Water Geyser (Shield Series New Shakti)",
+    "price": 5499,
+    "mrp": 10950,
+    "discount": 49.78,
+    "image_url": "https://rukminim2.flixcart.com/image/832/832/xif0q/water-geyser/f/8/h/-original-imagp8h5gyzzmthw.jpeg",
+    "url": "https://www.flipkart.com/product/p/itm?pid=AFRF8H5GYZZMTHWZ",
+    "is_verified_low": false,
+    "deal_score": 50.86082222222222,
+    "timestamp": 1787603116.7984095,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 5499,
+        "timestamp": 1787603116.7984095
+      }
+    ]
+  },
+  {
+    "id": "B0D8WC2XY1",
+    "platform": "amazon_master_lightning_deals",
+    "title": "OnePlus Nord 4 5G (Oasis Green, 8GB RAM, 256GB Storage)",
+    "price": 29999,
+    "mrp": 32999,
+    "discount": 9.09,
+    "image_url": "https://m.media-amazon.com/images/I/6175n4vyX3L._AC_SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0D8WC2XY1?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 37.4,
+    "timestamp": 1787603116.4183025,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 3547,
+        "timestamp": 1784270017.446585
+      },
+      {
+        "price": 29999,
+        "timestamp": 1787603116.4183025
+      }
+    ]
+  },
+  {
+    "id": "B0CKYCS7B2",
+    "platform": "amazon",
+    "title": "Redmi 13C 5G (Startrail Silver, 4GB RAM, 128GB Storage)",
+    "price": 9999,
+    "mrp": 13999,
+    "discount": 28.57,
+    "image_url": "",
+    "url": "https://www.amazon.in/dp/B0CKYCS7B2?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 42.99933333333333,
+    "timestamp": 1787603116.414151,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 9999,
+        "timestamp": 1785240395.2835524
+      },
+      {
+        "price": 8999,
+        "timestamp": 1785241125.2922764
+      },
+      {
+        "price": 7999,
+        "timestamp": 1785241139.3078513
+      },
+      {
+        "price": 9999,
+        "timestamp": 1787603116.414151
+      }
+    ]
+  },
+  {
+    "id": "B0CQ4TSFPS",
+    "platform": "amazon_master_lightning_deals",
+    "title": "Redmi Note 13 Pro+ 5G (Fusion Black, 8GB RAM, 256GB Storage)",
+    "price": 24999,
+    "mrp": 33999,
+    "discount": 26.47,
+    "image_url": "https://m.media-amazon.com/images/I/71V--WZVUIL._AC_SL1500_.jpg",
+    "url": "https://www.amazon.in/dp/B0CQ4TSFPS?tag=lootraiders-21",
+    "is_verified_low": false,
+    "deal_score": 57.376,
+    "timestamp": 1787603116.4076204,
+    "clicks": 0,
+    "price_history": [
+      {
+        "price": 2848,
+        "timestamp": 1784269940.6960933
+      },
+      {
+        "price": 24999,
+        "timestamp": 1787601414.9768343
+      },
+      {
+        "price": 21999,
+        "timestamp": 1787601418.4463553
+      },
+      {
+        "price": 24999,
+        "timestamp": 1787603116.4076204
       }
     ]
   },
@@ -1476,34 +1640,6 @@
     ]
   },
   {
-    "id": "B0CKYCS7B2",
-    "platform": "amazon",
-    "title": "Redmi 13C 5G (Startrail Silver, 4GB RAM, 128GB Storage)",
-    "price": 7999,
-    "mrp": 14999,
-    "discount": 46.66977798519901,
-    "image_url": "",
-    "url": "https://www.amazon.in/dp/B0CKYCS7B2",
-    "is_verified_low": false,
-    "deal_score": 72.73507567171144,
-    "timestamp": 1785241139.3078513,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 9999,
-        "timestamp": 1785240395.2835524
-      },
-      {
-        "price": 8999,
-        "timestamp": 1785241125.2922764
-      },
-      {
-        "price": 7999,
-        "timestamp": 1785241139.3078513
-      }
-    ]
-  },
-  {
     "id": "B0F2Z2TRK9",
     "platform": "amazon",
     "title": "Fire-Boltt Talk Round Smart Watch 1.39\u2033 TFT Display with Bluetooth Calling, Dual Button, Voice Assistance, SPO\u2082 & Heart Rate Monitor, 120+ Sports Modes, Smartwatch for Men & Women - Green : Amazon.in: Toys & Games",
@@ -1720,26 +1856,6 @@
       {
         "price": 824,
         "timestamp": 1784270075.7028692
-      }
-    ]
-  },
-  {
-    "id": "myntra_42067457",
-    "platform": "myntra_deals",
-    "title": "HRX by Hrithik Roshan",
-    "price": 749,
-    "mrp": 2650,
-    "discount": 71.73584905660377,
-    "image_url": "",
-    "url": "https://www.myntra.com/frames/hrx+by+hrithik+roshan/hrx-by-hrithik-roshan-unisex-full-rim-square-frames/42067457/buy",
-    "is_verified_low": false,
-    "deal_score": 89.88842767295597,
-    "timestamp": 1784270075.1829977,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 749,
-        "timestamp": 1784270075.1829977
       }
     ]
   },
@@ -2144,26 +2260,6 @@
     ]
   },
   {
-    "id": "ajio_467011005001",
-    "platform": "ajio_deals",
-    "title": "TW2V87000X6 Round Digital Watch",
-    "price": 12347,
-    "mrp": 18995,
-    "discount": 35.0,
-    "image_url": "https://assets.ajio.com/medias/sys_master/root/20240125/c3rA/65b16d248cdf1e0df5cd8c03/-286Wx359H-467011005-black-MODEL.jpg",
-    "url": "https://www.ajio.com/timex-tw2v87000x6-round-digital-watch/p/467011005_black",
-    "is_verified_low": false,
-    "deal_score": 61.5,
-    "timestamp": 1784270067.1084654,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 12347,
-        "timestamp": 1784270067.1084654
-      }
-    ]
-  },
-  {
     "id": "myntra_32635910",
     "platform": "myntra_deals",
     "title": "MINARA",
@@ -2180,26 +2276,6 @@
       {
         "price": 168,
         "timestamp": 1784270066.9119875
-      }
-    ]
-  },
-  {
-    "id": "EDFGFMSJVHHHVHWQ",
-    "platform": "flipkart_appliances_deals",
-    "title": "iBELL DF610M 6 Litre Stainless Steel 2500W Deep Fryer, ...",
-    "price": 777,
-    "mrp": 4885,
-    "discount": 84.09416581371546,
-    "image_url": "https://rukminim2.flixcart.com/image/612/612/xif0q/electric-deep-fryer/k/b/n/df610pplus-6-litre-stainless-steel-2500w-electric-deep-fryer-original-imahf3k9gcrjb62h.jpeg?q=70",
-    "url": "https://www.flipkart.com/product/p/itm?pid=EDFGFMSJVHHHVHWQ&affid=lootraiders",
-    "is_verified_low": false,
-    "deal_score": 98.0,
-    "timestamp": 1784270066.7272522,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 777,
-        "timestamp": 1784270066.7272522
       }
     ]
   },
@@ -2980,26 +3056,6 @@
       {
         "price": 1899,
         "timestamp": 1784270019.3963227
-      }
-    ]
-  },
-  {
-    "id": "B0D8WC2XY1",
-    "platform": "amazon_master_lightning_deals",
-    "title": "Nike Mens Quest Running Shoes",
-    "price": 3547,
-    "mrp": 7095,
-    "discount": 50.00704721634954,
-    "image_url": "https://m.media-amazon.com/images/I/61BmhQ11NIL._AC_SF226,226_QL85_.jpg?aicid=discounts-widgets-horizonte",
-    "url": "https://www.amazon.in/dp/B0D8WC2XY1?tag=lootraiders-21",
-    "is_verified_low": false,
-    "deal_score": 78.50493305144468,
-    "timestamp": 1784270017.446585,
-    "clicks": 0,
-    "price_history": [
-      {
-        "price": 3547,
-        "timestamp": 1784270017.446585
       }
     ]
   },
