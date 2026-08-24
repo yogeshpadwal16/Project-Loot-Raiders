@@ -1150,39 +1150,44 @@ def main():
                 
                 # Run scrapers sequentially in dedicated threads to keep CPU/memory footprint low,
                 # prevent OOM on 1GB VPS, and avoid Playwright Sync API asyncio event loop conflicts.
-                for platform, config in matrix.items():
-                    if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
-                        logging.info("Scraper execution halted by user request.")
-                        break
-                    
-                    logging.info(f"Starting sequential scrape scan for: {platform}")
-                    
-                    def run_scraper_safe(p_name, p_config, p_history):
-                        try:
-                            scrape_platform(p_name, p_config, p_history)
-                        except Exception as thread_err:
-                            logging.error(f"Scraper execution error for {p_name}: {thread_err}")
-                            
-                    t = threading.Thread(
-                        target=run_scraper_safe,
-                        args=(platform, config, history),
-                        name=f"Scraper-{platform}",
-                        daemon=True
-                    )
-                    t.start()
-                    t.join(timeout=180) # Wait up to 180s for this scraper to finish before advancing
-                    if t.is_alive():
-                        logging.warning(
-                            f"[Scraper Timeout] Platform scan for '{platform}' exceeded 180s timeout threshold. "
-                            f"Continuing pipeline to preserve scanner and snapshot sync continuity."
+                try:
+                    for platform, config in matrix.items():
+                        if not scraper_state["is_running"] and not scraper_state["scan_trigger"]:
+                            logging.info("Scraper execution halted by user request.")
+                            break
+
+                        logging.info(f"Starting sequential scrape scan for: {platform}")
+
+                        def run_scraper_safe(p_name, p_config, p_history):
+                            try:
+                                scrape_platform(p_name, p_config, p_history)
+                            except Exception as thread_err:
+                                logging.error(f"Scraper execution error for {p_name}: {thread_err}")
+
+                        t = threading.Thread(
+                            target=run_scraper_safe,
+                            args=(platform, config, history),
+                            name=f"Scraper-{platform}",
+                            daemon=True
                         )
-                        if platform in scraper_state.get("crawler_health", {}):
-                            scraper_state["crawler_health"][platform]["status"] = "Timeout"
-                            scraper_state["crawler_health"][platform]["last_failure"] = time.time()
-                            scraper_state["crawler_health"][platform]["last_error"] = "Execution exceeded 180s timeout"
-                
-                # Export SQLite state to JSON for static host environment (like GitHub Pages)
-                sync_database_to_json()
+                        t.start()
+                        t.join(timeout=180) # Wait up to 180s for this scraper to finish before advancing
+                        if t.is_alive():
+                            logging.warning(
+                                f"[Scraper Timeout] Platform scan for '{platform}' exceeded 180s timeout threshold. "
+                                f"Continuing pipeline to preserve scanner and snapshot sync continuity."
+                            )
+                            if platform in scraper_state.get("crawler_health", {}):
+                                scraper_state["crawler_health"][platform]["status"] = "Timeout"
+                                scraper_state["crawler_health"][platform]["last_failure"] = time.time()
+                                scraper_state["crawler_health"][platform]["last_error"] = "Execution exceeded 180s timeout"
+                finally:
+                    # Export SQLite state to JSON for static host environment (like Cloudflare Pages)
+                    # Guaranteed to execute on every cycle even if scrapers fail, time out, or throw exceptions
+                    try:
+                        sync_database_to_json()
+                    except Exception as sync_err:
+                        logging.error(f"Failed to synchronize database snapshot to JSON: {sync_err}")
                 
                 if single_run:
                     try:
