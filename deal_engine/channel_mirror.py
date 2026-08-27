@@ -64,5 +64,50 @@ def run_mirror_single_run():
     finally:
         loop.close()
 
-if __name__ == '__main__':
+import signal
+import threading
+import time
+
+def run_channel_mirror_daemon():
+    """
+    Runs the Channel Mirroring Engine as a long-running foreground daemon.
+    Designed for standalone PM2 service execution (`loot-raiders-mirror`),
+    maintaining the process lifecycle and cleanly shutting down on OS signals.
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
+    logging.info("[Channel Mirror Daemon] Launching standalone deal mirror process...")
+
+    stop_event = threading.Event()
+
+    def _signal_handler(signum, frame):
+        sig_name = str(signum)
+        try:
+            sig_name = signal.Signals(signum).name
+        except Exception:
+            pass
+        logging.info(f"[Channel Mirror Daemon] Received signal {sig_name}. Initiating graceful shutdown...")
+        stop_event.set()
+
+    try:
+        signal.signal(signal.SIGINT, _signal_handler)
+        signal.signal(signal.SIGTERM, _signal_handler)
+    except (ValueError, AttributeError):
+        pass # Non-main thread or unsupported platform
+
     start_channel_mirror()
+    logging.info("[Channel Mirror Daemon] Mirror engine is active. Awaiting deals / shutdown signals...")
+
+    try:
+        while not stop_event.is_set():
+            stop_event.wait(timeout=1.0)
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("[Channel Mirror Daemon] Interrupted by user/system.")
+    finally:
+        stop_channel_mirror()
+        logging.info("[Channel Mirror Daemon] Shutdown complete. Process exiting cleanly.")
+
+if __name__ == '__main__':
+    run_channel_mirror_daemon()

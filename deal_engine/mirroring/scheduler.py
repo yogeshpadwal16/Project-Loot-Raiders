@@ -46,8 +46,12 @@ class MirrorScheduler:
 
     def stop(self):
         """Stops background scheduled tasks cleanly."""
-        self.scheduler.shutdown()
-        logging.info("[Mirror Scheduler] APScheduler background tasks shut down.")
+        try:
+            if hasattr(self, 'scheduler') and self.scheduler.running:
+                self.scheduler.shutdown(wait=False)
+                logging.info("[Mirror Scheduler] APScheduler background tasks shut down.")
+        except Exception as e:
+            logging.debug(f"[Mirror Scheduler] Shutdown exception suppressed: {e}")
 
     def _log_system_health(self):
         """Gathers CPU, memory, and Redis queue size metrics and saves them to the DB."""
