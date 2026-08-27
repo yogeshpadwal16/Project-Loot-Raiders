@@ -506,6 +506,15 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                         bank_offers: list = None, coupon_detail: str = "", review_grade: str = "N/A", auto_cart_url: str = None, include_invite_link: bool = True) -> bool:
     settings = load_settings()
     
+    # Hard Safety Guard: Reject database backups and internal archive artifacts from Telegram deal publishing
+    FORBIDDEN_EXTENSIONS = ('.db', '.db.gz', '.sqlite', '.sqlite3', '.zip', '.tar.gz', '.tar', '.bak', '.log')
+    if any(str(final_url or '').lower().endswith(ext) or str(img_url or '').lower().endswith(ext) for ext in FORBIDDEN_EXTENSIONS):
+        logging.error(f"[SECURITY GUARD] Blocked attempt to publish forbidden archive artifact to Telegram: final_url='{final_url}', img_url='{img_url}'")
+        return False
+    if any(ext in str(title or '').lower() for ext in ('.db.gz', 'backup_', 'loot_raiders.db')):
+        logging.error(f"[SECURITY GUARD] Blocked attempt to publish backup database artifact in title: '{title}'")
+        return False
+
     # We will run the firewall check after trying to resolve missing images below
 
     invite_link = settings.get("telegram_invite_link", "https://t.me/LootRaidersDeals").strip()
@@ -729,6 +738,7 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
         logging.warning(f"[Notifier] Image extraction error: {ext_err}")
 
     # Try downloading and uploading product image locally first to prevent Telegram CDN download blocks
+    is_raw_image_valid = False
     if img_url and img_url.startswith("http") and not img_url.startswith("data:image"):
         local_temp_img_path = None
         try:
@@ -738,10 +748,15 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             }
             logging.info(f"[Notifier] [CorrID: {unique_id}] Downloading raw image locally to upload as file: {img_url}")
             dl_res = requests.get(img_url, headers=dl_headers, timeout=15)
-            if dl_res.status_code == 200 and len(dl_res.content) > 500:
+            content_type = dl_res.headers.get("content-type", "").lower()
+            is_gif_placeholder = "image/gif" in content_type and len(dl_res.content) < 1000
+            if dl_res.status_code == 200 and len(dl_res.content) > 500 and not is_gif_placeholder:
+                is_raw_image_valid = True
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
                     tmp_file.write(dl_res.content)
                     local_temp_img_path = tmp_file.name
+            else:
+                logging.warning(f"[Notifier] [CorrID: {unique_id}] Product image invalid, corrupted, or 1x1 GIF placeholder (len: {len(dl_res.content)}, type: {content_type}). Rejecting raw image.")
         except Exception as dl_err:
             logging.warning(f"[Notifier] [CorrID: {unique_id}] Failed to download raw image locally: {dl_err}")
             
@@ -771,10 +786,10 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
                 except Exception:
                     pass
                     
-        # Fallback to remote URL send if local upload did not succeed
-        if not photo_sent:
+        # Fallback to remote URL send ONLY if raw image was verified as valid but local file upload had a network glitch
+        if not photo_sent and is_raw_image_valid:
             try:
-                logging.info(f"[Notifier] [CorrID: {unique_id}] Falling back to remote URL photo dispatch: {img_url}")
+                logging.info(f"[Notifier] [CorrID: {unique_id}] Falling back to verified remote URL photo dispatch: {img_url}")
                 endpoint = f"https://api.telegram.org/bot{bot_token}/sendPhoto"
                 payload = {
                     "chat_id": chat_id,

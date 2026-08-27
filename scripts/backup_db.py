@@ -57,13 +57,38 @@ def compress_backup(backup_file: str) -> str:
 
 def push_to_telegram(file_path: str, caption: str = "") -> bool:
     """Dispatches the database backup document off-site to Telegram admin channel or chat."""
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    try:
+        from config.settings import load_settings
+        settings = load_settings()
+    except Exception:
+        settings = {}
+
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN") or settings.get("telegram_bot_token")
     chat_id = os.getenv("TELEGRAM_BACKUP_CHAT_ID")
-    
-    if not bot_token or not chat_id or chat_id == os.getenv("TELEGRAM_CHAT_ID"):
-        logging.warning("Telegram backup dispatch skipped: TELEGRAM_BACKUP_CHAT_ID is not configured or matches public channel.")
+
+    public_chat_id = (settings.get("telegram_chat_id") or "").strip().lower()
+    env_public_chat_id = (os.getenv("TELEGRAM_CHAT_ID") or "").strip().lower()
+
+    if not bot_token or not chat_id or not chat_id.strip():
+        logging.warning("Telegram backup dispatch skipped: TELEGRAM_BACKUP_CHAT_ID is not configured.")
         return False
-        
+
+    chat_id_clean = chat_id.strip().lower()
+
+    # HARD SAFETY BLOCK: Never send backup files to public channel
+    forbidden_channels = {
+        "@lootraidersdeals",
+        "-100lootraidersdeals",
+        "lootraidersdeals",
+        public_chat_id,
+        env_public_chat_id
+    }
+    forbidden_channels.discard("")  # remove empty strings
+
+    if chat_id_clean in forbidden_channels:
+        logging.error(f"CRITICAL SAFETY VIOLATION: TELEGRAM_BACKUP_CHAT_ID ({chat_id}) matches public deal channel ({public_chat_id}). Refusing to upload backup archive.")
+        return False
+
     url = f"https://api.telegram.org/bot{bot_token}/sendDocument"
     try:
         with open(file_path, 'rb') as doc:

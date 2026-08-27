@@ -82,29 +82,42 @@ def resolve_best_product_image(
 ) -> Optional[str]:
     """
     Intelligently resolves and validates the highest-quality product image URL available across retailers.
+    Preserves valid original product images while upscaling dimensions when appropriate.
     """
     clean_platform = (platform or "amazon").lower()
     
-    # 1. Amazon Resolution
+    # 1. If valid direct raw image URL is provided, preserve and upscale it
+    if raw_img_url and raw_img_url.startswith("http") and not raw_img_url.startswith("data:image"):
+        # Filter out temporary expired Telegram CDN URLs
+        if any(blocked in raw_img_url for blocked in ["telesco.pe", "telegram.org", "base64"]):
+            raw_img_url = None
+        else:
+            # Amazon direct product image (m.media-amazon.com or images-amazon.com)
+            if "media-amazon.com" in raw_img_url or "images-amazon.com" in raw_img_url or "images-eu.ssl-images-amazon.com" in raw_img_url:
+                # Upgrade low-res dimension tags (e.g. ._AC_UL320_. -> ._AC_SL1500_.)
+                if "._" in raw_img_url and not raw_img_url.endswith("._SCLZZZZZZZ_.jpg"):
+                    cleaned = re.sub(r'\._[A-Z0-9_,]+_\.', '._AC_SL1500_.', raw_img_url)
+                    return cleaned
+                return raw_img_url
+
+            # Flipkart direct product image
+            if "flixcart.com" in raw_img_url or "flipkart" in clean_platform:
+                return upscale_flipkart_image_url(raw_img_url)
+
+            # Myntra direct product image
+            if "myntassets.com" in raw_img_url or "myntra" in clean_platform:
+                return upscale_myntra_image_url(raw_img_url)
+
+            # Other valid retailer image
+            return raw_img_url
+
+    # 2. Fallback for Amazon when raw_img_url was missing/empty
     if "amazon" in clean_platform or (product_url and "amazon.in" in product_url):
-        asin = extract_amazon_asin(product_url or "") or extract_amazon_asin(unique_id or "") or extract_amazon_asin(raw_img_url or "")
+        asin = extract_amazon_asin(product_url or "") or extract_amazon_asin(unique_id or "")
         if asin:
             return get_amazon_highres_image_url(asin)
 
-    # 2. Flipkart Upscaling
-    if raw_img_url and ("flixcart.com" in raw_img_url or "flipkart" in clean_platform):
-        return upscale_flipkart_image_url(raw_img_url)
-
-    # 3. Myntra Upscaling
-    if raw_img_url and ("myntassets.com" in raw_img_url or "myntra" in clean_platform):
-        return upscale_myntra_image_url(raw_img_url)
-
-    # 4. Valid raw image check (Filter out temporary expired Telegram CDN URLs)
-    if raw_img_url and raw_img_url.startswith("http"):
-        if not any(blocked in raw_img_url for blocked in ["telesco.pe", "telegram.org", "base64"]):
-            return raw_img_url
-
-    # 5. Direct Page OpenGraph Scrape Fallback
+    # 3. Direct Page OpenGraph Scrape Fallback
     if product_url and product_url.startswith("http"):
         scraped_img = scrape_page_opengraph_image(product_url)
         if scraped_img:
