@@ -77,14 +77,21 @@ def extract_amazon_asins_from_url(url: str) -> list:
     return found_asins
 
 def extract_flipkart_pid(url: str) -> str:
+    if not url or not isinstance(url, str):
+        return None
     parsed = urllib.parse.urlparse(url)
     params = urllib.parse.parse_qs(parsed.query)
-    if 'pid' in params:
+    if 'pid' in params and params['pid']:
         return params['pid'][0]
-    match = re.search(r'pid=([a-zA-Z0-9]{16})', url)
-    if match: return match.group(1)
-    match_path = re.search(r'/p/([a-zA-Z0-9]{16})', url)
-    if match_path: return match_path.group(1)
+    match = re.search(r'[?&]pid=([a-zA-Z0-9]+)', url)
+    if match:
+        return match.group(1)
+    match_path = re.search(r'/p/([a-zA-Z0-9]+)', url)
+    if match_path:
+        return match_path.group(1)
+    match_item = re.search(r'itm[a-zA-Z0-9]+', url)
+    if match_item:
+        return match_item.group(0)
     return None
 
 def calculate_true_discount(text_content: str):

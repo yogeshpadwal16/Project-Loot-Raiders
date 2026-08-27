@@ -109,14 +109,16 @@ def extract_amazon_asin(url: str) -> Optional[str]:
 
 
 def extract_flipkart_pid(url: str) -> Optional[str]:
-    """Extracts 16-character Flipkart PID code from product URL query or path."""
-    match_query = re.search(r'[?&]pid=([a-zA-Z0-9]{16})', url)
+    """Extracts Flipkart PID code from product URL query or path."""
+    if not url or not isinstance(url, str):
+        return None
+    match_query = re.search(r'[?&]pid=([a-zA-Z0-9]+)', url)
     if match_query:
         return match_query.group(1)
-    match_path = re.search(r'/p/([a-zA-Z0-9]{16})', url)
+    match_path = re.search(r'/p/([a-zA-Z0-9]+)', url)
     if match_path:
         return match_path.group(1)
-    match_item = re.search(r'itm[a-zA-Z0-9]{13,16}', url)
+    match_item = re.search(r'itm[a-zA-Z0-9]+', url)
     if match_item:
         return match_item.group(0)
     return None

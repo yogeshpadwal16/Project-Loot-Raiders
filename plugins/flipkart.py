@@ -19,7 +19,9 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
 
     def extract_deals(self, driver, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         deals = []
-        flipkart_affid = settings.get("flipkart_affid", "YOUR_FLIPKART_AFFILIATE_ID")
+        flipkart_affid = (os.environ.get("FLIPKART_AFFID") or settings.get("flipkart_affid") or "lootraiders").strip()
+        if flipkart_affid == "YOUR_FLIPKART_AFFILIATE_ID" or flipkart_affid == "":
+            flipkart_affid = "lootraiders"
         min_discount_setting = float(settings.get("min_discount", 30.0))
         
         try:
@@ -62,7 +64,7 @@ class FlipkartRetailerPlugin(BaseRetailerPlugin):
                     if raw_url and not raw_url.startswith("http"):
                         raw_url = f"https://www.flipkart.com{raw_url}" if raw_url.startswith("/") else f"https://www.flipkart.com/{raw_url}"
                     
-                    if flipkart_affid and flipkart_affid != "YOUR_FLIPKART_AFFILIATE_ID" and "affid=" not in raw_url:
+                    if flipkart_affid and "affid=" not in raw_url:
                         sep = "&" if "?" in raw_url else "?"
                         final_url = f"{raw_url}{sep}affid={flipkart_affid}"
                     else:
