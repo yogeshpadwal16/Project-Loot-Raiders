@@ -1752,32 +1752,105 @@ def db_update_notification_status(db_id: int, status: str, retries: int = None):
     finally:
         db.close()
 
-def recover_pending_notifications():
-    """Queries all pending notifications from DB and re-enqueues them on startup."""
+def recover_pending_notifications(max_batch_size: int = 20, max_age_hours: float = 24.0):
+    """
+    Safely queries pending notifications from DB, expires stale entries (> 24 hours),
+    validates current product state, collapses duplicate product IDs, and re-enqueues
+    a bounded batch of recent valid deals without flooding Telegram or blocking live alerts.
+    """
+    from knowledge_base.models import Product, PriceHistory
     db = SessionLocal()
     try:
-        pending = db.query(PendingNotification).filter_by(status='pending').all()
+        pending = db.query(PendingNotification).filter_by(status='pending').order_by(PendingNotification.timestamp.asc()).all()
         if not pending:
             return
-        logging.info(f"[Notifier] Found {len(pending)} pending notifications in DB. Recovering and re-enqueueing...")
-        global queue_counter
+
+        now = time.time()
+        cutoff_time = now - (max_age_hours * 3600.0)
+
+        stale_count = 0
+        valid_candidates = []
+
+        # 1. Stale Recovery Expiration: Expire items older than max_age_hours
         for notif in pending:
+            notif_ts = notif.timestamp or 0
+            if notif_ts < cutoff_time:
+                notif.status = 'expired'
+                stale_count += 1
+            else:
+                valid_candidates.append(notif)
+
+        if stale_count > 0:
+            db.commit()
+            logging.info(f"[Notifier Recovery] Expired {stale_count} stale notifications older than {max_age_hours}h.")
+
+        if not valid_candidates:
+            return
+
+        # 2. Recovery Deduplication: Keep only the newest pending notification per unique_id
+        deduped_by_product = {}
+        for notif in valid_candidates:
+            pid = notif.unique_id
+            if pid in deduped_by_product:
+                older_notif = deduped_by_product[pid]
+                older_notif.status = 'expired'
+            deduped_by_product[pid] = notif
+
+        db.commit()
+
+        # 3. Current Product Validation & Price Comparison
+        enqueued_count = 0
+        global queue_counter
+
+        for pid, notif in deduped_by_product.items():
+            # Validate product still exists in SQLite
+            prod = db.query(Product).filter_by(id=pid).first()
+            if not prod:
+                notif.status = 'expired'
+                db.commit()
+                logging.info(f"[Notifier Recovery] Suppressed notification {notif.id}: product {pid} no longer in database.")
+                continue
+
+            # Validate latest price from price_history
+            latest_ph = db.query(PriceHistory).filter_by(product_id=pid).order_by(PriceHistory.timestamp.desc()).first()
+            current_price = latest_ph.price if latest_ph else notif.price
+            current_mrp = latest_ph.mrp if latest_ph else notif.mrp
+            current_discount = latest_ph.discount if latest_ph else notif.discount
+            current_deal_score = latest_ph.deal_score if latest_ph else notif.deal_score
+            current_is_verified_low = latest_ph.is_verified_low if latest_ph else notif.is_verified_low
+
+            # Check price change: If current price increased above queued price, suppress
+            if current_price > notif.price:
+                notif.status = 'expired'
+                db.commit()
+                logging.info(f"[Notifier Recovery] Suppressed notification {notif.id} ({pid}): price increased from Rs.{notif.price} to Rs.{current_price}.")
+                continue
+
+            if enqueued_count >= max_batch_size:
+                # Bounded recovery limit: remaining valid items stay 'pending' for subsequent runs
+                continue
+
+            # If current price improved (lower), use the improved current price and discount
+            effective_price = current_price
+            effective_discount = current_discount
+            effective_score = current_deal_score
+
             try:
                 bank_offers = json.loads(notif.bank_offers) if notif.bank_offers else []
             except Exception:
                 bank_offers = []
-                
+
             job = {
                 "platform": notif.platform,
-                "title": notif.title,
-                "price": notif.price,
-                "mrp": notif.mrp,
-                "discount": notif.discount,
-                "image_url": notif.image_url,
-                "url": notif.url,
-                "is_verified_low": notif.is_verified_low,
-                "deal_score": notif.deal_score,
-                "unique_id": notif.unique_id,
+                "title": prod.title or notif.title,
+                "price": effective_price,
+                "mrp": current_mrp or notif.mrp,
+                "discount": effective_discount,
+                "image_url": prod.image_url or notif.image_url,
+                "url": prod.url or notif.url,
+                "is_verified_low": current_is_verified_low,
+                "deal_score": effective_score,
+                "unique_id": pid,
                 "bank_offers": bank_offers,
                 "coupon_detail": notif.coupon_detail,
                 "review_grade": notif.review_grade,
@@ -1786,19 +1859,25 @@ def recover_pending_notifications():
                 "is_mirror": notif.is_mirror,
                 "db_id": notif.id
             }
-            
+
             if notif.is_mirror:
                 mirror_notification_queue.put(job)
-                logging.info(f"[Notifier] Recovered and enqueued mirror deal: {notif.title[:30]}")
+                enqueued_count += 1
+                logging.info(f"[Notifier Recovery] Recovered and enqueued mirror deal: {job['title'][:30]}")
             else:
                 timestamp = notif.timestamp or time.time()
                 with queue_counter_lock:
                     queue_counter += 1
                     cnt = queue_counter
                 notification_queue.put((notif.priority_level, timestamp, cnt, job))
-                logging.info(f"[Notifier] Recovered and enqueued scraper deal: {notif.title[:30]}")
+                enqueued_count += 1
+                logging.info(f"[Notifier Recovery] Recovered and enqueued valid recent scraper deal: {job['title'][:30]} (Price: Rs.{effective_price})")
+
+        logging.info(f"[Notifier Recovery] Successfully enqueued batch of {enqueued_count} recovered notifications (Cap: {max_batch_size}).")
+
     except Exception as e:
-        logging.error(f"Error during pending notifications recovery: {e}")
+        db.rollback()
+        logging.error(f"Error during safe pending notifications recovery: {e}")
     finally:
         db.close()
 
