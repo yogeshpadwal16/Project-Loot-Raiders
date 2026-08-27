@@ -7,6 +7,7 @@ import unittest
 import tempfile
 import sqlite3
 import shutil
+import time
 from unittest.mock import patch, MagicMock
 
 # Ensure project root is in sys.path
@@ -104,6 +105,32 @@ class TestOffsiteBackupEngine(unittest.TestCase):
             files = os.listdir(backup_dir)
             self.assertTrue(any(f.endswith(".db") for f in files))
             self.assertTrue(any(f.endswith(".db.gz") for f in files))
+
+    @patch("shutil.disk_usage")
+    def test_check_disk_space(self, mock_disk_usage):
+        from scripts.backup_db import check_disk_space
+        # 100 GB total, 20 GB used, 80 GB free
+        mock_disk_usage.return_value = (100 * 1024**3, 20 * 1024**3, 80 * 1024**3)
+        self.assertTrue(check_disk_space(self.test_dir, min_free_mb=500))
+
+    def test_prune_max_files_ceiling(self):
+        backup_dir = os.path.join(self.test_dir, "backups_max")
+        os.makedirs(backup_dir, exist_ok=True)
+        # Create 10 fake backup archives
+        for i in range(10):
+            fname = f"loot_raiders_backup_2026010{i}_120000.db.gz"
+            fpath = os.path.join(backup_dir, fname)
+            with open(fpath, "w") as f:
+                f.write("mock")
+            # Set artificial modification times
+            os.utime(fpath, (time.time() - (10 - i) * 100, time.time() - (10 - i) * 100))
+        self.assertEqual(len(os.listdir(backup_dir)), 10)
+        # Prune with max_files=4
+        with patch("scripts.backup_db.BACKUP_DIR", backup_dir):
+            prune_old_backups(days=30, max_files=4)
+
+        remaining = os.listdir(backup_dir)
+        self.assertEqual(len(remaining), 4)
 
 if __name__ == "__main__":
     unittest.main()

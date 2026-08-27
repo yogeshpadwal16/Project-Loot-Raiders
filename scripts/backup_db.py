@@ -164,14 +164,46 @@ def dispatch_offsite_backup(backup_file: str) -> dict:
     
     return results
 
-def perform_backup() -> bool:
+def check_disk_space(target_dir: str, min_free_mb: int = 500) -> bool:
+    """
+    Checks available disk space on the partition hosting target_dir.
+    If available space is below min_free_mb, logs a warning and triggers emergency pruning.
+    """
+    try:
+        total, used, free = shutil.disk_usage(target_dir)
+        free_mb = free / (1024 * 1024)
+        total_mb = total / (1024 * 1024)
+        pct_used = (used / total) * 100
+
+        logging.info(f"Disk space check on {target_dir}: {free_mb:.1f} MB free / {total_mb:.1f} MB total ({pct_used:.1f}% used)")
+
+        if free_mb < min_free_mb or pct_used > 92.0:
+            logging.warning(f"Low disk space warning! Free: {free_mb:.1f}MB, Usage: {pct_used:.1f}%. Triggering emergency pruning...")
+            prune_old_backups(days=2, max_files=6)
+
+            # Re-check after emergency pruning
+            _, _, free_after = shutil.disk_usage(target_dir)
+            if (free_after / (1024 * 1024)) < (min_free_mb / 2):
+                logging.error("CRITICAL: Disk space critically exhausted even after emergency pruning.")
+                return False
+        return True
+    except Exception as e:
+        logging.warning(f"Could not evaluate disk space for {target_dir}: {e}")
+        return True
+
+def perform_backup(cleanup_raw: bool = False) -> bool:
     """Executes online zero-downtime database backup, integrity verification, compression, and off-site dispatch."""
     if not os.path.exists(DB_PATH):
         logging.error(f"Database file not found at {DB_PATH}")
         return False
-        
+
     os.makedirs(BACKUP_DIR, exist_ok=True)
-    
+
+    # Pre-backup disk space safety guard
+    if not check_disk_space(BACKUP_DIR, min_free_mb=300):
+        logging.error("Aborting backup to protect host system stability from disk exhaustion.")
+        return False
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_file = os.path.join(BACKUP_DIR, f"loot_raiders_backup_{timestamp}.db")
     
@@ -203,15 +235,25 @@ def perform_backup() -> bool:
         offsite_res = dispatch_offsite_backup(backup_file)
         logging.info(f"Off-site backup dispatch complete: {offsite_res}")
         
-        # Prune backups older than 7 days
-        prune_old_backups(days=7)
+        # Optional raw .db cleanup after successful gzip compression
+        if cleanup_raw and os.path.exists(f"{backup_file}.gz"):
+            try:
+                os.remove(backup_file)
+            except Exception:
+                pass
+
+        # Prune backups older than 7 days or exceeding max 14 archives
+        prune_old_backups(days=7, max_files=14)
         return True
     except Exception as e:
         logging.error(f"Failed to perform database backup: {e}")
         return False
 
-def prune_old_backups(days: int = 7):
-    """Removes backup files (.db and .db.gz) older than the specified retention window."""
+def prune_old_backups(days: int = 7, max_files: int = 14):
+    """
+    Removes backup files (.db and .db.gz) older than the specified retention window,
+    and enforces an absolute ceiling on total backup archives to prevent unbounded growth.
+    """
     cutoff = time.time() - (days * 86400)
     count = 0
     dirs_to_prune = [BACKUP_DIR]
@@ -222,17 +264,33 @@ def prune_old_backups(days: int = 7):
         
     for target_dir in dirs_to_prune:
         if os.path.exists(target_dir):
+            valid_backups = []
             for fname in os.listdir(target_dir):
                 if fname.startswith("loot_raiders_backup_") and (fname.endswith(".db") or fname.endswith(".db.gz")):
                     fpath = os.path.join(target_dir, fname)
-                    if os.path.getmtime(fpath) < cutoff:
+                    mtime = os.path.getmtime(fpath)
+                    if mtime < cutoff:
                         try:
                             os.remove(fpath)
                             count += 1
                         except Exception as e:
                             logging.warning(f"Could not remove old backup {fname}: {e}")
+                    else:
+                        valid_backups.append((mtime, fpath))
+
+            # Enforce max_files limit by removing oldest if exceeding count
+            if len(valid_backups) > max_files:
+                valid_backups.sort(key=lambda x: x[0])  # Oldest first
+                excess = len(valid_backups) - max_files
+                for i in range(excess):
+                    try:
+                        os.remove(valid_backups[i][1])
+                        count += 1
+                    except Exception as e:
+                        logging.warning(f"Could not remove excess backup {valid_backups[i][1]}: {e}")
+
     if count > 0:
-        logging.info(f"Pruned {count} database backup archives older than {days} days.")
+        logging.info(f"Pruned {count} database backup archives (retention={days}d, max_files={max_files}).")
 
 if __name__ == "__main__":
     perform_backup()
