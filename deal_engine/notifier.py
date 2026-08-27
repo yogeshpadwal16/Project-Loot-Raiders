@@ -1568,6 +1568,7 @@ def notifier_worker():
     last_growth_check = 0.0
     last_festival_check = 0.0
     last_presale_check = 0.0
+    last_recovery_refill = 0.0
 
     while True:
         now_time = time.time()
@@ -1609,6 +1610,13 @@ def notifier_worker():
         try:
             queue_item = notification_queue.get(timeout=5)
         except queue.Empty:
+            # When the in-memory queue is empty, automatically refill next bounded batch from SQLite
+            if now_time - last_recovery_refill >= 5.0:
+                last_recovery_refill = now_time
+                try:
+                    recover_pending_notifications(max_batch_size=20)
+                except Exception as rec_err:
+                    logging.error(f"Error during automatic pending recovery refill: {rec_err}")
             continue
             
         if queue_item is None:
@@ -1763,7 +1771,7 @@ def recover_pending_notifications(max_batch_size: int = 20, max_age_hours: float
     try:
         pending = db.query(PendingNotification).filter_by(status='pending').order_by(PendingNotification.timestamp.asc()).all()
         if not pending:
-            return
+            return 0
 
         now = time.time()
         cutoff_time = now - (max_age_hours * 3600.0)
@@ -1785,7 +1793,7 @@ def recover_pending_notifications(max_batch_size: int = 20, max_age_hours: float
             logging.info(f"[Notifier Recovery] Expired {stale_count} stale notifications older than {max_age_hours}h.")
 
         if not valid_candidates:
-            return
+            return 0
 
         # 2. Recovery Deduplication: Keep only the newest pending notification per unique_id
         deduped_by_product = {}
@@ -1874,10 +1882,11 @@ def recover_pending_notifications(max_batch_size: int = 20, max_age_hours: float
                 logging.info(f"[Notifier Recovery] Recovered and enqueued valid recent scraper deal: {job['title'][:30]} (Price: Rs.{effective_price})")
 
         logging.info(f"[Notifier Recovery] Successfully enqueued batch of {enqueued_count} recovered notifications (Cap: {max_batch_size}).")
-
+        return enqueued_count
     except Exception as e:
         db.rollback()
         logging.error(f"Error during safe pending notifications recovery: {e}")
+        return 0
     finally:
         db.close()
 
