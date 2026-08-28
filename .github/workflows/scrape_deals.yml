@@ -6,7 +6,7 @@ on:
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 permissions:
-  contents: write # Allows the action to commit and push changes back to the repo
+  contents: read # Least privilege read-only permissions
 
 concurrency:
   group: deals-scraper
