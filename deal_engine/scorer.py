@@ -479,7 +479,12 @@ def calculate_deal_score(
     if product_id:
         db = SessionLocal()
         try:
-            click_count = db.query(ClickLog).filter_by(product_id=product_id).count()
+            # Count qualified clicks, excluding bots and rapid duplicates (Phase 6C)
+            click_count = db.query(ClickLog).filter(
+                ClickLog.product_id == product_id,
+                ~ClickLog.user.like('%:bot%'),
+                ~ClickLog.user.like('%:duplicate%')
+            ).count()
             feedback_bonus = min(15.0, (click_count // 10) * 2.0)
         except Exception as db_err:
             logging.error(f"Failed to query click logs for score feedback: {db_err}")

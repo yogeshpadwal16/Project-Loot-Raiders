@@ -28,10 +28,10 @@ from web.server import ScraperAPIHandler
 
 
 class MockServerRequest:
-    def __init__(self, path, client_ip="127.0.0.1"):
+    def __init__(self, path, client_ip="127.0.0.1", user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"):
         self.path = path
         self.client_address = (client_ip, 12345)
-        self.headers = {"User-Agent": "TelegramBotViewer/1.0"}
+        self.headers = {"User-Agent": user_agent}
         self.wfile = io.BytesIO()
         self.response_code = None
         self.response_headers = {}
@@ -248,7 +248,7 @@ class TestPhase6BConversionAndCart(unittest.TestCase):
 
     def test_09_go_route_records_click_and_redirects_cart(self):
         """HTTP GET /go/{id}?cta=cart logs click with user='telegram:cart' and returns HTTP 302 to cart URL."""
-        req = MockServerRequest("/go/test_p6b_amz_item?cta=cart&src=telegram")
+        req = MockServerRequest("/go/test_p6b_amz_item?cta=cart&src=telegram", client_ip="127.0.0.2")
         ScraperAPIHandler.do_GET(req)
 
         self.assertEqual(req.response_code, 302)
@@ -257,7 +257,7 @@ class TestPhase6BConversionAndCart(unittest.TestCase):
 
         # Verify ClickLog in DB
         clicks = self.db.query(ClickLog).filter_by(product_id="test_p6b_amz_item").all()
-        self.assertTrue(any(c.user == "telegram:cart" for c in clicks))
+        self.assertTrue(any(c.user.startswith("telegram:cart") for c in clicks))
 
     def test_10_go_route_failsafe_redirects_even_if_db_fails(self):
         """If ClickLog database write fails, /go/ STILL returns HTTP 302 to target URL."""

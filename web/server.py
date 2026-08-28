@@ -310,6 +310,19 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(rev).encode('utf-8'))
             return
 
+        if clean_path == '/api/v1/analytics/heatmap':
+            from deal_engine.analytics import get_deal_heatmap_analytics
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            lookback = int(queries.get('hours', [24])[0])
+            heatmap_data = get_deal_heatmap_analytics(lookback_hours=lookback)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(heatmap_data).encode('utf-8'))
+            return
+
         if clean_path.startswith('/api/v1/push/subscribe'):
             from utils.web_push import register_push_subscription
             parsed_url = urllib.parse.urlparse(self.path)
@@ -956,20 +969,19 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
                             except Exception as cart_err:
                                 logging.warning(f"[Cloaker] Cart URL resolution error: {cart_err}")
 
-                        # Non-blocking click logging
+                        # Non-blocking qualified click logging & anti-gaming (Phase 6C)
                         try:
                             client_ip = self.client_address[0]
                             user_agent = self.headers.get('User-Agent', 'Unknown')
-                            click = ClickLog(
+                            from deal_engine.analytics import record_deal_click
+                            record_deal_click(
                                 product_id=deal_id,
                                 title=product.title or "Deal",
-                                ip=client_ip,
-                                user=f"{src}:{cta}",
+                                client_ip=client_ip,
                                 user_agent=user_agent,
-                                timestamp=time.time()
+                                cta=cta,
+                                src=src
                             )
-                            db.add(click)
-                            db.commit()
                         except Exception as log_err:
                             logging.error(f"[Cloaker] ClickLog write error: {log_err}")
 
