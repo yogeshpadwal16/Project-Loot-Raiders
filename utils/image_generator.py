@@ -62,6 +62,61 @@ def draw_sparkline_overlay(prod_img: Image.Image, price_history: list) -> Image.
     return Image.alpha_composite(img, overlay)
 
 
+_BACKGROUND_GRADIENT_CACHE = None
+_FONT_CACHE = None
+
+
+def _get_background_canvas() -> Image.Image:
+    global _BACKGROUND_GRADIENT_CACHE
+    if _BACKGROUND_GRADIENT_CACHE is None:
+        strip_bytes = bytearray()
+        for y in range(1000):
+            r = int(0x07 + (0x16 - 0x07) * (y / 1000))
+            g = int(0x0b + (0x1f - 0x0b) * (y / 1000))
+            b = int(0x14 + (0x33 - 0x14) * (y / 1000))
+            strip_bytes.extend((r, g, b))
+        strip = Image.frombytes('RGB', (1, 1000), bytes(strip_bytes))
+        _BACKGROUND_GRADIENT_CACHE = strip.resize((800, 1000), Image.Resampling.BILINEAR)
+    return _BACKGROUND_GRADIENT_CACHE.copy()
+
+
+def _get_cached_fonts():
+    global _FONT_CACHE
+    if _FONT_CACHE is not None:
+        return _FONT_CACHE
+
+    font_bold = "C:\\Windows\\Fonts\\segoeuib.ttf"
+    font_reg = "C:\\Windows\\Fonts\\segoeui.ttf"
+    if not os.path.exists(font_bold):
+        font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        font_reg = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    if not os.path.exists(font_bold):
+        font_bold = "C:\\Windows\\Fonts\\arialbd.ttf"
+        font_reg = "C:\\Windows\\Fonts\\arial.ttf"
+
+    try:
+        title_font = ImageFont.truetype(font_bold, 24)
+        price_font = ImageFont.truetype(font_bold, 54)
+        label_font = ImageFont.truetype(font_bold, 26)
+        meta_font = ImageFont.truetype(font_reg, 21)
+        sub_font = ImageFont.truetype(font_reg, 16)
+    except Exception:
+        title_font = ImageFont.load_default()
+        price_font = title_font
+        label_font = title_font
+        meta_font = title_font
+        sub_font = title_font
+
+    _FONT_CACHE = {
+        "title": title_font,
+        "price": price_font,
+        "label": label_font,
+        "meta": meta_font,
+        "sub": sub_font
+    }
+    return _FONT_CACHE
+
+
 def generate_deal_image(
     unique_id: str = "deal",
     platform: str = "amazon",
@@ -85,38 +140,17 @@ def generate_deal_image(
     target_img_url = img_url or original_image_url or kwargs.get("image_url")
     platform_clean = (platform or "amazon").lower()
 
-    # 1. Initialize 800x1000 Canvas with Premium Slate-to-Indigo Deep Gradient
-    canvas = Image.new('RGB', (800, 1000), color='#070b14')
+    # 1. Initialize 800x1000 Canvas with Cached Premium Slate-to-Indigo Deep Gradient
+    canvas = _get_background_canvas()
     draw = ImageDraw.Draw(canvas)
-    
-    for y in range(1000):
-        r = int(0x07 + (0x16 - 0x07) * (y / 1000))
-        g = int(0x0b + (0x1f - 0x0b) * (y / 1000))
-        b = int(0x14 + (0x33 - 0x14) * (y / 1000))
-        draw.line([(0, y), (800, y)], fill=(r, g, b))
 
-    # 2. Fonts Configuration (Windows Segoe UI / Linux DejaVu / Fallback)
-    font_bold = "C:\\Windows\\Fonts\\segoeuib.ttf"
-    font_reg = "C:\\Windows\\Fonts\\segoeui.ttf"
-    if not os.path.exists(font_bold):
-        font_bold = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        font_reg = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    if not os.path.exists(font_bold):
-        font_bold = "C:\\Windows\\Fonts\\arialbd.ttf"
-        font_reg = "C:\\Windows\\Fonts\\arial.ttf"
-
-    try:
-        title_font = ImageFont.truetype(font_bold, 24)
-        price_font = ImageFont.truetype(font_bold, 54)
-        label_font = ImageFont.truetype(font_bold, 26)
-        meta_font = ImageFont.truetype(font_reg, 21)
-        sub_font = ImageFont.truetype(font_reg, 16)
-    except Exception:
-        title_font = ImageFont.load_default()
-        price_font = title_font
-        label_font = title_font
-        meta_font = title_font
-        sub_font = title_font
+    # 2. Fonts Configuration
+    fonts = _get_cached_fonts()
+    title_font = fonts["title"]
+    price_font = fonts["price"]
+    label_font = fonts["label"]
+    meta_font = fonts["meta"]
+    sub_font = fonts["sub"]
 
     # 3. Top Header Bar
     is_amazon = "amazon" in platform_clean

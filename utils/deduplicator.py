@@ -20,14 +20,20 @@ SIMILARITY_THRESHOLD = 85.0  # token_sort_ratio threshold (0-100)
 DEFAULT_TTL_SEC = 14400  # 4 hours
 
 _ASYNC_REDIS_CLIENT: Optional[Any] = None
+_ASYNC_REDIS_LAST_FAILED_AT: float = 0.0
+_ASYNC_REDIS_RETRY_INTERVAL: float = 60.0  # seconds
 _IN_MEMORY_DEDUP_CACHE: Dict[str, float] = {}
 
 
 async def _get_async_redis():
-    """Lazy-initializes redis.asyncio Redis client connection pool."""
-    global _ASYNC_REDIS_CLIENT
+    """Lazy-initializes redis.asyncio Redis client connection pool with circuit breaker cooldown."""
+    global _ASYNC_REDIS_CLIENT, _ASYNC_REDIS_LAST_FAILED_AT
     if _ASYNC_REDIS_CLIENT is not None:
         return _ASYNC_REDIS_CLIENT
+
+    now = time.time()
+    if now - _ASYNC_REDIS_LAST_FAILED_AT < _ASYNC_REDIS_RETRY_INTERVAL:
+        return None
 
     redis_host = os.environ.get("REDIS_HOST", "127.0.0.1")
     redis_port = int(os.environ.get("REDIS_PORT", 6379))
@@ -41,8 +47,8 @@ async def _get_async_redis():
             port=redis_port,
             db=redis_db,
             password=redis_pass,
-            socket_timeout=2.0,
-            socket_connect_timeout=2.0,
+            socket_timeout=1.0,
+            socket_connect_timeout=1.0,
             decode_responses=True,
         )
         await client.ping()
@@ -50,8 +56,9 @@ async def _get_async_redis():
         logger.info(f"[Async Redis Deduplicator] Connected to Redis at {redis_host}:{redis_port}")
         return _ASYNC_REDIS_CLIENT
     except Exception as e:
-        logger.warning(f"[Async Redis Deduplicator] Redis unavailable ({e}). Operating in-memory deduplication fallback.")
+        _ASYNC_REDIS_LAST_FAILED_AT = now
         _ASYNC_REDIS_CLIENT = None
+        logger.warning(f"[Async Redis Deduplicator] Redis unavailable ({e}). Operating in-memory deduplication fallback (cooldown 60s).")
         return None
 
 

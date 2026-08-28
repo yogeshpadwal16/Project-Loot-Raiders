@@ -78,13 +78,16 @@ def init_db():
             "daily_post_count": "INTEGER DEFAULT 0",
             "daily_post_date": "TEXT DEFAULT ''" if "sqlite" in engine.url.drivername else "VARCHAR(10) DEFAULT ''"
         }
-        
         with engine.begin() as connection:
             for col_name, col_type in migrations.items():
                 if col_name not in existing_cols:
                     alter_sql = f"ALTER TABLE products ADD COLUMN {col_name} {col_type}"
                     connection.execute(text(alter_sql))
                     logging.info(f"[Migration] Successfully added column '{col_name}' to products table.")
+
+            # High-performance composite indexes
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_price_history_prod_ts ON price_history (product_id, timestamp DESC)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_products_created_tg ON products (created_at DESC, telegram_message_id)"))
     except Exception as e:
         logging.warning(f"[Migration] Database products table migration failed: {e}")
 
