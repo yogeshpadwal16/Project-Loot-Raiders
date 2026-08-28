@@ -1107,6 +1107,14 @@ def main():
         except Exception as harvest_err:
             logging.error(f"Failed to start Autonomous Harvester: {harvest_err}")
             
+        # 5.10 Start Deal Expiration & Out-Of-Stock Monitoring Daemon
+        try:
+            from deal_engine.expiration_daemon import start_expiration_daemon
+            start_expiration_daemon()
+            logging.info("[Expiration Daemon] Deal stock & expiration monitoring daemon launched.")
+        except Exception as exp_err:
+            logging.error(f"Failed to start Deal Expiration Daemon: {exp_err}")
+
         logging.info("Master Engine Activated. Scanners operating.")
     else:
         logging.info("Single-run execution mode activated (Cloud/CI environment).")

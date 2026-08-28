@@ -61,25 +61,25 @@ def expire_telegram_deal(product_id: str):
             return
 
         new_caption = f"❌ <b>[ DEAL EXPIRED / SOLD OUT ]</b> ❌\n\n<s>{original_caption}</s>"
-        reply_markup = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "❌ EXPIRED / SOLD OUT ❌",
-                        "url": buy_url
-                    }
-                ]
-            ]
-        }
-
         endpoint = f"https://api.telegram.org/bot{bot_token}/editMessageCaption"
         payload = {
             "chat_id": channel_id,
             "message_id": message_id,
             "caption": new_caption,
-            "parse_mode": "HTML",
-            "reply_markup": json.dumps(reply_markup)
+            "parse_mode": "HTML"
         }
+        if buy_url and (str(buy_url).startswith("http://") or str(buy_url).startswith("https://")):
+            reply_markup = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": "❌ EXPIRED / SOLD OUT ❌",
+                            "url": buy_url
+                        }
+                    ]
+                ]
+            }
+            payload["reply_markup"] = json.dumps(reply_markup)
         res = requests.post(endpoint, json=payload, timeout=15)
         if res.status_code == 200:
             logger.info(f"[EXPIRATION] Telegram message {message_id} marked as EXPIRED for product {product_id}.")
@@ -122,13 +122,25 @@ async def run_expiration_daemon_loop():
             
         await asyncio.sleep(3 * 3600)  # Sleep 3 hours
 
+_DAEMON_STARTED = False
+_DAEMON_LOCK = threading.Lock()
+
 def start_expiration_daemon():
-    """Starts the Expiration Daemon loop in a dedicated background thread."""
+    """Starts the Expiration Daemon loop in a dedicated background thread (singleton)."""
+    global _DAEMON_STARTED
+    with _DAEMON_LOCK:
+        if _DAEMON_STARTED:
+            logger.info("[EXPIRATION_DAEMON] Daemon thread already running. Skipping duplicate spawn.")
+            return
+        _DAEMON_STARTED = True
+
     def _run():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_expiration_daemon_loop())
-        loop.close()
+        try:
+            loop.run_until_complete(run_expiration_daemon_loop())
+        finally:
+            loop.close()
         
     t = threading.Thread(target=_run, name="ExpirationDaemon", daemon=True)
     t.start()
