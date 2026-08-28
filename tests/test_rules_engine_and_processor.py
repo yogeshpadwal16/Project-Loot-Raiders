@@ -44,21 +44,20 @@ class TestRulesEngineAndProcessor(unittest.TestCase):
         test_text = "Apple AirPods Pro (2nd Gen)\nPrice: ₹18,990 (MRP: ₹26,900)\nGrab: https://amzn.to/3xyz"
         raw_url = "https://www.amazon.in/dp/B09G9BL5CP"
 
-        asyncio.run(release_deal_lock("AMAZON:B09G9BL5CP"))
-
         # Mock scraper failure to force Text Fallback Mode
         async def mock_scrape_fail(url, timeout_seconds=8.0):
             return None
 
-        with patch("pipeline.processor.scrape_product_details", side_effect=mock_scrape_fail):
+        with patch("utils.deduplicator._get_async_redis", return_value=None), \
+             patch("pipeline.processor.scrape_product_details", side_effect=mock_scrape_fail):
+            asyncio.run(release_deal_lock("AMAZON:B09G9BL5CP"))
             result = asyncio.run(process_incoming_deal(raw_url, raw_text=test_text))
             self.assertIsNotNone(result)
             self.assertEqual(result["status"], "APPROVED")
             self.assertIn("AirPods", result["title"])
             self.assertTrue(result["price"] > 0)
             self.assertIn("tag=lootraiders-21", result["affiliate_url"])
-
-        asyncio.run(release_deal_lock("AMAZON:B09G9BL5CP"))
+            asyncio.run(release_deal_lock("AMAZON:B09G9BL5CP"))
 
 
 if __name__ == "__main__":

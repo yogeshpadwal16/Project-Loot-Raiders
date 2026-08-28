@@ -33,19 +33,21 @@ class TestMasterRefactoredPipeline(unittest.TestCase):
 
     def test_02_async_redis_deduplication(self):
         """Tests async Redis deduplication check & lock."""
-        test_key = "TEST_MASTER_CANONICAL_9999"
-        asyncio.run(release_deal_lock(test_key))
+        from unittest.mock import patch
+        with patch("utils.deduplicator._get_async_redis", return_value=None):
+            test_key = "TEST_MASTER_CANONICAL_9999"
+            asyncio.run(release_deal_lock(test_key))
 
-        # First attempt: Lock acquired (Not a duplicate!)
-        is_dup_1 = asyncio.run(is_duplicate_and_lock(test_key, ttl_seconds=60))
-        self.assertFalse(is_dup_1)
+            # First attempt: Lock acquired (Not a duplicate!)
+            is_dup_1 = asyncio.run(is_duplicate_and_lock(test_key, ttl_seconds=60))
+            self.assertFalse(is_dup_1)
 
-        # Second attempt: Lock exists (Duplicate suppressed!)
-        is_dup_2 = asyncio.run(is_duplicate_and_lock(test_key, ttl_seconds=60))
-        self.assertTrue(is_dup_2)
+            # Second attempt: Lock exists (Duplicate suppressed!)
+            is_dup_2 = asyncio.run(is_duplicate_and_lock(test_key, ttl_seconds=60))
+            self.assertTrue(is_dup_2)
 
-        # Clean up
-        asyncio.run(release_deal_lock(test_key))
+            # Clean up
+            asyncio.run(release_deal_lock(test_key))
 
     def test_03_stealth_scraper_json_ld(self):
         """Tests stealth scraper JSON-LD microdata parsing."""
@@ -84,7 +86,6 @@ class TestMasterRefactoredPipeline(unittest.TestCase):
         """Tests unified async deal pipeline orchestrator."""
         test_url = "https://www.amazon.in/dp/B09G9BL5CP"
         test_key = "AMAZON:B09G9BL5CP"
-        asyncio.run(release_deal_lock(test_key))
 
         async def mock_scrape(url, timeout_seconds=8.0):
             return {
@@ -97,14 +98,16 @@ class TestMasterRefactoredPipeline(unittest.TestCase):
             }
 
         from unittest.mock import patch
-        with patch("pipeline.processor.scrape_product_details", side_effect=mock_scrape):
+        with patch("utils.deduplicator._get_async_redis", return_value=None), \
+             patch("pipeline.processor.scrape_product_details", side_effect=mock_scrape):
+            asyncio.run(release_deal_lock(test_key))
             res = asyncio.run(process_incoming_deal(test_url, raw_text="Apple iPhone 13 128GB"))
             self.assertIsNotNone(res)
             self.assertEqual(res["canonical_id"], "AMAZON:B09G9BL5CP")
             self.assertIn("tag=lootraiders-21", res["affiliate_url"])
 
-        # Clean up
-        asyncio.run(release_deal_lock(test_key))
+            # Clean up
+            asyncio.run(release_deal_lock(test_key))
 
 
 if __name__ == "__main__":

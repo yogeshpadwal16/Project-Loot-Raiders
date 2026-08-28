@@ -483,6 +483,14 @@ class TestScrapyCrawler(unittest.TestCase):
 
 class TestDragonflyCache(unittest.TestCase):
     """Tests for Dragonfly mutual exclusion locking and fallback memory caching"""
+
+    def setUp(self):
+        from unittest.mock import patch
+        self.redis_patch = patch("utils.cache.get_redis_client", return_value=None)
+        self.redis_patch.start()
+
+    def tearDown(self):
+        self.redis_patch.stop()
     
     def test_cache_set_get_delete(self):
         from utils.cache import cache_set, cache_get, cache_delete

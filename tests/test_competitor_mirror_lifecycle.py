@@ -18,6 +18,13 @@ import deal_engine.mirroring as mirroring_pkg
 
 class TestCompetitorMirrorLifecycle(unittest.TestCase):
 
+    def setUp(self):
+        self.redis_patcher = patch("deal_engine.mirroring.redis_queue.redis.Redis", side_effect=Exception("No Redis Daemon"))
+        self.redis_patcher.start()
+
+    def tearDown(self):
+        self.redis_patcher.stop()
+
     def test_should_skip_url(self):
         """Verify non-product and aggregator URLs are filtered out."""
         self.assertTrue(_should_skip_url("https://www.amazon.in/s?k=deals+of+the+day"))

@@ -40,19 +40,21 @@ class TestRefactoredModules(unittest.TestCase):
 
     def test_02_atomic_deduplication(self):
         """Tests atomic deduplication locking (SET NX logic)."""
-        test_key = "test_asin_unique_9999"
-        release_lock(test_key)
+        from unittest.mock import patch
+        with patch("database.deduplicator._get_redis_client", return_value=None):
+            test_key = "test_asin_unique_9999"
+            release_lock(test_key)
 
-        # First acquisition must return False (Not a duplicate!)
-        is_dup_1 = is_duplicate_and_lock(test_key, ttl_seconds=60)
-        self.assertFalse(is_dup_1)
+            # First acquisition must return False (Not a duplicate!)
+            is_dup_1 = is_duplicate_and_lock(test_key, ttl_seconds=60)
+            self.assertFalse(is_dup_1)
 
-        # Second acquisition must return True (Duplicate suppressed!)
-        is_dup_2 = is_duplicate_and_lock(test_key, ttl_seconds=60)
-        self.assertTrue(is_dup_2)
+            # Second acquisition must return True (Duplicate suppressed!)
+            is_dup_2 = is_duplicate_and_lock(test_key, ttl_seconds=60)
+            self.assertTrue(is_dup_2)
 
-        # Clean up
-        release_lock(test_key)
+            # Clean up
+            release_lock(test_key)
 
     def test_03_multitier_monetization_converter(self):
         """Tests 3-tier fallback monetization engine."""
@@ -94,23 +96,26 @@ class TestRefactoredModules(unittest.TestCase):
 
     def test_05_async_queue_job_processing(self):
         """Tests async queue job processing end-to-end workflow."""
-        test_payload = {
-            "raw_url": "https://www.amazon.in/dp/B08N5WRWNW",
-            "title": "Apple MacBook Air Laptop M1",
-            "price": 69990.0,
-            "mrp": 99900.0
-        }
+        from unittest.mock import patch
+        with patch("database.deduplicator._get_redis_client", return_value=None), \
+             patch("deal_engine.queue_manager.scrape_product_live_async", return_value={"title": "Apple MacBook Air", "price": 69990.0, "in_stock": True}):
+            test_payload = {
+                "raw_url": "https://www.amazon.in/dp/B08N5WRWNW",
+                "title": "Apple MacBook Air Laptop M1",
+                "price": 69990.0,
+                "mrp": 99900.0
+            }
 
-        # Clear any lock
-        release_lock("AMAZON:B08N5WRWNW")
+            # Clear any lock
+            release_lock("AMAZON:B08N5WRWNW")
 
-        res = asyncio.run(process_deal_job(test_payload))
-        self.assertEqual(res["status"], "success")
-        self.assertEqual(res["canonical_id"], "AMAZON:B08N5WRWNW")
-        self.assertIn("tag=lootraiders-21", res["monetized_url"])
+            res = asyncio.run(process_deal_job(test_payload))
+            self.assertEqual(res["status"], "success")
+            self.assertEqual(res["canonical_id"], "AMAZON:B08N5WRWNW")
+            self.assertIn("tag=lootraiders-21", res["monetized_url"])
 
-        # Clean up
-        release_lock("AMAZON:B08N5WRWNW")
+            # Clean up
+            release_lock("AMAZON:B08N5WRWNW")
 
 
 if __name__ == "__main__":

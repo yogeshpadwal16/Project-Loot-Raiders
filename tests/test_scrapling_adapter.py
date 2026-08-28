@@ -19,14 +19,21 @@ class TestScraplingAdapter(unittest.TestCase):
 
     def test_fetch_success_fast_mode(self):
         """Test fetching a page in fast mode (HTTP)."""
-        response = self.adapter.fetch("https://www.google.com", mode="fast")
-        self.assertIsInstance(response, ScrapedResponse)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("html", response.content.lower())
+        from unittest.mock import patch, MagicMock
+        mock_res = MagicMock()
+        mock_res.status = 200
+        mock_res.html_content = "<html><head><title>Google</title></head><body><h1>Google</h1></body></html>"
+        with patch("scrapling.Fetcher.get", return_value=mock_res):
+            response = self.adapter.fetch("https://www.google.com", mode="fast")
+            self.assertIsInstance(response, ScrapedResponse)
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("html", response.content.lower())
 
     def test_fetch_error_invalid_url(self):
         """Verify internal exceptions are shielded and re-raised as ScraperFetchError."""
-        with self.assertRaises(ScraperFetchError):
+        from unittest.mock import patch
+        with patch("scrapling.Fetcher.get", side_effect=Exception("Could not resolve host")), \
+             self.assertRaises(ScraperFetchError):
             self.adapter.fetch("http://invalid-domain-name-that-does-not-exist.local", mode="fast")
 
     def test_element_selection_and_normalization(self):
