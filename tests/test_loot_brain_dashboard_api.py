@@ -43,5 +43,29 @@ class TestLootBrainDashboardAPI(unittest.TestCase):
         self.assertEqual(data["status"], "APPROVED")
 
 
+    def test_brain_learning_policies_endpoint(self):
+        response = client.get("/api/v1/brain/learning/policies")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), list)
+
+    def test_brain_policy_approve_nonexistent_404(self):
+        response = client.post("/api/v1/brain/learning/policies/non_existent_policy_9999/approve", json={"approver_id": "admin"})
+        self.assertEqual(response.status_code, 404)
+
+    def test_brain_memories_search_query(self):
+        response = client.get("/api/v1/brain/memories?query=test")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.json(), list)
+
+    def test_brain_status_standalone_fallback(self):
+        from unittest.mock import patch
+        with patch("loot_brain.dashboard_api.get_brain_components", side_effect=RuntimeError("Provider unavailable")):
+            response = client.get("/api/v1/brain/status")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["status"], "STANDALONE")
+            self.assertIn("Provider unavailable", data["message"])
+
+
 if __name__ == "__main__":
     unittest.main()

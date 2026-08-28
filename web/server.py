@@ -1164,66 +1164,64 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def _handle_brain_get(self, clean_path):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
+        try:
+            parsed_url = urllib.parse.urlparse(self.path)
+            queries = urllib.parse.parse_qs(parsed_url.query)
+            q_term = queries.get('query', [None])[0]
 
-        parsed_url = urllib.parse.urlparse(self.path)
-        queries = urllib.parse.parse_qs(parsed_url.query)
-        q_term = queries.get('query', [None])[0]
+            if clean_path.endswith('/brain/status'):
+                agents = brain_registry.list_agents()
+                active_mems = brain_store.search_memories(include_archived=False, limit=1000)
+                archived_mems = brain_store.search_memories(include_archived=True, limit=1000)
+                res = {
+                    "status": "ONLINE",
+                    "version": "1.0.0",
+                    "registered_agents_count": len(agents),
+                    "agents": agents,
+                    "active_memories_count": len(active_mems),
+                    "archived_memories_count": len(archived_mems) - len(active_mems),
+                    "pending_policy_proposals_count": len(brain_subconscious.list_proposed_policies())
+                }
+                self.send_json_response(res, 200)
 
-        if clean_path.endswith('/brain/status'):
-            agents = brain_registry.list_agents()
-            active_mems = brain_store.search_memories(include_archived=False, limit=1000)
-            archived_mems = brain_store.search_memories(include_archived=True, limit=1000)
-            res = {
-                "status": "ONLINE",
-                "version": "1.0.0",
-                "registered_agents_count": len(agents),
-                "agents": agents,
-                "active_memories_count": len(active_mems),
-                "archived_memories_count": len(archived_mems) - len(active_mems),
-                "pending_policy_proposals_count": len(brain_subconscious.list_proposed_policies())
-            }
-            self.wfile.write(json.dumps(res).encode('utf-8'))
+            elif clean_path.endswith('/brain/memories'):
+                memories = brain_store.search_memories(query=q_term, limit=50)
+                res = [m.model_dump() for m in memories]
+                self.send_json_response(res, 200)
 
-        elif clean_path.endswith('/brain/memories'):
-            memories = brain_store.search_memories(query=q_term, limit=50)
-            res = [m.model_dump() for m in memories]
-            self.wfile.write(json.dumps(res).encode('utf-8'))
+            elif clean_path.endswith('/learning/policies'):
+                policies = brain_subconscious.list_proposed_policies()
+                res = [p.model_dump() for p in policies]
+                self.send_json_response(res, 200)
 
-        elif clean_path.endswith('/learning/policies'):
-            policies = brain_subconscious.list_proposed_policies()
-            res = [p.model_dump() for p in policies]
-            self.wfile.write(json.dumps(res).encode('utf-8'))
-
-        else:
-            self.wfile.write(json.dumps({"status": "ONLINE", "service": "Loot Brain API"}).encode('utf-8'))
+            else:
+                self.send_json_response({"status": "ONLINE", "service": "Loot Brain API"}, 200)
+        except Exception as e:
+            self.send_json_response({"error": str(e)}, 500)
 
     def _handle_brain_post(self, parsed_path, post_data):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-
         try:
             req_data = json.loads(post_data.decode('utf-8')) if post_data else {}
         except Exception:
             req_data = {}
 
-        if '/learning/policies/' in parsed_path and parsed_path.endswith('/approve'):
-            policy_id = parsed_path.split('/learning/policies/')[1].replace('/approve', '')
-            approver_id = req_data.get('approver_id', 'human_operator')
-            success = brain_subconscious.approve_policy_candidate(policy_id, approver_id=approver_id)
-            res = {"approved": success, "policy_id": policy_id, "approver_id": approver_id}
-            self.wfile.write(json.dumps(res).encode('utf-8'))
+        try:
+            if '/learning/policies/' in parsed_path and parsed_path.endswith('/approve'):
+                policy_id = parsed_path.split('/learning/policies/')[1].replace('/approve', '')
+                approver_id = req_data.get('approver_id', 'human_operator')
+                success = brain_subconscious.approve_policy_candidate(policy_id, approver_id=approver_id)
+                res = {"approved": success, "policy_id": policy_id, "approver_id": approver_id}
+                self.send_json_response(res, 200 if success else 404)
 
-        elif parsed_path.endswith('/pipeline/process'):
-            task_id = f"api-task-{int(time.time())}"
-            res = brain_orchestrator.process_deal_pipeline(task_id, req_data)
-            self.wfile.write(json.dumps(res).encode('utf-8'))
+            elif parsed_path.endswith('/pipeline/process'):
+                task_id = f"api-task-{int(time.time())}"
+                res = brain_orchestrator.process_deal_pipeline(task_id, req_data)
+                self.send_json_response(res, 200)
 
-        else:
-            self.wfile.write(json.dumps({"status": "received"}).encode('utf-8'))
+            else:
+                self.send_json_response({"status": "received"}, 200)
+        except Exception as e:
+            self.send_json_response({"error": str(e)}, 500)
 
     def do_POST(self):
         if not self.is_authorized():
