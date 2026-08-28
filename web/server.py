@@ -930,56 +930,76 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
             return
 
         elif self.path.startswith('/go/'):
-            # Cloaker URL redirect (Feature 13)
-            parts = self.path.split('/')
+            # Cloaker URL redirect with CTA attribution (Phase 6B)
+            from urllib.parse import urlparse, parse_qs
+            parsed = urlparse(self.path)
+            parts = parsed.path.split('/')
+            queries = parse_qs(parsed.query)
+            cta = queries.get('cta', ['buy'])[0].lower()
+            src = queries.get('src', ['telegram'])[0].lower()
+
             if len(parts) >= 3:
-                deal_id = parts[2].split('?')[0].strip()
+                deal_id = parts[2].strip()
                 db = SessionLocal()
                 try:
                     product = db.query(Product).filter_by(id=deal_id).first()
                     if product:
                         target_url = product.url
 
-                        # Increment clicks and log click
-                        client_ip = self.client_address[0]
-                        user_agent = self.headers.get('User-Agent', 'Unknown')
-                        click = ClickLog(
-                            product_id=deal_id,
-                            title=product.title,
-                            ip=client_ip,
-                            user='CloakedUser',
-                            user_agent=user_agent,
-                            timestamp=time.time()
-                        )
-                        db.add(click)
-                        db.commit()
+                        # If 1-click cart CTA requested, generate direct auto-cart link
+                        if cta == 'cart' and product.url:
+                            try:
+                                from utils.affiliate import generate_auto_cart_url
+                                cart_url = generate_auto_cart_url(product.url, product.platform, load_settings())
+                                if cart_url:
+                                    target_url = cart_url
+                            except Exception as cart_err:
+                                logging.warning(f"[Cloaker] Cart URL resolution error: {cart_err}")
 
-                        # Recalculate score and sync JSON
-                        latest_price = db.query(PriceHistory).filter_by(product_id=deal_id).order_by(PriceHistory.timestamp.desc()).first()
-                        if latest_price:
-                            new_score = calculate_deal_score(
-                                platform=product.platform,
-                                price=latest_price.price,
-                                mrp=latest_price.mrp,
-                                discount=latest_price.discount,
-                                is_verified_low=latest_price.is_verified_low,
-                                is_lightning=False,
+                        # Non-blocking click logging
+                        try:
+                            client_ip = self.client_address[0]
+                            user_agent = self.headers.get('User-Agent', 'Unknown')
+                            click = ClickLog(
                                 product_id=deal_id,
-                                title=product.title
+                                title=product.title or "Deal",
+                                ip=client_ip,
+                                user=f"{src}:{cta}",
+                                user_agent=user_agent,
+                                timestamp=time.time()
                             )
-                            latest_price.deal_score = new_score
+                            db.add(click)
                             db.commit()
+                        except Exception as log_err:
+                            logging.error(f"[Cloaker] ClickLog write error: {log_err}")
 
-                            # Debounced: JSON sync happens periodically in the main loop, not per-click
-                            pass
+                        # Background score popularity adjustment
+                        try:
+                            latest_price = db.query(PriceHistory).filter_by(product_id=deal_id).order_by(PriceHistory.timestamp.desc()).first()
+                            if latest_price:
+                                new_score = calculate_deal_score(
+                                    platform=product.platform,
+                                    price=latest_price.price,
+                                    mrp=latest_price.mrp,
+                                    discount=latest_price.discount,
+                                    is_verified_low=latest_price.is_verified_low,
+                                    is_lightning=False,
+                                    product_id=deal_id,
+                                    title=product.title
+                                )
+                                latest_price.deal_score = new_score
+                                db.commit()
 
-                            # Trigger background message update
-                            import threading
-                            from deal_engine.notifier import update_telegram_message
-                            threading.Thread(target=update_telegram_message, args=(deal_id,), daemon=True).start()
+                                import threading
+                                from deal_engine.notifier import update_telegram_message
+                                threading.Thread(target=update_telegram_message, args=(deal_id,), daemon=True).start()
+                        except Exception as score_err:
+                            logging.debug(f"[Cloaker] Popularity score update error: {score_err}")
 
+                        # Guaranteed HTTP 302 redirect
                         self.send_response(302)
                         self.send_header('Location', target_url)
+                        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
                         self.end_headers()
                         return
                 except Exception as e:

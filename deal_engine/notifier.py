@@ -30,6 +30,8 @@ def send_deal_notification(deal_payload: dict) -> bool:
         mrp = deal_payload.get("mrp", 0.0)
         discount = deal_payload.get("discount", 0.0)
         affiliate_url = deal_payload.get("affiliate_url", "")
+        platform = deal_payload.get("platform", "")
+        unique_id = deal_payload.get("id") or deal_payload.get("product_id")
 
         price_str = f"Rs.{price:,.0f}" if price > 0 else "Special Price"
         mrp_str = f" (MRP: Rs.{mrp:,.0f})" if mrp > price > 0 else ""
@@ -37,9 +39,36 @@ def send_deal_notification(deal_payload: dict) -> bool:
 
         caption = f"🔥 [{deal_payload.get('tier', 'LOOT DEAL')}] 🔥\n{title}\n\n💰 Price: {price_str}{mrp_str}{disc_str}\n👉 Buy Now: {affiliate_url}"
 
+        # 1-Click Cart URL Resolution (Phase 6B)
+        auto_cart_url = deal_payload.get("auto_cart_url")
+        if not auto_cart_url and affiliate_url:
+            try:
+                from utils.affiliate import generate_auto_cart_url
+                auto_cart_url = generate_auto_cart_url(affiliate_url, platform, settings)
+            except Exception:
+                auto_cart_url = None
+
+        price_val = int(price) if price else 0
+        price_label = f" — ₹{price_val:,}" if price_val > 0 else ""
+
+        inline_keyboard = []
+        if auto_cart_url:
+            inline_keyboard.append([
+                {"text": f"🛍 BUY NOW{price_label}", "url": affiliate_url},
+                {"text": "🛒 ADD TO CART", "url": auto_cart_url}
+            ])
+        elif affiliate_url:
+            inline_keyboard.append([
+                {"text": f"🛍 BUY NOW{price_label}", "url": affiliate_url}
+            ])
+
+        reply_markup = {"inline_keyboard": inline_keyboard} if inline_keyboard else None
+
         if bot_token and not bot_token.startswith("YOUR_"):
             api_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
             payload = {"chat_id": chat_id, "text": caption, "disable_web_page_preview": False}
+            if reply_markup:
+                payload["reply_markup"] = reply_markup
             requests.post(api_url, json=payload, timeout=5.0)
             logging.info(f"[Notifier] Dispatched notification for '{title[:35]}...' to Telegram {chat_id}")
             return True
@@ -699,23 +728,52 @@ def send_telegram_alert(bot_token: str, chat_id: str, platform: str, title: str,
             buy_url = f"https://{buy_url}"
     if auto_cart_url and not auto_cart_url.startswith("http"):
         auto_cart_url = None
-    
+
+    # 3. Build Inline Buy & Add-to-Cart Buttons with Click Attribution (Phase 6B)
     price_val = int(price) if price else 0
-    inline_keyboard = [
-        [
-            {
-                "text": f"🛍 BUY NOW — ₹{price_val:,} 🛍",
-                "url": buy_url
-            }
-        ]
-    ]
-    if settings.get("enable_auto_cart_button", False) and auto_cart_url:
+    price_label = f" — ₹{price_val:,}" if price_val > 0 else ""
+
+    # Route buttons through cloaker redirect if cloaker_domain is configured
+    cloaker_domain = (settings.get("cloaker_domain") or "").strip()
+    if cloaker_domain and unique_id:
+        if not cloaker_domain.startswith("http"):
+            cloaker_domain = "https://" + cloaker_domain
+        buy_button_url = f"{cloaker_domain.rstrip('/')}/go/{unique_id}?cta=buy&src=telegram"
+        cart_button_url = f"{cloaker_domain.rstrip('/')}/go/{unique_id}?cta=cart&src=telegram"
+    else:
+        buy_button_url = buy_url
+        cart_button_url = auto_cart_url
+
+    # Check auto-cart availability
+    if not auto_cart_url and (final_url or buy_url):
+        try:
+            from utils.affiliate import generate_auto_cart_url
+            auto_cart_url = generate_auto_cart_url(final_url or buy_url, platform, settings)
+            if not cloaker_domain:
+                cart_button_url = auto_cart_url
+        except Exception:
+            auto_cart_url = None
+
+    inline_keyboard = []
+    if auto_cart_url and cart_button_url:
         inline_keyboard.append([
             {
-                "text": "🛒 ADD TO CART 🛒",
-                "url": auto_cart_url
+                "text": f"🛍 BUY NOW{price_label}",
+                "url": buy_button_url
+            },
+            {
+                "text": "🛒 ADD TO CART",
+                "url": cart_button_url
             }
         ])
+    else:
+        inline_keyboard.append([
+            {
+                "text": f"🛍 BUY NOW{price_label}",
+                "url": buy_button_url
+            }
+        ])
+
     reply_markup = {"inline_keyboard": inline_keyboard}
     reply_markup_json = json.dumps(reply_markup)
 
