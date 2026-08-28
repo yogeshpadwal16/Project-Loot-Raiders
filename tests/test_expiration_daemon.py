@@ -82,7 +82,7 @@ class TestDealExpirationDaemon(unittest.TestCase):
         mock_post.status_code = 200
 
         with patch("requests.post", return_value=mock_post) as mock_req, \
-             patch("config.settings.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@LootRaidersDeals"}):
+             patch("config.settings.load_settings", return_value={"telegram_bot_token": "TEST_BOT_TOKEN_EXPIRATION", "telegram_chat_id": "@LootRaidersDeals"}):
             expire_telegram_deal("test_exp_1001")
 
             self.assertTrue(mock_req.called)
@@ -112,7 +112,7 @@ class TestDealExpirationDaemon(unittest.TestCase):
         self.db.commit()
 
         with patch("requests.post") as mock_req, \
-             patch("config.settings.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@LootRaidersDeals"}):
+             patch("config.settings.load_settings", return_value={"telegram_bot_token": "TEST_BOT_TOKEN_EXPIRATION", "telegram_chat_id": "@LootRaidersDeals"}):
             expire_telegram_deal("test_exp_1002")
             self.assertFalse(mock_req.called)
 
@@ -139,7 +139,7 @@ class TestDealExpirationDaemon(unittest.TestCase):
         self.db.add(p)
         self.db.commit()
 
-        with patch("config.settings.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@LootRaidersDeals"}):
+        with patch("config.settings.load_settings", return_value={"telegram_bot_token": "TEST_BOT_TOKEN_EXPIRATION", "telegram_chat_id": "@LootRaidersDeals"}):
             expire_telegram_deal("test_exp_1003")
             expire_telegram_deal("non_existent_id")
 

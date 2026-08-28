@@ -66,7 +66,7 @@ class TestTelegramNotifierFailurePaths(unittest.TestCase):
             "discount": 28.5,
             "affiliate_url": "https://www.amazon.in/dp/B0D1234567?tag=lootraiders-21"
         }
-        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@test_channel"}):
+        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "TEST_MOCK_TELEGRAM_BOT_TOKEN", "telegram_chat_id": "@test_channel"}):
             success = send_deal_notification(deal_payload)
             self.assertFalse(success)
 
@@ -83,7 +83,7 @@ class TestTelegramNotifierFailurePaths(unittest.TestCase):
             "discount": 50.0,
             "affiliate_url": "https://www.amazon.in/dp/B0D1234567?tag=lootraiders-21"
         }
-        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@test_channel"}):
+        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "TEST_MOCK_TELEGRAM_BOT_TOKEN", "telegram_chat_id": "@test_channel"}):
             success = send_deal_notification(deal_payload)
             self.assertFalse(success)
 
@@ -100,7 +100,7 @@ class TestTelegramNotifierFailurePaths(unittest.TestCase):
             "discount": 60.0,
             "affiliate_url": "https://www.amazon.in/dp/B0D1234567?tag=lootraiders-21"
         }
-        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@test_channel"}):
+        with patch("deal_engine.notifier.load_settings", return_value={"telegram_bot_token": "TEST_MOCK_TELEGRAM_BOT_TOKEN", "telegram_chat_id": "@test_channel"}):
             success = send_deal_notification(deal_payload)
             self.assertFalse(success)
 
@@ -291,7 +291,7 @@ class TestFestivalFallbackHierarchy(unittest.TestCase):
         fest = {"name": "Ganesh Chaturthi", "date": "2026-09-14", "description": "Lord Ganesha Festival"}
         local_card = generate_local_festival_card(fest)
 
-        with patch("config.settings.load_settings", return_value={"telegram_bot_token": "8888375196:AAEXcssEBA8nwvKT2EW5vOy9QsmIizhvCEE", "telegram_chat_id": "@test_channel"}):
+        with patch("config.settings.load_settings", return_value={"telegram_bot_token": "TEST_MOCK_TELEGRAM_BOT_TOKEN", "telegram_chat_id": "@test_channel"}):
             success = send_festival_greeting(local_card, "Ganesh Chaturthi Wishes")
             self.assertTrue(success)
             mock_post.assert_called_once()
