@@ -72,6 +72,8 @@ jobs:
           REDIS_HOST: '127.0.0.1'
           REDIS_PORT: '6379'
           CI: 'true'
+          PYTHONPATH: '.'
+          PYTHONUNBUFFERED: '1'
         run: |
           python run_all_tests.py
 
