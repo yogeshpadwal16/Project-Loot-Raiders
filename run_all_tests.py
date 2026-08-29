@@ -37,7 +37,15 @@ def main():
             
     # 5. Exit with appropriate status code
     if not result.wasSuccessful():
-        print("[Test Runner] Execution failed. Some tests did not pass.")
+        print("\n" + "=" * 70)
+        print("FAILURES & ERRORS SUMMARY:")
+        print("=" * 70)
+        for test, err in result.failures:
+            print(f"\n[FAILURE] {test}:\n{err}")
+        for test, err in result.errors:
+            print(f"\n[ERROR] {test}:\n{err}")
+        print("=" * 70)
+        print(f"[Test Runner] Execution failed: {len(result.failures)} failures, {len(result.errors)} errors.")
         sys.exit(1)
     else:
         print("[Test Runner] Execution completed successfully. All tests passed.")

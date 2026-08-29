@@ -6,10 +6,16 @@ aiolimiter>=1.1.0
 anyio>=4.3.0
 async-timeout>=4.0.3
 attrs>=23.2.0
+nest-asyncio>=1.6.0
 
 # Database & Storage
 SQLAlchemy>=2.0.25
 redis>=5.0.4
+chromadb>=0.5.0
+fastembed>=0.3.0
+
+# API & Web Framework
+fastapi>=0.110.0
 
 # Web, Scraping & Parsers
 beautifulsoup4>=4.12.3
