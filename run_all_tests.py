@@ -22,7 +22,11 @@ def main():
     # 3. Discover and run all unittest files inside tests/
     print(f"[Test Runner] Initiating test discovery in {os.path.join(project_root, 'tests')}...")
     loader = unittest.TestLoader()
-    suite = loader.discover(start_dir=os.path.join(project_root, "tests"), pattern="test_*.py")
+    suite = loader.discover(
+        start_dir=os.path.join(project_root, "tests"),
+        pattern="test_*.py",
+        top_level_dir=project_root
+    )
     
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
