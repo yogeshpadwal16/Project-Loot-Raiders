@@ -163,10 +163,7 @@ class TestFixedFunctions(unittest.TestCase):
     # TEST 4: Quality Firewall Validation and Logs
     # ---------------------------------------------------------
     def test_quality_firewall_validation_and_logs(self):
-        try:
-            from compliance_guard import check_quality_firewall
-        except ImportError:
-            from loot_raiders.compliance_guard import check_quality_firewall
+        from loot_raiders.compliance_guard import check_quality_firewall
 
         # Test Case A: Invalid price (0)
         with self.assertLogs(level="WARNING") as log_watcher:
