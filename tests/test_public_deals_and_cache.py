@@ -48,8 +48,8 @@ class TestPublicDealsAndCache(unittest.TestCase):
 
         # Ensure SessionLocal (SQLite) is NOT called on get_cached_public_deals()
         with patch("web.server.SessionLocal", side_effect=AssertionError("SQLite must NEVER be called")):
-            with patch("os.path.exists", return_value=True):
-                with patch("os.path.getmtime", return_value=12345.0):
+            with patch("web.server.os.path.exists", return_value=True):
+                with patch("web.server.os.path.getmtime", return_value=12345.0):
                     with patch("builtins.open", unittest.mock.mock_open(read_data=json.dumps(sample_deals))):
                         res = get_cached_public_deals()
                         self.assertEqual(len(res), 2)
@@ -72,13 +72,13 @@ class TestPublicDealsAndCache(unittest.TestCase):
 
     def test_missing_or_corrupted_snapshot_fails_safely(self):
         # Scenario A: File does not exist
-        with patch("os.path.exists", return_value=False):
+        with patch("web.server.os.path.exists", return_value=False):
             res = get_cached_public_deals()
             self.assertEqual(res, [], "Must return empty list if snapshot is missing")
 
         # Scenario B: File contains invalid JSON
-        with patch("os.path.exists", return_value=True):
-            with patch("os.path.getmtime", return_value=99999.0):
+        with patch("web.server.os.path.exists", return_value=True):
+            with patch("web.server.os.path.getmtime", return_value=99999.0):
                 with patch("builtins.open", unittest.mock.mock_open(read_data="INVALID_JSON")):
                     res = get_cached_public_deals()
                     self.assertEqual(res, [], "Must return empty list gracefully on parse error")

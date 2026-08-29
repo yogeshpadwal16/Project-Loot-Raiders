@@ -403,6 +403,11 @@ class TestSemanticDeduplication(unittest.TestCase):
     
     def setUp(self):
         try:
+            from utils.deduplicator import MOCKED_VECTOR_DB
+            MOCKED_VECTOR_DB.clear()
+        except Exception:
+            pass
+        try:
             from database.db_session import SessionLocal
             from knowledge_base.models import Product
             db = SessionLocal()
@@ -420,6 +425,11 @@ class TestSemanticDeduplication(unittest.TestCase):
             pass
 
     def tearDown(self):
+        try:
+            from utils.deduplicator import MOCKED_VECTOR_DB
+            MOCKED_VECTOR_DB.clear()
+        except Exception:
+            pass
         try:
             from database.db_session import SessionLocal
             from knowledge_base.models import Product

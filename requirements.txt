@@ -20,12 +20,15 @@ fastapi>=0.110.0
 # Web, Scraping & Parsers
 beautifulsoup4>=4.12.3
 requests>=2.31.0
+requests-oauthlib>=2.0.0
 httpx>=0.27.0
 lxml>=5.1.0
 selectolax>=0.3.21
 scrapling>=0.3.0
 rebrowser-playwright>=1.43.0
 playwright>=1.43.0
+Scrapy>=2.11.0
+selenium>=4.18.0
 feedparser>=6.0.11
 
 # Telegram & Messaging
@@ -47,3 +50,4 @@ APScheduler>=3.10.4
 psutil>=5.9.8
 curl-cffi>=0.7.0
 google-generativeai>=0.5.0
+tenacity>=8.2.0
