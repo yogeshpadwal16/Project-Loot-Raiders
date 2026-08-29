@@ -39,7 +39,30 @@ def main():
         except Exception as e:
             print(f"[Test Runner] Failed to restore .env: {e}")
             
-    # 5. Exit with appropriate status code
+    # 5. Write GitHub Actions Step Summary if available
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        try:
+            with open(summary_path, "a", encoding="utf-8") as sf:
+                sf.write("### 🧪 Full Regression Test Suite Report\n\n")
+                sf.write(f"- **Total Tests Executed:** {result.testsRun}\n")
+                sf.write(f"- **Failures:** {len(result.failures)}\n")
+                sf.write(f"- **Errors:** {len(result.errors)}\n")
+                sf.write(f"- **Was Successful:** {result.wasSuccessful()}\n\n")
+                if result.failures:
+                    sf.write("#### ❌ Failures\n```text\n")
+                    for t, err in result.failures:
+                        sf.write(f"[{t}]\n{err}\n\n")
+                    sf.write("```\n")
+                if result.errors:
+                    sf.write("#### ⚠️ Errors\n```text\n")
+                    for t, err in result.errors:
+                        sf.write(f"[{t}]\n{err}\n\n")
+                    sf.write("```\n")
+        except Exception as se:
+            print(f"[Test Runner] Failed to write step summary: {se}")
+
+    # 6. Exit with appropriate status code
     if not result.wasSuccessful():
         print("\n" + "=" * 70)
         print("FAILURES & ERRORS SUMMARY:")
