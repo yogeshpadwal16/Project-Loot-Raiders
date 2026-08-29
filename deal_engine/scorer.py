@@ -203,6 +203,13 @@ Example: 72.5
 
     return None
 
+def _matches_brand(brand: str, text_lower: str) -> bool:
+    """Matches a brand or keyword against text ensuring whole-word boundary and optional plural matching."""
+    if not text_lower or not brand:
+        return False
+    pattern = r'\b' + re.escape(brand) + r'(?:s|es)?\b'
+    return bool(re.search(pattern, text_lower, re.IGNORECASE))
+
 def get_heuristic_ai_ranking(
     title: str,
     platform: str,
@@ -244,7 +251,7 @@ def get_heuristic_ai_ranking(
     is_accessory = False
     accessory_penalty = 0
     for keyword, penalty in LOW_VALUE_CATEGORIES.items():
-        if keyword in title_lower:
+        if _matches_brand(keyword, title_lower):
             is_accessory = True
             accessory_penalty = min(accessory_penalty, penalty)
             
@@ -263,15 +270,15 @@ def get_heuristic_ai_ranking(
             "speaker": 12, "soundbar": 14, "projector": 16,
             "console": 20, "playstation": 22, "xbox": 22, "nintendo": 20,
             "trimmer": 8, "shaver": 8, "grooming": 6,
-            "shoe": 10, "sneaker": 12, "running shoe": 10,
-            "backpack": 6, "luggage": 8, "suitcase": 8,
-            "perfume": 8, "fragrance": 8,
+            "shoe": 10, "sneaker": 12, "running shoe": 10, "footwear": 10, "slide": 8, "sandal": 8, "sportstyle": 10,
+            "backpack": 6, "luggage": 8, "suitcase": 8, "wallet": 8, "leather wallet": 10, "handbag": 8,
+            "perfume": 8, "fragrance": 8, "sunglasses": 8,
             "jacket": 8, "hoodie": 6, "jeans": 6, "shirt": 4, "t-shirt": 3,
             "kurta": 4, "saree": 5, "dress": 6,
         }
         category_bonus = 0
         for keyword, bonus in HIGH_VALUE_CATEGORIES.items():
-            if keyword in title_lower:
+            if _matches_brand(keyword, title_lower):
                 category_bonus = max(category_bonus, bonus)
         score += category_bonus
     
@@ -290,18 +297,18 @@ def get_heuristic_ai_ranking(
     ]
     
     brand_score = 0
-    if not (is_accessory and any(b in title_lower for b in BUDGET_GENERIC_BRANDS)):
+    if not (is_accessory and any(_matches_brand(b, title_lower) for b in BUDGET_GENERIC_BRANDS)):
         for brand in FLAGSHIP_BRANDS:
-            if brand in title_lower:
+            if _matches_brand(brand, title_lower):
                 brand_score = 8
                 break
         if brand_score == 0:
             for brand in MID_POPULAR_BRANDS:
-                if brand in title_lower:
+                if _matches_brand(brand, title_lower):
                     brand_score = 4
                     break
     for brand in BUDGET_GENERIC_BRANDS:
-        if brand in title_lower:
+        if _matches_brand(brand, title_lower):
             brand_score = -12
             break
     score += brand_score
@@ -411,8 +418,8 @@ def calculate_die_v2_breakdown(
     ]
     GENERIC_BRANDS = ["generic", "unbranded", "local", "no brand"]
 
-    is_flagship = any(b in title_lower for b in FLAGSHIP_BRANDS)
-    is_generic = any(b in title_lower for b in GENERIC_BRANDS)
+    is_flagship = any(_matches_brand(b, title_lower) for b in FLAGSHIP_BRANDS)
+    is_generic = any(_matches_brand(b, title_lower) for b in GENERIC_BRANDS)
 
     if is_verified_low or is_flagship:
         kappa_mrp = 1.0
