@@ -69,8 +69,14 @@ def main():
         print("=" * 70)
         for test, err in result.failures:
             print(f"\n[FAILURE] {test}:\n{err}")
+            # Output GitHub Actions workflow command annotation
+            msg = err.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            print(f"::error title=Test Failure - {test}::{msg}")
         for test, err in result.errors:
             print(f"\n[ERROR] {test}:\n{err}")
+            # Output GitHub Actions workflow command annotation
+            msg = err.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            print(f"::error title=Test Error - {test}::{msg}")
         print("=" * 70)
         print(f"[Test Runner] Execution failed: {len(result.failures)} failures, {len(result.errors)} errors.")
         sys.exit(1)
