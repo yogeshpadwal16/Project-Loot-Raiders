@@ -325,6 +325,239 @@ def get_heuristic_ai_ranking(
     _ai_score_cache.set(cache_key, score)
     return score
 
+# =====================================================================
+# Phase 6D: Commercial Deal Intelligence Engine v2 (DIE v2) Constants
+# =====================================================================
+DEFAULT_CATEGORY_COMMISSION_RATES = {
+    "fashion": 0.090,      # Apparel, Footwear, Fashion Accessories
+    "beauty": 0.070,       # Cosmetics, Perfume, Personal Care
+    "home": 0.060,         # Home Decor, Kitchen, Furniture
+    "grocery": 0.050,      # Food, FMCG, Staples
+    "electronics": 0.045,  # Audio, Headphones, Cameras, Components
+    "appliances": 0.035,   # Large Appliances, ACs, Washing Machines
+    "laptops": 0.030,      # Laptops, Desktops, Tablets
+    "smartphones": 0.015,  # Mobile Phones
+    "general": 0.040       # Default fallback rate
+}
+
+DIE_V2_WEIGHTS = {
+    "discount": 0.25,
+    "savings": 0.15,
+    "history": 0.20,
+    "ai_ranking": 0.20,
+    "commercial_yield": 0.10,
+    "urgency": 0.05,
+    "trust": 0.05
+}
+
+def calculate_die_v2_breakdown(
+    platform: str, 
+    price: int, 
+    mrp: int, 
+    discount: float, 
+    is_verified_low: bool,
+    is_lightning: bool = False,
+    product_id: str = None,
+    title: str = None,
+    rating: float = None,
+    reviews: int = None,
+    has_bank_offer: bool = False,
+    qualified_clicks: int = None,
+    category: str = None
+) -> dict:
+    """
+    Computes a comprehensive component breakdown of the Commercial Deal Intelligence v2 score.
+    Returns dictionary with component scores, modifiers, kappa_mrp attenuation, and final score.
+    """
+    # 0. Defensive input sanitization
+    try:
+        price = float(price or 0.0)
+    except (ValueError, TypeError):
+        price = 0.0
+
+    try:
+        mrp = float(mrp or price)
+    except (ValueError, TypeError):
+        mrp = price
+
+    if mrp < price or mrp <= 0.0:
+        mrp = max(price, 0.0)
+
+    try:
+        discount = float(discount or 0.0)
+    except (ValueError, TypeError):
+        discount = 0.0
+
+    if mrp > 0.0 and price > 0.0 and discount <= 0.0 and mrp > price:
+        discount = ((mrp - price) / mrp) * 100.0
+
+    title_str = str(title or "")
+    title_lower = title_str.lower()
+    platform_str = str(platform or "generic").lower()
+
+    # 1. Resolve Category & Commission
+    if not category:
+        from utils.rules_engine import infer_category
+        category = infer_category(title=title_str)
+
+    comm_rate = DEFAULT_CATEGORY_COMMISSION_RATES.get(category, 0.040)
+    expected_commission = max(0.0, price * comm_rate)
+    
+    # 2. Brand & MRP Credibility (Kappa MRP Attenuation)
+    FLAGSHIP_BRANDS = [
+        "apple", "samsung", "sony", "dyson", "bose", "lg", "dell", "hp",
+        "lenovo", "asus", "acer", "msi", "nike", "adidas", "puma", "reebok",
+        "new balance", "asics", "sennheiser", "marshall", "bosch", "whirlpool"
+    ]
+    GENERIC_BRANDS = ["generic", "unbranded", "local", "no brand"]
+
+    is_flagship = any(b in title_lower for b in FLAGSHIP_BRANDS)
+    is_generic = any(b in title_lower for b in GENERIC_BRANDS)
+
+    if is_verified_low or is_flagship:
+        kappa_mrp = 1.0
+        mrp_credibility = "HIGH"
+    elif is_generic:
+        if discount >= 80.0: kappa_mrp = 0.25
+        elif discount >= 60.0: kappa_mrp = 0.50
+        else: kappa_mrp = 0.75
+        mrp_credibility = "LOW_GENERIC"
+    else:
+        if discount >= 85.0: kappa_mrp = 0.40
+        elif discount >= 75.0: kappa_mrp = 0.70
+        else: kappa_mrp = 1.0
+        mrp_credibility = "STANDARD"
+
+    eff_discount = max(0.0, discount * kappa_mrp)
+    eff_savings = max(0.0, (mrp - price) * kappa_mrp)
+
+    # 3. Component Scores (0 to 100 normalized)
+    # A. Discount score (s_disc)
+    if mrp >= 15000:
+        if eff_discount < 15.0: s_disc = 0.0
+        elif eff_discount >= 50.0: s_disc = 100.0
+        else: s_disc = ((eff_discount - 15.0) / 35.0) * 100.0
+    else:
+        if eff_discount < 20.0: s_disc = 0.0
+        elif eff_discount >= 80.0: s_disc = 100.0
+        else: s_disc = ((eff_discount - 20.0) / 60.0) * 100.0
+
+    # B. Absolute Savings score (s_save) - normalized to ₹8,000 cap
+    s_save = min(100.0, (eff_savings / 8000.0) * 100.0)
+
+    # C. Price History score (s_hist)
+    s_hist = 100.0 if is_verified_low else 45.0
+
+    # D. Heuristic Product / Brand Desirability score (s_ai)
+    s_ai = get_heuristic_ai_ranking(
+        title=title_str,
+        platform=platform_str,
+        price=int(price),
+        mrp=int(mrp),
+        discount=discount,
+        is_verified_low=is_verified_low,
+        product_id=product_id
+    )
+    if s_ai is None:
+        s_ai = 50.0
+
+    # E. Commercial Yield score (s_comm) - normalized to ₹500 expected commission
+    s_comm = min(100.0, (expected_commission / 500.0) * 100.0)
+
+    # F. Urgency (s_urg) & Trust (s_trust)
+    s_urg = 100.0 if (is_lightning or "lightning" in platform_str) else 50.0
+    s_trust = 90.0 if "amazon" in platform_str else (85.0 if "flipkart" in platform_str else 80.0)
+
+    # 4. Weighted Base Sum
+    base_score = (
+        (s_disc * DIE_V2_WEIGHTS["discount"]) +
+        (s_save * DIE_V2_WEIGHTS["savings"]) +
+        (s_hist * DIE_V2_WEIGHTS["history"]) +
+        (s_ai * DIE_V2_WEIGHTS["ai_ranking"]) +
+        (s_comm * DIE_V2_WEIGHTS["commercial_yield"]) +
+        (s_urg * DIE_V2_WEIGHTS["urgency"]) +
+        (s_trust * DIE_V2_WEIGHTS["trust"])
+    )
+
+    # 5. Additive Feedback & Risk Modifiers
+    # A. Popularity feedback (s_feedback)
+    feedback_bonus = 0.0
+    if qualified_clicks is not None:
+        feedback_bonus = min(15.0, (max(0, qualified_clicks) // 10) * 2.5)
+    elif product_id:
+        db = SessionLocal()
+        try:
+            click_count = db.query(ClickLog).filter(
+                ClickLog.product_id == product_id,
+                ~ClickLog.user.like('%:bot%'),
+                ~ClickLog.user.like('%:duplicate%')
+            ).count()
+            feedback_bonus = min(15.0, (click_count // 10) * 2.5)
+        except Exception as db_err:
+            logging.error(f"Failed to query click logs for score feedback: {db_err}")
+        finally:
+            db.close()
+
+    # B. Rating & Reviews
+    rating_mod = 0.0
+    if rating is not None:
+        if rating >= 4.5: rating_mod = 5.0
+        elif rating >= 4.2: rating_mod = 3.0
+        elif rating < 3.8: rating_mod = -10.0
+
+    reviews_mod = 0.0
+    if reviews is not None:
+        if reviews >= 10000: reviews_mod = 4.0
+        elif reviews >= 1000: reviews_mod = 2.0
+
+    # C. Bank offer bonus
+    bank_mod = 3.0 if has_bank_offer else 0.0
+
+    # D. Price Glitch boost
+    is_glitch = check_if_glitch(int(price), int(mrp), discount, product_id, title_str)
+    glitch_mod = 15.0 if is_glitch else 0.0
+
+    # E. Cancellation Risk penalty
+    risk = calculate_cancellation_risk(platform_str, int(price), int(mrp), discount, title_str)
+    risk_mod = -10.0 if risk >= 80.0 else (-5.0 if risk >= 50.0 else 0.0)
+
+    # F. Optional OmniRoute Secondary Adjustment (bounded +/- 5)
+    settings = load_settings()
+    llm_adj = 0.0
+    if settings.get("gemini_ai_scoring_enabled", False):
+        llm_score = get_gemini_ai_desirability_score(title_str, int(price), int(mrp), discount, platform_str)
+        if llm_score is not None:
+            disagreement = llm_score - s_ai
+            llm_adj = max(-5.0, min(5.0, disagreement * 0.10))
+
+    final_score = base_score + feedback_bonus + rating_mod + reviews_mod + bank_mod + glitch_mod + risk_mod + llm_adj
+    final_clamped = max(0.0, min(100.0, final_score))
+
+    return {
+        "score": round(final_clamped, 2),
+        "base_score": round(base_score, 2),
+        "s_disc": round(s_disc, 2),
+        "s_save": round(s_save, 2),
+        "s_hist": round(s_hist, 2),
+        "s_ai": round(s_ai, 2),
+        "s_comm": round(s_comm, 2),
+        "s_urg": round(s_urg, 2),
+        "s_trust": round(s_trust, 2),
+        "kappa_mrp": kappa_mrp,
+        "mrp_credibility": mrp_credibility,
+        "category": category,
+        "comm_rate": comm_rate,
+        "expected_commission": round(expected_commission, 2),
+        "feedback_bonus": round(feedback_bonus, 2),
+        "rating_mod": rating_mod,
+        "reviews_mod": reviews_mod,
+        "bank_mod": bank_mod,
+        "glitch_mod": glitch_mod,
+        "risk_mod": risk_mod,
+        "llm_adj": round(llm_adj, 2)
+    }
+
+
 def calculate_deal_score(
     platform: str, 
     price: int, 
@@ -336,192 +569,39 @@ def calculate_deal_score(
     title: str = None,
     rating: float = None,
     reviews: int = None,
-    has_bank_offer: bool = False
+    has_bank_offer: bool = False,
+    qualified_clicks: int = None,
+    category: str = None
 ) -> float:
     """
-    Calculates a normalized score (0 to 100) for a deal based on settings.json weights,
-    heuristic product desirability, OmniRoute secondary input, and click feedback loops.
+    Calculates the Commercial Deal Intelligence v2 score (0.0 to 100.0) for a deal.
+    Enforces strict safety invariants: 0-100 bounded, fake-MRP attenuation, and commission-aware yield.
     """
-    settings = load_settings()
-    rules = settings.get("scoring_rules", {})
-    weights = rules.get("weights", {
-        "discount": 0.35,
-        "savings": 0.20,
-        "history": 0.25,
-        "urgency": 0.10,
-        "trust": 0.10
-    })
-    
-    # 1. Discount Score (s_disc)
-    # Adaptive scaling: High-MRP items (electronics/appliances >= 15k) scale from 15% discount
-    if mrp >= 15000:
-        if discount < 15.0:
-            s_disc = 0.0
-        elif discount >= 50.0:
-            s_disc = 100.0
-        else:
-            s_disc = ((discount - 15.0) / (50.0 - 15.0)) * 100.0
-    else:
-        if discount < 20.0:
-            s_disc = 0.0
-        elif discount >= 80.0:
-            s_disc = 100.0
-        else:
-            s_disc = ((discount - 20.0) / (80.0 - 20.0)) * 100.0
-        
-    # 2. Absolute Savings Score (s_save)
-    # Scale absolute savings up to ₹10,000 (score 100)
-    savings = max(0, mrp - price)
-    s_save = min(100.0, (savings / 10000.0) * 100.0)
-        
-    # 3. History Score (s_hist)
-    # Verified low price gets 100, otherwise 40
-    s_hist = 100.0 if is_verified_low else 40.0
-    
-    # 4. Urgency Score (s_urg)
-    # Lightning/Flash deals get 100, standard items get 50
-    s_urg = 100.0 if (is_lightning or "lightning" in platform.lower()) else 50.0
-    
-    # 5. Trust Score (s_trust)
-    # Look up retailer/stream configuration trust score
-    trust_scores = rules.get("retailer_trust_scores", {})
-    s_trust = float(trust_scores.get(platform, 80.0))
-    
-    # Resolve product title from DB if not provided directly but product_id is present
-    if not title and product_id:
-        db = SessionLocal()
-        try:
-            prod = db.query(Product).filter_by(id=product_id).first()
-            if prod:
-                title = prod.title
-        except Exception as db_err:
-            logging.error(f"Failed to fetch product title from DB for scoring: {db_err}")
-        finally:
-            db.close()
-
-    # Always calculate the deterministic heuristic AI ranking.
-    # This remains the primary product-desirability signal.
-    heuristic_ai_score = get_heuristic_ai_ranking(
-        title=title,
+    breakdown = calculate_die_v2_breakdown(
         platform=platform,
         price=price,
         mrp=mrp,
         discount=discount,
         is_verified_low=is_verified_low,
-        product_id=product_id
+        is_lightning=is_lightning,
+        product_id=product_id,
+        title=title,
+        rating=rating,
+        reviews=reviews,
+        has_bank_offer=has_bank_offer,
+        qualified_clicks=qualified_clicks,
+        category=category
     )
+    final_score = breakdown["score"]
 
-    # OmniRoute is an optional secondary opinion.
-    # It must never become a hard dependency or replace deterministic scoring.
-    llm_ai_score = None
-    if settings.get("gemini_ai_scoring_enabled", False):
-        llm_ai_score = get_gemini_ai_desirability_score(
-            title, price, mrp, discount, platform
-        )
-
-    # Check if this is a price glitch / extreme price error
-    is_glitch = check_if_glitch(price, mrp, discount, product_id, title)
-
-    # Use heuristic score in the weighted scoring model.
-    ai_score = heuristic_ai_score
-
-    # Confidence-adjusted discount signal for unverified, non-glitch deals
-    if not is_verified_low and not is_glitch:
-        confidence_factor = max(0.40, min(1.0, (ai_score or 50.0) / 60.0))
-        s_disc = s_disc * confidence_factor
-
-    active_weights = dict(weights)
-
-    if ai_score is not None:
-        if "ai_ranking" not in active_weights:
-            active_weights["ai_ranking"] = 0.25
-
-        total_weight = sum(active_weights.values())
-
-        weighted_sum = (
-            (s_disc * active_weights.get("discount", 0.0)) +
-            (s_save * active_weights.get("savings", 0.0)) +
-            (s_hist * active_weights.get("history", 0.0)) +
-            (s_urg * active_weights.get("urgency", 0.0)) +
-            (s_trust * active_weights.get("trust", 0.0)) +
-            (ai_score * active_weights.get("ai_ranking", 0.0))
-        )
-
-        final_score = weighted_sum / total_weight
-
-    else:
-        total_weight = sum(weights.values())
-
-        weighted_sum = (
-            (s_disc * weights.get("discount", 0.0)) +
-            (s_save * weights.get("savings", 0.0)) +
-            (s_hist * weights.get("history", 0.0)) +
-            (s_urg * weights.get("urgency", 0.0)) +
-            (s_trust * weights.get("trust", 0.0))
-        )
-
-        final_score = weighted_sum / total_weight
-
-    # OmniRoute may adjust the deterministic result only slightly.
-    # Maximum influence: +/- 5 points.
-    ai_adjustment = 0.0
-
-    if llm_ai_score is not None and heuristic_ai_score is not None:
-        disagreement = llm_ai_score - heuristic_ai_score
-
-        # Scale disagreement down heavily and clamp it.
-        ai_adjustment = max(-5.0, min(5.0, disagreement * 0.10))
-
-        final_score += ai_adjustment
-    # 6. Real-time Feedback Popularity Bonus (s_feedback)
-    # Add +2 points for every 10 clicks, capped at +15 points max boost
-    feedback_bonus = 0.0
-    if product_id:
-        db = SessionLocal()
-        try:
-            # Count qualified clicks, excluding bots and rapid duplicates (Phase 6C)
-            click_count = db.query(ClickLog).filter(
-                ClickLog.product_id == product_id,
-                ~ClickLog.user.like('%:bot%'),
-                ~ClickLog.user.like('%:duplicate%')
-            ).count()
-            feedback_bonus = min(15.0, (click_count // 10) * 2.0)
-        except Exception as db_err:
-            logging.error(f"Failed to query click logs for score feedback: {db_err}")
-        finally:
-            db.close()
-            
-    final_score += feedback_bonus
-    
-    # 6.5 Deal Intelligence Engine (DIE) Adjustments
-    die_adjustment = 0.0
-    if rating is not None:
-        if rating >= 4.5:
-            die_adjustment += 10.0
-        elif rating >= 4.2:
-            die_adjustment += 5.0
-        elif rating < 3.8:
-            die_adjustment -= 15.0
-            
-    if reviews is not None:
-        if reviews >= 10000:
-            die_adjustment += 5.0
-        elif reviews >= 1000:
-            die_adjustment += 3.0
-            
-    if has_bank_offer:
-        die_adjustment += 5.0
-        
-    final_score += die_adjustment
-    
-    if is_glitch:
-        final_score += 15.0
-        logging.info(f"[AI Scorer] Price glitch detected for product {product_id}! Score boosted.")
-    
-    final_score = max(0.0, min(100.0, final_score))
-    
-    logging.info(f"Deal Scoring -> [ID: {product_id}] Discount: {discount:.1f}%, VerifiedLow: {is_verified_low}, AI Score: {ai_score}, Glitch: {is_glitch}, Clicks Bonus: +{feedback_bonus:.1f} -> Final Score: {final_score:.1f}")
+    safe_price = breakdown.get("price", 0.0)
+    safe_comm = breakdown.get("expected_commission", 0.0)
+    logging.info(
+        f"[DIE v2 Scorer] Deal ID: {product_id} | Cat: {breakdown['category']} | Comm: Rs.{safe_comm:.1f} | "
+        f"Final Score: {final_score:.2f}"
+    )
     return final_score
+
 
 def check_if_glitch(price: int, mrp: int, discount: float, unique_id: str = None, title: str = None) -> bool:
     """

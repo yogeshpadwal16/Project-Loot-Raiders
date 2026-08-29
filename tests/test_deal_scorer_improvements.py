@@ -100,11 +100,9 @@ class TestDealScorerArchitecture(unittest.TestCase):
             is_verified_low=False,
             title="Unbranded Smartwatch with Heart Rate Monitor"
         )
-        # Unverified deals receive s_hist penalty (40) and confidence adjustments,
-        # qualifying above min threshold (>= 45) but bounded below top-tier glitch scores (< 85)
-        self.assertGreaterEqual(score, 45.0)
-        self.assertLess(score, 85.0)
-        self.assertTrue(should_publish_deal("amazon", score))
+        # DIE v2 Kappa-MRP attenuation and generic brand penalty suppress fake-MRP deals (< 45.0)
+        self.assertLess(score, 45.0)
+        self.assertFalse(should_publish_deal("amazon", score))
 
     # ---------------------------------------------------------
     # TEST 6: Verified Historical-Low Deal
