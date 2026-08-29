@@ -565,6 +565,56 @@ def calculate_die_v2_breakdown(
     }
 
 
+def calculate_legacy_deal_score(
+    platform: str,
+    price: int,
+    mrp: int,
+    discount: float,
+    is_verified_low: bool,
+    is_lightning: bool = False,
+    product_id: str = None,
+    title: str = None
+) -> float:
+    """
+    Legacy v1 Scorer fallback calculation for instant rollback capability.
+    """
+    if mrp >= 15000:
+        if discount < 15.0: s_disc = 0.0
+        elif discount >= 50.0: s_disc = 100.0
+        else: s_disc = ((discount - 15.0) / 35.0) * 100.0
+    else:
+        if discount < 20.0: s_disc = 0.0
+        elif discount >= 80.0: s_disc = 100.0
+        else: s_disc = ((discount - 20.0) / 60.0) * 100.0
+
+    savings = max(0, mrp - price)
+    s_save = min(100.0, (savings / 10000.0) * 100.0)
+    s_hist = 100.0 if is_verified_low else 40.0
+    s_urg = 100.0 if (is_lightning or "lightning" in (platform or "").lower()) else 50.0
+    s_trust = 80.0
+
+    ai_score = get_heuristic_ai_ranking(
+        title=title,
+        platform=platform,
+        price=price,
+        mrp=mrp,
+        discount=discount,
+        is_verified_low=is_verified_low,
+        product_id=product_id
+    ) or 50.0
+
+    is_glitch = check_if_glitch(price, mrp, discount, product_id, title)
+    if not is_verified_low and not is_glitch:
+        confidence_factor = max(0.40, min(1.0, ai_score / 60.0))
+        s_disc = s_disc * confidence_factor
+
+    weighted_sum = (s_disc * 0.35) + (s_save * 0.20) + (s_hist * 0.25) + (s_urg * 0.10) + (s_trust * 0.10) + (ai_score * 0.25)
+    final_score = weighted_sum / 1.25
+    if is_glitch:
+        final_score += 15.0
+    return max(0.0, min(100.0, final_score))
+
+
 def calculate_deal_score(
     platform: str, 
     price: int, 
@@ -581,9 +631,24 @@ def calculate_deal_score(
     category: str = None
 ) -> float:
     """
-    Calculates the Commercial Deal Intelligence v2 score (0.0 to 100.0) for a deal.
-    Enforces strict safety invariants: 0-100 bounded, fake-MRP attenuation, and commission-aware yield.
+    Calculates the deal score (0.0 to 100.0) for a deal.
+    Active Engine: Commercial Deal Intelligence Engine v2 (DIE v2) with instant rollback switch.
     """
+    # 0. Check immediate rollback switch
+    settings = load_settings()
+    if not settings.get("enable_die_v2", True) or os.environ.get("ENABLE_DIE_V2", "true").lower() in ("false", "0", "no"):
+        logging.info(f"[Scorer Rollback Fallback] DIE v2 disabled via configuration. Using legacy scorer for {product_id}.")
+        return calculate_legacy_deal_score(
+            platform=platform,
+            price=price,
+            mrp=mrp,
+            discount=discount,
+            is_verified_low=is_verified_low,
+            is_lightning=is_lightning,
+            product_id=product_id,
+            title=title
+        )
+
     breakdown = calculate_die_v2_breakdown(
         platform=platform,
         price=price,

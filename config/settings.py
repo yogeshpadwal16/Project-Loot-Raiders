@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import time as _time
 
@@ -57,6 +57,7 @@ def load_settings() -> dict:
         "catalog_monitor_enabled": False,
         "supermarket_monitor_enabled": False,
         "external_price_tracker_enabled": False,
+        "enable_die_v2": True,
         "min_discount": 30.0,
         "min_deal_price": 299,
         "min_deal_savings": 250,

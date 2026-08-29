@@ -23,6 +23,7 @@
   "catalog_monitor_enabled": false,
   "supermarket_monitor_enabled": false,
   "external_price_tracker_enabled": false,
+  "enable_die_v2": true,
   "min_discount": 20.0,
   "min_deal_price": 99,
   "min_deal_savings": 100,
