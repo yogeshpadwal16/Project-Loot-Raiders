@@ -176,7 +176,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     }
   });
 
-  const timeoutMs = isPublicDeals ? 10000 : 15000;
+  const timeoutMs = isPublicDeals ? 4000 : 3000;
   let lastError: any = null;
 
   // 6. Iterate through candidate targets with failover
@@ -199,8 +199,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         timeoutPromise
       ]);
 
-      // If Cloudflare returns tunnel failure (530 / 1016 / 521 / 522), try next candidate target
-      if ([530, 521, 522, 523, 524].includes(backendResponse.status)) {
+      // If Cloudflare returns tunnel failure or upstream error, try next candidate target
+      if ([502, 503, 504, 521, 522, 523, 524, 530].includes(backendResponse.status)) {
         continue;
       }
 
