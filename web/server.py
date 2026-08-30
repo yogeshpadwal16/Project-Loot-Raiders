@@ -1678,6 +1678,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     port = int(os.environ.get("PORT", 5555))
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
+    ThreadingHTTPServer.allow_reuse_address = True
+    ThreadingHTTPServer.request_queue_size = 64
     server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
     logging.info(f"Dashboard REST API standalone server listening at http://0.0.0.0:{port}/")
     try:
