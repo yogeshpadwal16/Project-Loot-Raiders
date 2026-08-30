@@ -1,6 +1,21 @@
 module.exports = {
   apps: [
     {
+      name: 'loot-raiders-api',
+      script: 'web/server.py',
+      cwd: '/var/www/loot-raiders',
+      interpreter: '/var/www/loot-raiders/venv/bin/python',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '300M',
+      restart_delay: 3000,
+      env: {
+        PYTHONUNBUFFERED: '1',
+        PYTHONPATH: '/var/www/loot-raiders',
+        PORT: '5555'
+      }
+    },
+    {
       name: 'loot-raiders',
       script: 'scripts/start_loot_scraper.sh',
       cwd: '/var/www/loot-raiders',
