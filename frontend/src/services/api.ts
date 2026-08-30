@@ -18,7 +18,7 @@ import {
   ProcessDealPayload
 } from '../types/api';
 
-const ACTIVE_TUNNEL_FALLBACK = 'https://logged-vat-leg-males.trycloudflare.com';
+const ACTIVE_TUNNEL_FALLBACK = 'https://presence-tariff-shaped-police.trycloudflare.com';
 
 /**
  * Resilient multi-target fetch utility.

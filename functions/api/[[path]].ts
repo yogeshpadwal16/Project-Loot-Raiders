@@ -140,8 +140,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const isPublicDeals = pathname === "/api/deals/public" || pathname.startsWith("/api/deals/public");
 
-  // 3. Resolve candidate backend targets from environment configuration
-  const candidateTargets: string[] = [];
+  // 3. Resolve candidate backend targets from environment configuration and verified tunnel fallback
+  const ACTIVE_HTTP2_TUNNEL = "https://presence-tariff-shaped-police.trycloudflare.com";
+  const candidateTargets: string[] = [ACTIVE_HTTP2_TUNNEL];
 
   if (env.BACKEND_API_URL && env.BACKEND_API_URL.trim()) {
     const custom = env.BACKEND_API_URL.trim().replace(/\/+$/, "");
