@@ -1665,6 +1665,7 @@ def start_api_server(port=5555, state=None):
     os.makedirs(DASHBOARD_DIR, exist_ok=True)
 
     try:
+        ThreadingHTTPServer.request_queue_size = 64
         server = ThreadingHTTPServer(('0.0.0.0', port), ScraperAPIHandler)
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
         server_thread.start()
