@@ -161,7 +161,7 @@ def is_public_endpoint(path: str) -> bool:
 
 
 class ScraperAPIHandler(BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.1"
+    protocol_version = "HTTP/1.0"
 
     def log_message(self, format, *args):
         # Log REST requests to execution.log
@@ -173,8 +173,6 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         origin = headers_obj.get('Origin', '*') if headers_obj else '*'
         allowed_origin = os.environ.get('CORS_ORIGIN', origin)
         self.send_header('Access-Control-Allow-Origin', allowed_origin)
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         super().end_headers()
 
     def send_json_response(self, data, status_code: int = 200):
@@ -183,7 +181,7 @@ class ScraperAPIHandler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Connection', 'keep-alive')
+        self.send_header('Connection', 'close')
         self.end_headers()
         self.wfile.write(body)
         self.wfile.flush()
