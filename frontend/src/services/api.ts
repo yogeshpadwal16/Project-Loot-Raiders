@@ -18,7 +18,7 @@ import {
   ProcessDealPayload
 } from '../types/api';
 
-const ACTIVE_TUNNEL_FALLBACK = 'https://teenage-brand-mirror-valve.trycloudflare.com';
+const ACTIVE_TUNNEL_FALLBACK = 'https://egg-terminal-losing-both.trycloudflare.com';
 
 /**
  * Resilient multi-target fetch utility.
