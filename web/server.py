@@ -11,18 +11,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
+LOG_FILE = os.path.join(BASE_DIR, "execution.log")
 
 # Database & Scorer imports
 from database.db_session import SessionLocal
 from knowledge_base.models import Product, PriceHistory, ClickLog, SelectorMatrix
 from config.settings import load_settings, save_settings
-from deal_engine.scorer import calculate_deal_score
-from database.operations import verify_historical_low
-
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DASHBOARD_DIR = os.path.join(BASE_DIR, "dashboard")
-LOG_FILE = os.path.join(BASE_DIR, "execution.log")
 
 # Loot Brain Singleton Setup
 from loot_brain.memory.store import MemoryStore
