@@ -1067,7 +1067,8 @@ def main():
     
     if not single_run:
         settings = load_settings()
-        start_api_server(5555, scraper_state)
+        if os.environ.get("DISABLE_INTERNAL_API_SERVER") != "true":
+            start_api_server(5555, scraper_state)
         
         # 4. Start Asynchronous Competitor Mirroring Listener
         if settings.get("channel_mirror_enabled", False):

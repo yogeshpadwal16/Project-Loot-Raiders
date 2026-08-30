@@ -26,7 +26,8 @@ module.exports = {
       cron_restart: '0 4 * * *',
       env: {
         PYTHONUNBUFFERED: '1',
-        PYTHONPATH: '/var/www/loot-raiders'
+        PYTHONPATH: '/var/www/loot-raiders',
+        DISABLE_INTERNAL_API_SERVER: 'true'
       }
     },
     {
