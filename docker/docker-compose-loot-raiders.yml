@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  loot-raiders:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: loot-raiders
+    restart: unless-stopped
+    command: ["python3", "loot_scraper.py"]
+    environment:
+      - REDIS_HOST=dragonfly
+      - REDIS_PORT=6379
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ../database:/app/database
+      - ../knowledge_base:/app/knowledge_base
+      - ../dashboard:/app/dashboard
+      - ../settings.json:/app/settings.json
+    networks:
+      - docker_default
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+networks:
+  docker_default:
+    external: true

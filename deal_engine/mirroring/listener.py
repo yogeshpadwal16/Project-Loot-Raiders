@@ -514,31 +514,49 @@ class MultiClientMirrorListener:
         public_channels = [ch for ch in channels if not (ch.startswith("+") or "joinchat" in ch)]
         
         # Perform initial sweep to establish baseline last_seen IDs
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30) as client:
-            for ch in public_channels:
-                try:
-                    url = f"https://t.me/s/{ch}"
-                    resp = await client.get(url)
-                    if resp.status_code == 200:
-                        soup = BeautifulSoup(resp.text, "html.parser")
-                        messages = soup.find_all("div", class_="tgme_widget_message")
-                        max_id = 0
-                        for msg in messages:
-                            post_ref = msg.get("data-post", "")
-                            if post_ref and "/" in post_ref:
-                                try:
-                                    msg_id = int(post_ref.split("/")[-1])
-                                    if msg_id > max_id:
-                                        max_id = msg_id
-                                except ValueError:
-                                    pass
-                        if max_id > 0:
-                            # Start baseline 50 messages back so we pull all recent deals on startup
-                            baseline_val = max(0, max_id - 50)
-                            last_seen_msg_ids[ch] = baseline_val
-                            logging.info(f"[Web Scraper] Initialized baseline for {ch} at message ID {baseline_val} (Current max: {max_id})")
-                except Exception as init_err:
-                    logging.warning(f"[Web Scraper] Failed to initialize baseline for {ch}: {init_err}")
+        # First attempt to restore persisted last_seen_msg_ids from Redis across container restarts
+        for ch in public_channels:
+            try:
+                if self.queue.is_connected():
+                    stored_id = self.queue.client.get(f"mirror:last_seen:{ch}")
+                    if stored_id:
+                        last_seen_msg_ids[ch] = int(stored_id)
+                        logging.info(f"[Web Scraper] Restored persisted baseline for {ch} at message ID {last_seen_msg_ids[ch]}")
+            except Exception as r_err:
+                logging.debug(f"[Web Scraper] Redis baseline lookup failed for {ch}: {r_err}")
+
+        # If any channel was not found in Redis, initialize from Telegram web
+        missing_channels = [ch for ch in public_channels if ch not in last_seen_msg_ids]
+        if missing_channels:
+            async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=30) as client:
+                for ch in missing_channels:
+                    try:
+                        url = f"https://t.me/s/{ch}"
+                        resp = await client.get(url)
+                        if resp.status_code == 200:
+                            soup = BeautifulSoup(resp.text, "html.parser")
+                            messages = soup.find_all("div", class_="tgme_widget_message")
+                            max_id = 0
+                            for msg in messages:
+                                post_ref = msg.get("data-post", "")
+                                if post_ref and "/" in post_ref:
+                                    try:
+                                        msg_id = int(post_ref.split("/")[-1])
+                                        if msg_id > max_id:
+                                            max_id = msg_id
+                                    except ValueError:
+                                        pass
+                            if max_id > 0:
+                                baseline_val = max(0, max_id - 10)
+                                last_seen_msg_ids[ch] = baseline_val
+                                if self.queue.is_connected():
+                                    try:
+                                        self.queue.client.set(f"mirror:last_seen:{ch}", baseline_val)
+                                    except Exception:
+                                        pass
+                                logging.info(f"[Web Scraper] Initialized baseline for {ch} at message ID {baseline_val} (Current max: {max_id})")
+                    except Exception as init_err:
+                        logging.warning(f"[Web Scraper] Failed to initialize baseline for {ch}: {init_err}")
         
         # Main polling loop
         while self.should_run and self.active_client_name == "web_scraper":
@@ -667,6 +685,11 @@ class MultiClientMirrorListener:
                                         asyncio.create_task(asyncio.to_thread(self._process_inline, normalized))
                                         
                                     last_seen_msg_ids[ch] = msg_id
+                                    if self.queue.is_connected():
+                                        try:
+                                            self.queue.client.set(f"mirror:last_seen:{ch}", msg_id)
+                                        except Exception:
+                                            pass
                                 except Exception as msg_err:
                                     logging.error(f"[INGEST] Error processing message {msg_id} from {ch}: {msg_err}", exc_info=True)
                                     

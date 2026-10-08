@@ -97,6 +97,12 @@ class RedisMessageQueue:
             # BRPOPLPUSH blocks until a message is available
             data = self.client.brpoplpush(QUEUE_PENDING, worker_processing_key, timeout)
             if data:
+                try:
+                    import hashlib
+                    item_hash = hashlib.md5(data.encode('utf-8')).hexdigest()
+                    self.client.hset(f"{QUEUE_PROCESSING}:lease", item_hash, time.time())
+                except Exception:
+                    pass
                 msg_dict = json.loads(data)
                 return NormalizedMessage(**msg_dict)
         except Exception as e:
@@ -114,6 +120,8 @@ class RedisMessageQueue:
                     for idx, msg in enumerate(self.fallback_processing[worker_id]):
                         if msg.message_id == message.message_id:
                             self.fallback_processing[worker_id].pop(idx)
+                            if hasattr(self, "fallback_processing_times"):
+                                self.fallback_processing_times.pop(f"{worker_id}:{msg.message_id}", None)
                             return True
                 except ValueError:
                     pass
@@ -126,6 +134,12 @@ class RedisMessageQueue:
             data = message.model_dump_json()
             # Remove exact message from the processing list
             self.client.lrem(worker_processing_key, 0, data)
+            try:
+                import hashlib
+                item_hash = hashlib.md5(data.encode('utf-8')).hexdigest()
+                self.client.hdel(f"{QUEUE_PROCESSING}:lease", item_hash)
+            except Exception:
+                pass
             return True
         except Exception as e:
             logging.error(f"[Redis Queue] Commit failed for message {message.correlation_id}: {e}")
@@ -162,6 +176,12 @@ class RedisMessageQueue:
             pipe.lrem(worker_processing_key, 0, message.model_dump_json())
             pipe.lpush(QUEUE_FAILED, data_json)
             pipe.execute()
+            try:
+                import hashlib
+                item_hash = hashlib.md5(message.model_dump_json().encode('utf-8')).hexdigest()
+                self.client.hdel(f"{QUEUE_PROCESSING}:lease", item_hash)
+            except Exception:
+                pass
             return True
         except Exception as e:
             logging.error(f"[Redis Queue] Failed to flag message failure for {message.correlation_id}: {e}")
@@ -180,8 +200,8 @@ class RedisMessageQueue:
         if not self.is_connected():
             return {"pending": 0, "failed": 0, "processing": 0}
         try:
-            # Sum up all active worker processing keys
-            keys = self.client.keys(f"{QUEUE_PROCESSING}:*")
+            # Sum up all active worker processing keys, excluding metadata lease hash
+            keys = [k for k in self.client.keys(f"{QUEUE_PROCESSING}:*") if not k.endswith(":lease")]
             processing_size = sum(self.client.llen(k) for k in keys) if keys else 0
             
             return {
@@ -196,11 +216,16 @@ class RedisMessageQueue:
         """Re-enqueues messages stuck in worker processing lists for more than 15 minutes (Feature 29)."""
         if self.use_fallback:
             count = 0
+            now = time.time()
+            if not hasattr(self, "fallback_processing_times"):
+                self.fallback_processing_times = {}
             for worker_id, lst in list(self.fallback_processing.items()):
                 for msg in list(lst):
-                    # Check if message is older than 15 mins (900 seconds)
-                    if time.time() - getattr(msg, "timestamp", time.time()) > 900:
+                    msg_key = f"{worker_id}:{msg.message_id}"
+                    entered_at = self.fallback_processing_times.setdefault(msg_key, now)
+                    if now - entered_at > 900:
                         lst.remove(msg)
+                        self.fallback_processing_times.pop(msg_key, None)
                         self.fallback_queue.put(msg)
                         count += 1
             return count
@@ -209,22 +234,32 @@ class RedisMessageQueue:
             return 0
         count = 0
         try:
-            # Find all worker processing lists
-            processing_keys = self.client.keys(f"{QUEUE_PROCESSING}:*")
+            import hashlib
+            now = time.time()
+            # Find all worker processing lists (exclude lease hash)
+            processing_keys = [k for k in self.client.keys(f"{QUEUE_PROCESSING}:*") if not k.endswith(":lease")]
             for key in processing_keys:
                 items = self.client.lrange(key, 0, -1)
                 for item in items:
                     try:
-                        msg_dict = json.loads(item)
-                        # If a message is enqueued/scanned more than 900 seconds ago and still processing
-                        if time.time() - msg_dict.get("timestamp", 0) > 900:
+                        item_hash = hashlib.md5(item.encode('utf-8')).hexdigest()
+                        leased_str = self.client.hget(f"{QUEUE_PROCESSING}:lease", item_hash)
+                        if leased_str is None:
+                            # Initialize lease timestamp to now if not yet tracked
+                            self.client.hset(f"{QUEUE_PROCESSING}:lease", item_hash, now)
+                            continue
+                        leased_at = float(leased_str)
+                        # Only recover if message has actually been processing for > 900s
+                        if now - leased_at > 900:
+                            msg_dict = json.loads(item)
                             # Atomic move back to pending queue
                             pipe = self.client.pipeline()
                             pipe.lrem(key, 0, item)
+                            pipe.hdel(f"{QUEUE_PROCESSING}:lease", item_hash)
                             pipe.lpush(QUEUE_PENDING, item)
                             pipe.execute()
                             count += 1
-                            logging.info(f"[Redis Queue] Recovered zombie message {msg_dict.get('message_id')} back to pending queue.")
+                            logging.info(f"[Redis Queue] Recovered zombie message {msg_dict.get('message_id')} back to pending queue (processing duration {int(now - leased_at)}s).")
                     except Exception as parse_err:
                         # If it is unparseable corrupted data, remove it
                         self.client.lrem(key, 0, item)

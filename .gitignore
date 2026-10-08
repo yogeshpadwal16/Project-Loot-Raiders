@@ -82,3 +82,6 @@ database/chroma_db/
 
 # Local OmniRoute Gateway Clone
 /OmniRoute/
+
+# Agent Memory Store
+loot_brain/memory/markdown_store/

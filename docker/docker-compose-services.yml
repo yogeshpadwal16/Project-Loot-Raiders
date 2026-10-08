@@ -5,7 +5,7 @@ services:
     image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
     container_name: dragonfly-cache
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     command: ["--proactor_threads=1", "--maxmemory=256MB"]
     # Dragonfly requires memlock ulimit settings to be set to unlimited for lock allocations
     ulimits:
@@ -70,9 +70,9 @@ services:
       - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=lootraiders2026
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-lootraiders2026}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://92.4.70.19:3000
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_INSTALL_PLUGINS=                     # No plugins (saves RAM)
@@ -87,3 +87,7 @@ volumes:
   n8n_data:
   prometheus_data:
   grafana_data:
+
+networks:
+  default:
+    name: docker_default

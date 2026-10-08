@@ -325,16 +325,19 @@ def scrape_platform(platform: str, config: dict, history: set):
             health["fail_count"] += 1
             health["last_failure"] = time.time()
             health["last_error"] = "0 deals extracted (possible selector drift or no deals available)"
-            if health["consecutive_failures"] >= 3:
+            if health.get("consecutive_failures", 0) >= 3 and not health.get("status", "").startswith("Blocked"):
                 health["status"] = "Degraded"
 
-            # Trigger Autonomous Self-Healing Selector Healer
-            try:
-                from loot_brain.agents.scraper_healer import ScraperHealerAgent
-                healer = ScraperHealerAgent()
-                healer.auto_repair_selectors(driver, platform, config)
-            except Exception as heal_err:
-                logging.warning(f"Autonomous selector self-healing attempt failed on stream {platform}: {heal_err}")
+            # Trigger Autonomous Self-Healing Selector Healer (skip if blocked by anti-bot)
+            if health.get("status", "").startswith("Blocked") or health.get("is_blocked"):
+                logging.info(f"Skipping selector auto-repair for {platform} due to active anti-bot block ({health.get('last_error')}).")
+            else:
+                try:
+                    from loot_brain.agents.scraper_healer import ScraperHealerAgent
+                    healer = ScraperHealerAgent()
+                    healer.auto_repair_selectors(driver, platform, config)
+                except Exception as heal_err:
+                    logging.warning(f"Autonomous selector self-healing attempt failed on stream {platform}: {heal_err}")
                 
         # 3. Process extracted deal candidates
         for deal in extracted_deals:
@@ -889,7 +892,7 @@ def _scrape_product_details_fallback(url: str, driver=None) -> dict:
                 pass
             from utils.playwright_adapter import get_playwright_driver
             settings = load_settings()
-            local_driver = get_playwright_driver(settings)
+            local_driver = get_playwright_driver(settings, standalone=True)
             try:
                 res = _scrape_product_details_core(url, local_driver)
                 q.put((True, res))

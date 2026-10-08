@@ -245,49 +245,62 @@ def _get_shared_browser(settings=None):
     Returns the thread-isolated persistent Playwright Chromium browser instance,
     re-launching automatically if disconnected or uninitialized.
     """
-    if hasattr(_THREAD_LOCAL, 'browser') and _THREAD_LOCAL.browser is not None:
-        try:
-            if _THREAD_LOCAL.browser.is_connected():
-                return _THREAD_LOCAL.playwright, _THREAD_LOCAL.browser
-        except Exception:
-            pass
-        _shutdown_shared_browser_internal()
+    with playwright_lock:
+        if hasattr(_THREAD_LOCAL, 'browser') and _THREAD_LOCAL.browser is not None:
+            try:
+                if _THREAD_LOCAL.browser.is_connected():
+                    return _THREAD_LOCAL.playwright, _THREAD_LOCAL.browser
+            except Exception:
+                pass
+            _shutdown_shared_browser_internal()
 
-    _THREAD_LOCAL.playwright = sync_playwright().start()
-    browser_args = [
-        "--headless=new",
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
-        "--disable-extensions",
-        "--disable-background-networking",
-        "--disable-sync",
-        "--disable-translate",
-        "--hide-scrollbars",
-        "--metrics-recording-only",
-        "--mute-audio",
-        "--no-first-run",
-        "--memory-pressure-off",
-    ]
+        browser_args = [
+            "--headless=new",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-accelerated-2d-canvas",
+            "--disable-gpu",
+            "--disable-extensions",
+            "--disable-background-networking",
+            "--disable-sync",
+            "--disable-translate",
+            "--hide-scrollbars",
+            "--metrics-recording-only",
+            "--mute-audio",
+            "--no-first-run",
+            "--memory-pressure-off",
+        ]
 
-    proxy_config = None
-    if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
-        try:
-            from utils.proxy_validator import get_next_working_proxy
-            proxy_url = get_next_working_proxy(settings)
-            if proxy_url:
-                proxy_config = {"server": proxy_url}
-                logging.info(f"Playwright launching using validated proxy: {proxy_url}")
-        except Exception as pe:
-            logging.error(f"Failed to resolve validated proxy: {pe}")
+        proxy_config = None
+        if settings and settings.get("proxies_enabled") and settings.get("proxy_list"):
+            try:
+                from utils.proxy_validator import get_next_working_proxy
+                proxy_url = get_next_working_proxy(settings)
+                if proxy_url:
+                    proxy_config = {"server": proxy_url}
+                    logging.info(f"Playwright launching using validated proxy: {proxy_url}")
+            except Exception as pe:
+                logging.error(f"Failed to resolve validated proxy: {pe}")
 
-    _THREAD_LOCAL.browser = _THREAD_LOCAL.playwright.chromium.launch(
-        headless=True,
-        args=browser_args
-    )
-    return _THREAD_LOCAL.playwright, _THREAD_LOCAL.browser
+        for retry in range(3):
+            try:
+                _THREAD_LOCAL.playwright = sync_playwright().start()
+                _THREAD_LOCAL.browser = _THREAD_LOCAL.playwright.chromium.launch(
+                    headless=True,
+                    args=browser_args
+                )
+                break
+            except Exception as launch_err:
+                err_str = str(launch_err).lower()
+                if "etxtbsy" in err_str or "busy" in err_str:
+                    logging.warning(f"[Playwright Adapter] ETXTBSY on launch attempt {retry+1}/3. Retrying...")
+                    time.sleep(0.5 * (retry + 1))
+                    if retry == 2:
+                        raise
+                else:
+                    raise
+        return _THREAD_LOCAL.playwright, _THREAD_LOCAL.browser
 
 def _shutdown_shared_browser_internal():
     if hasattr(_THREAD_LOCAL, 'browser') and _THREAD_LOCAL.browser is not None:
@@ -313,7 +326,6 @@ def get_playwright_driver(settings=None, standalone=False) -> PlaywrightSelenium
     (or standalone if requested), wrapped in a Selenium-compatible adapter.
     """
     if standalone:
-        playwright = sync_playwright().start()
         browser_args = [
             "--headless=new",
             "--no-sandbox",
@@ -331,7 +343,21 @@ def get_playwright_driver(settings=None, standalone=False) -> PlaywrightSelenium
             "--no-first-run",
             "--memory-pressure-off",
         ]
-        browser = playwright.chromium.launch(headless=True, args=browser_args)
+        with playwright_lock:
+            for retry in range(3):
+                try:
+                    playwright = sync_playwright().start()
+                    browser = playwright.chromium.launch(headless=True, args=browser_args)
+                    break
+                except Exception as launch_err:
+                    err_str = str(launch_err).lower()
+                    if "etxtbsy" in err_str or "busy" in err_str:
+                        logging.warning(f"[Playwright Standalone] ETXTBSY on launch attempt {retry+1}/3. Retrying...")
+                        time.sleep(0.5 * (retry + 1))
+                        if retry == 2:
+                            raise
+                    else:
+                        raise
         is_shared = False
         user_agents = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",

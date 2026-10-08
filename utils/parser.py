@@ -94,9 +94,13 @@ def calculate_true_discount(text_content: str):
     # 1. Clean up commas and spaces
     clean_text = text_content.replace(',', '')
     
-    # 1.5. Strip coupon and discount currency values (e.g. ₹2000 coupon, save ₹2000)
+    # 1.5. Strip coupon, price drops, and discount currency values (e.g. ₹2000 coupon, price dropped by ₹159)
+    clean_text = re.sub(r'price\s+dropped\s+(?:by\s+)?(?:₹|Rs\.?)\s*[0-9]+', ' ', clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r'(?:coupon|save|discount|extra|flat|apply)\s+(?:flat\s+)?(?:of\s+)?(?:₹|Rs\.?)\s*[0-9]+(?:\s*(?:off|discount|coupon))?', ' ', clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r'(?:₹|Rs\.?)\s*[0-9]+\s*(?:coupon|save|off|discount|extra|flat)', ' ', clean_text, flags=re.IGNORECASE)
+    
+    # 1.6. Separate prices concatenated directly to 2-digit percentage discounts (e.g. ₹79920% off -> ₹799 20% off)
+    clean_text = re.sub(r'(?<=[0-9])(?=(?:[1-9][0-9]|100)%\s*(?:off)?)', ' ', clean_text, flags=re.IGNORECASE)
     
     # 2. Strip percentage discounts (e.g. 50% OFF, 50%off) so they don't get matched
     clean_text = re.sub(r'[0-9]{1,3}\s*%\s*(?:off)?', ' ', clean_text, flags=re.IGNORECASE)

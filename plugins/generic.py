@@ -138,6 +138,8 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             return self._extract_myntra_deals(config, settings)
         if "meesho" in self._platform_id.lower():
             return self._extract_meesho_deals(config, settings)
+        if "jiomart" in self._platform_id.lower():
+            return self._extract_jiomart_deals(config, settings)
 
         deals = []
         try:
@@ -149,6 +151,15 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             title_text = driver.title or ""
             if "access denied" in title_text.lower() or "just a moment" in title_text.lower() or "attention required" in title_text.lower():
                 logging.error(f"[Generic Plugin - {self._platform_id}] Blocked by anti-bot protection (Title: '{title_text}') for URL: {config['url']}. Recovery Action: Enable proxies or rotate user-agents.")
+                try:
+                    from core.engine import scraper_state
+                    if self._platform_id in scraper_state.get("crawler_health", {}):
+                        health = scraper_state["crawler_health"][self._platform_id]
+                        health["status"] = f"Blocked (Anti-Bot: {title_text.strip()})"
+                        health["last_error"] = f"Anti-bot block page: {title_text.strip()}"
+                        health["is_blocked"] = True
+                except Exception:
+                    pass
                 return []
 
             # Simulated human scrolling
@@ -408,9 +419,12 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                             val = img_element.get(attr)
                             if val:
                                 val = val.strip()
-                                if val.startswith("http") or val.startswith("data:image") or val.startswith("//"):
+                                if val.startswith("http") or val.startswith("data:image") or val.startswith("//") or val.startswith("/"):
                                     if val.startswith("//"):
                                         val = "https:" + val
+                                    elif val.startswith("/"):
+                                        from urllib.parse import urljoin
+                                        val = urljoin(config['url'], val)
                                     if attr == "srcset":
                                         val = val.split()[0]
                                     candidate_url = val
@@ -1059,11 +1073,11 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
             import re
             import time
 
-            logging.info(f"[Meesho Scraper] Launching headed Playwright driver to render Meesho page: {config['url']}")
+            logging.info(f"[Meesho Scraper] Launching Playwright driver to render Meesho page: {config['url']}")
 
             playwright_instance = sync_playwright().start()
             browser = playwright_instance.chromium.launch(
-                headless=False,
+                headless=True,
                 args=[
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
@@ -1084,6 +1098,22 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
 
             # Wait for hydration
             time.sleep(5)
+
+            # Check for Akamai EdgeSuite anti-bot block page
+            page_title = page.title()
+            page_content = page.content().lower()
+            if "access denied" in page_title.lower() or "access denied" in page_content or "permission to access" in page_content:
+                logging.warning(f"[Meesho Scraper] Detected Akamai EdgeSuite Access Denied anti-bot block page on {config['url']}.")
+                try:
+                    from core.engine import scraper_state
+                    if self._platform_id in scraper_state.get("crawler_health", {}):
+                        health = scraper_state["crawler_health"][self._platform_id]
+                        health["status"] = "Blocked (Anti-Bot: Akamai EdgeSuite)"
+                        health["last_error"] = "Akamai EdgeSuite WAF Access Denied"
+                        health["is_blocked"] = True
+                except Exception:
+                    pass
+                return deals
 
             # Scroll down to load more products
             page.evaluate("window.scrollTo(0, 800)")
@@ -1186,4 +1216,91 @@ class GenericRetailerPlugin(BaseRetailerPlugin):
                     playwright_instance.stop()
                 except Exception:
                     pass
+        return deals
+
+    def _extract_jiomart_deals(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
+        import threading
+        deals = []
+        def worker():
+            nonlocal deals
+            try:
+                deals = self._extract_jiomart_deals_sync(config, settings)
+            except Exception as e:
+                logging.error(f"[JioMart Scraper] Inner thread error: {e}", exc_info=True)
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+        return deals
+
+    def _extract_jiomart_deals_sync(self, config: Dict[str, Any], settings: Dict[str, Any]) -> List[Dict[str, Any]]:
+        deals = []
+        try:
+            from curl_cffi import requests
+            import json
+
+            url = config.get("url", "")
+            collection_slug = "basic-electricals1"
+            if "/collection/" in url:
+                collection_slug = url.split("/collection/")[-1].split("?")[0].strip("/")
+            elif "/c/" in url:
+                collection_slug = url.split("/c/")[-1].split("?")[0].strip("/")
+
+            api_url = f"https://www.jiomart.com/api/service/application/catalog/v1.0/products?page_no=1&page_size=30&collection_slug={collection_slug}"
+            headers = {
+                "x-application-id": "685945f46c8c7aee3f3af605",
+                "x-application-token": "TpKw7wD9h",
+                "x-location-detail": json.dumps({"pincode": "400001", "country": "IND", "city": "Mumbai"}),
+                "referer": url or "https://www.jiomart.com/"
+            }
+            cookies = {"pincode": "400001"}
+            logging.info(f"[JioMart Scraper] Fetching JioMart catalog API: {api_url}")
+            resp = requests.get(api_url, headers=headers, cookies=cookies, impersonate="chrome120", timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                items = data.get("items", [])
+                logging.info(f"[JioMart Scraper] Catalog API returned {len(items)} items.")
+                min_discount = settings.get("min_discount", 20.0)
+                for item in items:
+                    try:
+                        uid = item.get("uid") or item.get("item_code")
+                        if not uid:
+                            continue
+                        name = item.get("name")
+                        if not name or len(name) < 5:
+                            continue
+                        price_dict = item.get("price", {})
+                        eff_price = price_dict.get("effective", {}).get("min")
+                        mrp_price = price_dict.get("marked", {}).get("min") or eff_price
+                        if not eff_price:
+                            continue
+                        price = float(eff_price)
+                        mrp = float(mrp_price)
+                        discount = 0.0
+                        if mrp > price:
+                            discount = ((mrp - price) / mrp) * 100
+                        if min_discount <= discount <= 98.0:
+                            medias = item.get("medias", [])
+                            img_url = medias[0].get("url") if medias else ""
+                            slug = item.get("slug") or str(uid)
+                            prod_url = f"https://www.jiomart.com/p/groceries/{slug}/{uid}"
+                            deals.append({
+                                "id": f"{self._platform_id}_{uid}",
+                                "title": name,
+                                "price": int(price),
+                                "mrp": int(mrp),
+                                "discount": round(discount, 2),
+                                "image_url": clean_and_upgrade_image_url(img_url),
+                                "url": prod_url,
+                                "is_lightning": False,
+                                "rating": item.get("rating", 0),
+                                "reviews": 0,
+                                "has_bank_offer": False
+                            })
+                    except Exception as item_err:
+                        logging.debug(f"[JioMart Scraper] Error parsing item: {item_err}")
+            else:
+                logging.warning(f"[JioMart Scraper] Catalog API returned status {resp.status_code}")
+        except Exception as e:
+            logging.error(f"[JioMart Scraper] Error fetching JioMart deals: {e}", exc_info=True)
         return deals
