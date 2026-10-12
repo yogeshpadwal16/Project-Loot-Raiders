@@ -199,10 +199,7 @@ async def scrape_tier2_playwright(url: str, timeout_seconds: float = 10.0) -> Op
     }
 
     try:
-        try:
-            from rebrowser_playwright.async_api import async_playwright
-        except ImportError:
-            from patchright.async_api import async_playwright
+        from rebrowser_playwright.async_api import async_playwright
         async with async_playwright() as p:
             browser = await p.chromium.launch(
                 headless=True,

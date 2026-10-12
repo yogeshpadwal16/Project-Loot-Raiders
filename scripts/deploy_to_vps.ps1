@@ -40,12 +40,10 @@ if [ ! -d "venv" ]; then
     ./venv/bin/python -m ensurepip --upgrade 2>/dev/null || true
     ./venv/bin/pip install --upgrade pip
     ./venv/bin/pip install -r requirements.txt
-    ./venv/bin/playwright install chromium
-    ./venv/bin/scrapling install || true
+    ./venv/bin/python3 -m rebrowser_playwright install chromium
 else
     # Always keep dependencies in sync
     ./venv/bin/pip install -r requirements.txt
-    ./venv/bin/scrapling install || true
 fi
 
 # Daemonize process with PM2 using ecosystem configuration
